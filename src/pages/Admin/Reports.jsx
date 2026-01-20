@@ -1,74 +1,93 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
-import { formatDate } from '../../utils/helpers'; // Đảm bảo bạn đã import đúng helper này nếu sử dụng
 
 const Reports = () => {
-  const { attendanceLogs, facilityLogs, tasks, staffList } = useData();
+  const { tasks, staffList } = useData();
+  const [filterStaff, setFilterStaff] = useState('');
+  const [filterMonth, setFilterMonth] = useState(''); // Format: YYYY-MM
+  
+  // Logic lọc
+  const filteredTasks = tasks.filter(t => {
+    let matchStaff = true;
+    let matchTime = true;
+
+    if (filterStaff) matchStaff = (t.assigneeId.toString() === filterStaff);
+    
+    if (filterMonth) {
+        const taskMonth = t.deadline.slice(0, 7); // Lấy YYYY-MM
+        matchTime = (taskMonth === filterMonth);
+    }
+
+    return matchStaff && matchTime;
+  });
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
-    <div>
-      <h2>Báo cáo tổng hợp</h2>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        
-        {/* Cột 1: Lịch sử Điểm danh */}
-        <div>
-          <h3>Lịch sử Điểm danh</h3>
-          <ul style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #ddd', padding: '10px' }}>
-            {attendanceLogs.length === 0 && <p>Chưa có dữ liệu</p>}
-            {attendanceLogs.map((log, index) => (
-              <li key={index} style={{ marginBottom: '5px', borderBottom: '1px solid #eee' }}>
-                <strong>{log.staffName}</strong>: {log.type} lúc {formatDate(log.time)}
-              </li>
-            ))}
-          </ul>
-        </div>
+    <div className="report-container">
+      {/* Ẩn thanh công cụ khi in */}
+      <style>{`
+        @media print {
+            .no-print { display: none; }
+            .report-container { padding: 0; }
+        }
+      `}</style>
 
-        {/* Cột 2: Báo cáo CSVC */}
-        <div>
-          <h3>Báo cáo CSVC (Bất thường)</h3>
-          <ul style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #ddd', padding: '10px' }}>
-            {facilityLogs.filter(l => l.status === 'Hỏng').length === 0 && <p>Hệ thống CSVC ổn định</p>}
-            {facilityLogs.filter(l => l.status === 'Hỏng').map((log, index) => (
-              <li key={index} style={{ color: 'red', marginBottom: '5px' }}>
-                <strong>{log.item}</strong> bị hỏng. Báo cáo bởi {log.staffName} ({log.type} - {formatDate(log.time)})
-              </li>
-            ))}
-          </ul>
-        </div>
+      <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>Báo cáo tổng hợp</h2>
+        <button onClick={handlePrint} style={{ padding: '10px 20px', background: '#003366', color: 'white', border: 'none', cursor: 'pointer' }}>
+            Xuất PDF / In Báo Cáo
+        </button>
+      </div>
+
+      <div className="no-print" style={{ marginBottom: '20px', padding: '15px', background: '#f9f9f9', border: '1px solid #ddd' }}>
+        <strong>Bộ lọc: </strong>
+        <select onChange={e => setFilterStaff(e.target.value)} style={{ marginLeft: '10px', padding: '5px' }}>
+            <option value="">-- Tất cả nhân sự --</option>
+            {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
         
-        {/* Phần mới: Báo cáo tiến độ & Giải trình */}
-        <div style={{ gridColumn: 'span 2', marginTop: '20px' }}>
-          <h3>Báo cáo tiến độ công việc & Giải trình</h3>
-          <table border="1" style={{ width: '100%', borderCollapse: 'collapse', background: 'white' }}>
-            <thead style={{ background: '#f5f5f5' }}>
-              <tr>
-                <th>Nhân sự</th>
-                <th>Công việc</th>
-                <th>Tiến độ</th>
-                {/* ĐÃ SỬA LỖI TẠI DÒNG DƯỚI ĐÂY: thay < bằng &lt; */}
-                <th>Lý do giải trình (nếu &lt; 90%)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tasks.map(task => {
-                const staff = staffList.find(s => s.id === task.assigneeId);
-                return (
-                  <tr key={task.id}>
-                    <td style={{ padding: '10px' }}>{staff?.name}</td>
-                    <td style={{ padding: '10px' }}>{task.title}</td>
-                    <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: task.progress < 90 ? 'red' : 'green' }}>
-                      {task.progress}%
-                    </td>
-                    <td style={{ padding: '10px', color: '#555', fontStyle: 'italic' }}>
-                      {task.progress < 90 ? (task.reason || 'Chưa có giải trình') : 'N/A'}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <span style={{ marginLeft: '20px' }}>Tháng: </span>
+        <input type="month" onChange={e => setFilterMonth(e.target.value)} style={{ padding: '5px' }} />
+      </div>
+
+      {/* Nội dung báo cáo */}
+      <div id="report-content">
+        <h3>Báo cáo Tiến độ & Hiệu suất</h3>
+        <p>Thời gian xuất: {new Date().toLocaleString('vi-VN')}</p>
+        
+        <table border="1" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
+          <thead>
+            <tr style={{ background: '#eee' }}>
+              <th>Nhân sự</th>
+              <th>Công việc</th>
+              <th>Thời hạn</th>
+              <th>Tiến độ</th>
+              <th>Trạng thái / Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredTasks.map(task => {
+              const staff = staffList.find(s => s.id === task.assigneeId);
+              return (
+                <tr key={task.id}>
+                  <td style={{ padding: '8px' }}>{staff?.name}</td>
+                  <td style={{ padding: '8px' }}>{task.title}</td>
+                  <td style={{ padding: '8px' }}>{task.deadline}</td>
+                  <td style={{ padding: '8px', textAlign: 'center' }}>{task.progress}%</td>
+                  <td style={{ padding: '8px' }}>
+                     {task.progress === 100 ? 'Hoàn thành' : 
+                      (task.progress < 90 ? `Chậm - Lý do: ${task.reason || 'Không có'}` : 'Đang thực hiện')
+                     }
+                  </td>
+                </tr>
+              );
+            })}
+            {filteredTasks.length === 0 && <tr><td colSpan="5" style={{ textAlign: 'center', padding: '10px' }}>Không tìm thấy dữ liệu phù hợp</td></tr>}
+          </tbody>
+        </table>
       </div>
     </div>
   );

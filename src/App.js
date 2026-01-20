@@ -14,6 +14,7 @@ import Reports from './pages/Admin/Reports';
 import Attendance from './pages/Staff/Attendance';
 import MyTasks from './pages/Staff/MyTasks';
 import FacilityCheck from './pages/Staff/FacilityCheck';
+import Performance from './pages/Staff/Performance'; // Import trang mới
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
             <Route path="attendance" element={<Attendance />} />
             <Route path="my-tasks" element={<MyTasks />} />
             <Route path="facility-check" element={<FacilityCheck />} />
+            <Route path="performance" element={<Performance />} /> {/* Route mới */}
           </Route>
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
