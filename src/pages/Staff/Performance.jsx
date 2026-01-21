@@ -1,128 +1,82 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 
 const Performance = () => {
   const { user } = useAuth();
-  const { tasks } = useData();
-  const [viewMode, setViewMode] = useState('month'); // 'week' or 'month'
+  const { staffList } = useData();
 
-  const myTasks = tasks.filter(t => t.assigneeId === user.id);
+  // Lấy data mới nhất từ staffList dựa trên user.id để đảm bảo realtime
+  const currentUserData = staffList.find(s => s.id === user?.id) || user;
 
-  // 3. Logic xếp hạng
-  const evaluateTask = (task) => {
-    const today = new Date();
-    const deadline = new Date(task.deadline);
-    const completedDate = task.completedDate ? new Date(task.completedDate) : null;
-    
-    // Xuất sắc: 100% xong + xong trước hạn > 1 ngày
-    if (task.progress === 100 && completedDate) {
-        const diffTime = deadline - completedDate;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays >= 1) return { rank: 'Xuất sắc', color: 'purple', score: 10 };
-        // Tốt: 90% trở lên + đúng hạn (hoặc xong đúng hạn)
-        if (diffDays >= 0) return { rank: 'Tốt', color: 'green', score: 8 };
-    }
+  if (!currentUserData) return <div>Đang tải dữ liệu...</div>;
 
-    // Nếu chưa xong (progress < 100)
-    // Tốt (định nghĩa lại cho task đang chạy): > 90% và chưa quá hạn
-    if (task.progress >= 90 && today <= deadline) return { rank: 'Tốt', color: 'green', score: 8 };
+  // Tính toán lương
+  const ubiBase = Number(currentUserData.ubiBase) || 0;
+  const ubiPercent = Number(currentUserData.ubiPercent) || 0;
+  const ubiReal = ubiBase * (ubiPercent / 100);
+  
+  const remuneration = currentUserData.remunerationStatus === 'Approved' 
+    ? (Number(currentUserData.remuneration) || 0) 
+    : 0;
 
-    // Cần điều chỉnh: 70-85% + đúng hạn (chưa quá hạn)
-    if (task.progress >= 70 && task.progress <= 89 && today <= deadline) return { rank: 'Cần điều chỉnh', color: 'orange', score: 6 };
-
-    // Cảnh cáo: 60-70% + trễ > 3 ngày
-    const lateDays = Math.ceil((today - deadline) / (1000 * 60 * 60 * 24));
-    if (task.progress >= 60 && task.progress <= 70 && lateDays > 3) return { rank: 'Cảnh cáo', color: 'red', score: 4 };
-
-    // Kỷ luật: Không hoàn thành (quá hạn lâu hoặc progress quá thấp) - Fallback
-    if (lateDays > 0 && task.progress < 60) return { rank: 'Kỷ luật', color: 'black', score: 0 };
-
-    return { rank: 'Đang theo dõi', color: 'gray', score: 5 }; // Trường hợp bình thường khác
-  };
-
-  // 4. Tổng kết theo thời gian
-  const filterTasksByTime = (taskList) => {
-    const now = new Date();
-    return taskList.filter(t => {
-      const tDate = new Date(t.deadline);
-      if (viewMode === 'week') {
-        // Lấy tasks có deadline trong 7 ngày gần đây hoặc tới
-        const diff = Math.abs(tDate - now) / (1000 * 3600 * 24);
-        return diff <= 7;
-      } else {
-        // Lấy tasks trong tháng hiện tại
-        return tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear();
-      }
-    });
-  };
-
-  const filteredTasks = filterTasksByTime(myTasks);
-  const evaluatedTasks = filteredTasks.map(t => ({ ...t, eval: evaluateTask(t) }));
-
-  // Thống kê đơn giản
-  const stats = evaluatedTasks.reduce((acc, curr) => {
-    acc[curr.eval.rank] = (acc[curr.eval.rank] || 0) + 1;
-    return acc;
-  }, {});
+  const totalIncome = ubiReal + remuneration;
 
   return (
-    <div>
-      <h2>Performance & Đánh giá</h2>
-      
-      <div style={{ marginBottom: '20px' }}>
-        <button 
-          onClick={() => setViewMode('week')}
-          style={{ padding: '10px 20px', background: viewMode === 'week' ? '#003366' : '#eee', color: viewMode === 'week' ? 'white' : 'black', border: 'none', marginRight: '5px' }}
-        >
-          Theo Tuần
-        </button>
-        <button 
-          onClick={() => setViewMode('month')}
-          style={{ padding: '10px 20px', background: viewMode === 'month' ? '#003366' : '#eee', color: viewMode === 'month' ? 'white' : 'black', border: 'none' }}
-        >
-          Theo Tháng
-        </button>
-      </div>
+    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+      <h2 style={{ color: '#003366', borderBottom: '2px solid #003366', paddingBottom: '10px' }}>
+        Hiệu suất & Thu nhập
+      </h2>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: '20px' }}>
-        {/* Bảng thống kê */}
-        <div style={{ border: '1px solid #ddd', padding: '15px', height: 'fit-content' }}>
-          <h4>Tổng kết ({viewMode === 'week' ? 'Tuần này' : 'Tháng này'})</h4>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            <li>Xuất sắc: <strong>{stats['Xuất sắc'] || 0}</strong></li>
-            <li>Tốt: <strong>{stats['Tốt'] || 0}</strong></li>
-            <li>Cần điều chỉnh: <strong>{stats['Cần điều chỉnh'] || 0}</strong></li>
-            <li>Cảnh cáo: <strong>{stats['Cảnh cáo'] || 0}</strong></li>
-            <li>Kỷ luật: <strong>{stats['Kỷ luật'] || 0}</strong></li>
-          </ul>
+      {/* CARD 1: THU NHẬP (MỚI CẬP NHẬT) */}
+      <div style={{ background: 'white', borderRadius: '8px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
+        <h4 style={{ margin: '0 0 15px 0', color: '#28a745' }}>💰 Bảng Lương (UBI & Thù Lao)</h4>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px dashed #eee', paddingBottom: '10px' }}>
+            <span>Định mức UBI ({ubiPercent}%):</span>
+            <strong>{ubiReal.toLocaleString('vi-VN')} VNĐ</strong>
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px dashed #eee', paddingBottom: '10px' }}>
+            <span>Thù lao (Remuneration):</span>
+            <div style={{textAlign: 'right'}}>
+                <strong>{remuneration.toLocaleString('vi-VN')} VNĐ</strong>
+                {currentUserData.remunerationStatus === 'Pending' && (
+                    <div style={{fontSize: '0.8rem', color: '#ffc107'}}>*(Đang chờ duyệt: {Number(currentUserData.remuneration).toLocaleString()} đ)</div>
+                )}
+            </div>
         </div>
 
-        {/* Danh sách chi tiết */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '10px', fontSize: '1.1rem', color: '#003366' }}>
+            <span><strong>TỔNG THỰC LÃNH:</strong></span>
+            <span><strong>{totalIncome.toLocaleString('vi-VN')} VNĐ</strong></span>
+        </div>
+      </div>
+
+      {/* CARD 2: CÁC VAI TRÒ ĐẢM NHẬN */}
+      <div style={{ background: 'white', borderRadius: '8px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+        <h4 style={{ margin: '0 0 15px 0', color: '#007bff' }}>🏷️ Vai trò & Nhiệm vụ</h4>
+        
+        <div style={{marginBottom: '10px'}}>
+            <strong>System Role:</strong> <span style={{textTransform: 'uppercase'}}>{currentUserData.role}</span>
+        </div>
+
         <div>
-          <table border="1" style={{ width: '100%', borderCollapse: 'collapse', background: 'white' }}>
-            <thead>
-              <tr style={{ background: '#f5f5f5' }}>
-                <th>Công việc</th>
-                <th>Deadline</th>
-                <th>Tiến độ</th>
-                <th>Xếp hạng</th>
-              </tr>
-            </thead>
-            <tbody>
-              {evaluatedTasks.map(t => (
-                <tr key={t.id}>
-                  <td style={{ padding: '8px' }}>{t.title}</td>
-                  <td style={{ padding: '8px' }}>{t.deadline}</td>
-                  <td style={{ padding: '8px' }}>{t.progress}%</td>
-                  <td style={{ padding: '8px', color: t.eval.color, fontWeight: 'bold' }}>
-                    {t.eval.rank}
-                  </td>
-                </tr>
-              ))}
-              {evaluatedTasks.length === 0 && <tr><td colSpan="4" style={{textAlign: 'center', padding: '10px'}}>Không có dữ liệu trong khoảng thời gian này</td></tr>}
-            </tbody>
-          </table>
+            <strong>Job Titles Assigned:</strong>
+            <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px'}}>
+                {currentUserData.jobTitles && currentUserData.jobTitles.length > 0 ? (
+                    currentUserData.jobTitles.map((title, index) => (
+                        <span key={index} style={{
+                            background: '#e3f2fd', color: '#0d47a1', 
+                            padding: '5px 10px', borderRadius: '15px', fontSize: '0.9rem'
+                        }}>
+                            {title}
+                        </span>
+                    ))
+                ) : (
+                    <span style={{color: '#999', fontStyle: 'italic'}}>Chưa được phân công vị trí cụ thể.</span>
+                )}
+            </div>
         </div>
       </div>
     </div>

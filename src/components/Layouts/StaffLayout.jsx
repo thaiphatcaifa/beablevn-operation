@@ -3,147 +3,126 @@ import { Outlet, Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 
-// --- BỘ ICON SVG TỐI GIẢN CHO STAFF ---
+// Icons SVG Minimalist
 const Icons = {
-  Attendance: () => (
-    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  Task: () => (
-    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-  ),
-  Performance: () => (
-    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-    </svg>
-  ),
-  Facility: () => (
-    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-    </svg>
-  )
+  Home: ({active}) => <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke={active?"#003366":"#9ca3af"} strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>,
+  Task: ({active}) => <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke={active?"#003366":"#9ca3af"} strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" /></svg>,
+  Check: ({active}) => <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke={active?"#003366":"#9ca3af"} strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  Facility: ({active}) => <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke={active?"#003366":"#9ca3af"} strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125V14.25m-17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125V14.25m-1.875-5.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V5.375c0-.621.504-1.125 1.125-1.125h17.25c.621 0 1.125.504 1.125 1.125v3.5c0 .621-.504 1.125-1.125 1.125H8.25z" /></svg>
 };
 
 const StaffLayout = () => {
   const { user, logout } = useAuth();
-  const { updatePassword, staffList } = useData();
-  const [showChangePass, setShowChangePass] = useState(false);
-  const [passForm, setPassForm] = useState({ currentPass: '', newPass: '', confirmPass: '' });
+  const { staffList, updatePassword } = useData();
   const location = useLocation();
 
-  if (!user || user.role !== 'staff') return <Navigate to="/" />;
+  const [showPwdModal, setShowPwdModal] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ current: '', new: '', confirm: '' });
+
+  if (!user) return <Navigate to="/" />;
+
+  // SỬA LỖI: So sánh ID dưới dạng chuỗi để tránh lệch kiểu (số vs chữ)
+  // Nếu staffList chưa load kịp hoặc không tìm thấy, sử dụng user làm fallback an toàn
+  const currentUserInfo = staffList.find(s => String(s.id) === String(user.id)) || user;
+
+  // SỬA LỖI: Đảm bảo positions luôn là mảng, sử dụng Optional Chaining (?.)
+  const userPositions = currentUserInfo?.positions || [];
+
+  const isActive = (path) => location.pathname === path;
 
   const handleChangePassword = (e) => {
     e.preventDefault();
-    
-    // Lấy thông tin user hiện tại từ DataContext để check pass cũ
-    const currentUserData = staffList.find(s => s.id === user.id);
-    
-    if (!currentUserData) return alert("Lỗi: Không tìm thấy thông tin nhân sự!");
-    if (currentUserData.password !== passForm.currentPass) return alert("Mật khẩu hiện tại không đúng!");
-    if (passForm.newPass !== passForm.confirmPass) return alert("Mật khẩu xác nhận không khớp!");
-    if (passForm.newPass.length < 3) return alert("Mật khẩu quá ngắn!");
-    
-    updatePassword(user.id, passForm.newPass);
+    if (pwdForm.current !== currentUserInfo.password) return alert("Mật khẩu hiện tại không đúng!");
+    if (pwdForm.new.length < 1) return alert("Vui lòng nhập mật khẩu mới.");
+    if (pwdForm.new !== pwdForm.confirm) return alert("Xác nhận mật khẩu mới không khớp!");
+    updatePassword(user.id, pwdForm.new);
     alert("Đổi mật khẩu thành công!");
-    setShowChangePass(false);
-    setPassForm({ currentPass: '', newPass: '', confirmPass: '' });
+    setShowPwdModal(false);
+    setPwdForm({ current: '', new: '', confirm: '' });
   };
 
-  const linkStyle = (path) => {
-    const isActive = location.pathname === path;
-    return {
-      textDecoration: 'none',
-      color: isActive ? '#003366' : '#666',
-      fontWeight: isActive ? 'bold' : '500',
-      padding: '12px 15px',
-      borderBottom: isActive ? '3px solid #003366' : '3px solid transparent',
-      transition: 'all 0.3s',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px' 
-    };
-  };
+  const navItemStyle = (path) => ({ 
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    textDecoration: 'none', color: isActive(path) ? '#003366' : '#9ca3af',
+    flex: 1, padding: '8px 0'
+  });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f7fa' }}>
-      <header style={{ 
-        background: '#003366', 
-        color: 'white', 
-        padding: '10px 20px', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-        height: '65px', 
-        boxSizing: 'border-box'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <img 
-              src="/BA LOGO.png" 
-              alt="Be Able VN Logo" 
-              style={{ height: '45px', width: 'auto', objectFit: 'contain', backgroundColor: 'white', borderRadius: '8px', padding: '4px' }} 
-            />
-            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 'bold' }}>Be Able VN - Nhân sự</h3>
-        </div>
-        
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span 
-            onClick={() => setShowChangePass(!showChangePass)}
-            style={{ cursor: 'pointer', fontWeight: '500', userSelect: 'none' }}
-          >
-            Xin chào, <strong>{user.name}</strong> ▾
-          </span>
-          
-          <button 
-            onClick={logout} 
-            style={{ padding: '6px 15px', cursor: 'pointer', border: '1px solid white', borderRadius: '4px', background: 'transparent', color: 'white', fontWeight: 'bold', fontSize: '0.9rem' }}
-          >
-            Đăng xuất
-          </button>
-
-          {/* Popup Đổi mật khẩu */}
-          {showChangePass && (
-            <div style={{ position: 'absolute', top: '140%', right: 0, background: 'white', color: 'black', padding: '20px', boxShadow: '0 5px 15px rgba(0,0,0,0.15)', borderRadius: '8px', zIndex: 1000, width: '280px', border: '1px solid #ddd' }}>
-              <h4 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #eee', paddingBottom: '10px', color: '#003366' }}>Đổi mật khẩu</h4>
-              <form onSubmit={handleChangePassword}>
-                <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem'}}>Mật khẩu hiện tại:</label>
-                <input type="password" value={passForm.currentPass} onChange={e => setPassForm({...passForm, currentPass: e.target.value})} style={{ width: '100%', marginBottom: '10px', padding: '8px', boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: '4px' }} required />
-
-                <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem'}}>Mật khẩu mới:</label>
-                <input type="password" value={passForm.newPass} onChange={e => setPassForm({...passForm, newPass: e.target.value})} style={{ width: '100%', marginBottom: '10px', padding: '8px', boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: '4px' }} required />
-                
-                <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem'}}>Xác nhận mật khẩu:</label>
-                <input type="password" value={passForm.confirmPass} onChange={e => setPassForm({...passForm, confirmPass: e.target.value})} style={{ width: '100%', marginBottom: '20px', padding: '8px', boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: '4px' }} required />
-                
-                <button type="submit" style={{ width: '100%', background: '#003366', color: 'white', border: 'none', padding: '10px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Lưu thay đổi</button>
-              </form>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f9fafb' }}>
+      <header style={{ background: '#ffffff', color: '#003366', padding: '0 20px', height: '64px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 1000 }}>
+         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <img src="/BA LOGO.png" alt="Logo" style={{ height: '40px', objectFit: 'contain' }} />
+            <div>
+                <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700' }}>Be Able VN</h1>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Staff Portal</span>
             </div>
-          )}
-        </div>
+         </div>
+         <button onClick={logout} style={{ border: '1px solid #e5e7eb', background: 'white', color: '#374151', padding: '6px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500' }}>Đăng xuất</button>
       </header>
 
-      <nav style={{ background: '#fff', padding: '0 20px', borderBottom: '1px solid #ddd', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-        <Link to="/staff/attendance" style={linkStyle('/staff/attendance')}>
-          <Icons.Attendance /> Điểm danh
-        </Link>
-        <Link to="/staff/my-tasks" style={linkStyle('/staff/my-tasks')}>
-          <Icons.Task /> Công việc
-        </Link>
-        <Link to="/staff/performance" style={linkStyle('/staff/performance')}>
-          <Icons.Performance /> Performance
-        </Link>
-        <Link to="/staff/facility-check" style={linkStyle('/staff/facility-check')}>
-          <Icons.Facility /> Kiểm tra CSVC
-        </Link>
-      </nav>
-
-      <main style={{ padding: '30px', flex: 1, maxWidth: '1200px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+      <main style={{ flex: 1, padding: '16px', paddingBottom: '90px' }}>
+        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                    <div onClick={() => setShowPwdModal(true)} style={{ fontSize: '1.2rem', color: '#111827', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {currentUserInfo.name || user.name} <span style={{fontSize: '0.8rem', color: '#003366', background: '#e0f2fe', padding: '2px 8px', borderRadius: '4px'}}>✏️</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                        {/* SỬA LỖI: Dùng biến userPositions đã xử lý an toàn */}
+                        {userPositions.length > 0 ? (
+                            userPositions.map(p => (
+                                <span key={p} style={{ background: '#f3f4f6', color: '#374151', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', border: '1px solid #e5e7eb' }}>{p}</span>
+                            ))
+                        ) : <span style={{fontSize: '0.75rem', color: '#9ca3af'}}>Staff</span>}
+                    </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>UBI ({currentUserInfo.ubiPercentage || 100}%)</div>
+                    <strong style={{ color: '#059669', fontSize: '1.25rem' }}>
+                        {((currentUserInfo.baseUBI || 0) * (currentUserInfo.ubiPercentage || 100) / 100).toLocaleString()} <span style={{fontSize: '0.8rem', color: '#374151'}}>đ</span>
+                    </strong>
+                </div>
+            </div>
+        </div>
         <Outlet />
       </main>
+
+      {/* MODAL */}
+      {showPwdModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(2px)' }}>
+            <div style={{ background: 'white', padding: '24px', borderRadius: '12px', width: '90%', maxWidth: '360px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+                <h3 style={{ marginTop: 0, color: '#111827', textAlign: 'center', marginBottom: '20px' }}>Đổi mật khẩu</h3>
+                <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <input type="password" placeholder="Mật khẩu hiện tại" required value={pwdForm.current} onChange={e => setPwdForm({...pwdForm, current: e.target.value})} style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }} />
+                    <input type="password" placeholder="Mật khẩu mới" required value={pwdForm.new} onChange={e => setPwdForm({...pwdForm, new: e.target.value})} style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }} />
+                    <input type="password" placeholder="Xác nhận mật khẩu mới" required value={pwdForm.confirm} onChange={e => setPwdForm({...pwdForm, confirm: e.target.value})} style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }} />
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                        <button type="submit" style={{ flex: 1, background: '#003366', color: 'white', padding: '10px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Xác nhận</button>
+                        <button type="button" onClick={() => setShowPwdModal(false)} style={{ flex: 1, background: '#f3f4f6', color: '#374151', padding: '10px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}>Hủy</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+      )}
+
+      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', borderTop: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-around', padding: '8px 0', zIndex: 1000, paddingBottom: '20px' }}>
+        <Link to="/staff/my-tasks" style={navItemStyle('/staff/my-tasks')}>
+            <Icons.Task active={isActive('/staff/my-tasks')} />
+            <span style={{ fontSize: '0.7rem', marginTop: '4px' }}>Nhiệm vụ</span>
+        </Link>
+        <Link to="/staff/attendance" style={navItemStyle('/staff/attendance')}>
+            <Icons.Check active={isActive('/staff/attendance')} />
+            <span style={{ fontSize: '0.7rem', marginTop: '4px' }}>Chấm công</span>
+        </Link>
+        <Link to="/staff/facility-check" style={navItemStyle('/staff/facility-check')}>
+            <Icons.Facility active={isActive('/staff/facility-check')} />
+            <span style={{ fontSize: '0.7rem', marginTop: '4px' }}>CSVC</span>
+        </Link>
+        <Link to="/staff/performance" style={navItemStyle('/staff/performance')}>
+            <Icons.Home active={isActive('/staff/performance')} />
+            <span style={{ fontSize: '0.7rem', marginTop: '4px' }}>Hiệu suất</span>
+        </Link>
+      </nav>
     </div>
   );
 };

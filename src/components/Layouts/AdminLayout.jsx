@@ -2,82 +2,68 @@ import React from 'react';
 import { Outlet, Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-// Icons SVG đơn giản
+// Icons SVG Minimalist (Stroke 1.5px)
 const Icons = {
-  Staff: () => <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>,
-  Task: () => <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>,
-  Discipline: () => <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>,
-  Report: () => <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+  Staff: ({ active }) => <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke={active ? "#003366" : "#6b7280"} strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>,
+  Task: ({ active }) => <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke={active ? "#003366" : "#6b7280"} strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" /></svg>,
+  Discipline: ({ active }) => <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke={active ? "#003366" : "#6b7280"} strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>,
+  Report: ({ active }) => <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke={active ? "#003366" : "#6b7280"} strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
 };
 
 const AdminLayout = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
 
-  // Redirect nếu không phải là một trong các loại Admin
   if (!user || !['chief', 'reg', 'op'].includes(user.role)) return <Navigate to="/" />;
 
-  const sidebarLinkStyle = (path) => ({
+  const isActive = (path) => location.pathname === path;
+  const linkStyle = (path) => ({
     textDecoration: 'none',
-    color: location.pathname === path ? '#003366' : '#666',
-    fontWeight: location.pathname === path ? 'bold' : '500',
-    display: 'flex', alignItems: 'center', gap: '12px', padding: '10px',
-    borderRadius: '6px',
-    background: location.pathname === path ? '#e6f7ff' : 'transparent',
-    transition: 'all 0.2s'
+    color: isActive(path) ? '#003366' : '#4b5563',
+    fontWeight: isActive(path) ? '600' : '400',
+    display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 15px',
+    borderRadius: '8px',
+    background: isActive(path) ? '#e6f7ff' : 'transparent',
+    transition: 'all 0.2s',
+    marginBottom: '5px'
   });
 
   return (
-    <div>
-      <header style={{ background: '#003366', color: 'white', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '65px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f9fafb' }}>
+      <header style={{ background: '#ffffff', color: '#003366', padding: '0 20px', height: '64px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 1000 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <img src="/BA LOGO.png" alt="Logo" style={{ height: '45px', backgroundColor: 'white', borderRadius: '8px', padding: '4px' }} />
+          <img src="/BA LOGO.png" alt="Logo" style={{ height: '40px', objectFit: 'contain' }} />
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Be Able VN Admin</h3>
-            <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>Role: {user.role.toUpperCase()} ADMIN</span>
+            <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', letterSpacing: '-0.025em' }}>Be Able VN</h1>
+            <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{user.role} Dashboard</span>
           </div>
         </div>
-        <button onClick={logout} style={{ padding: '6px 15px', border: '1px solid white', background: 'transparent', color: 'white', borderRadius: '4px', cursor: 'pointer' }}>Đăng xuất</button>
+        <button onClick={logout} style={{ border: '1px solid #e5e7eb', background: 'white', color: '#374151', padding: '6px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500', transition: 'all 0.2s' }}>Đăng xuất</button>
       </header>
-
-      <div style={{ display: 'flex', minHeight: 'calc(100vh - 65px)' }}>
-        <aside style={{ width: '240px', background: '#fff', padding: '20px', borderRight: '1px solid #eee' }}>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            <li style={{ marginBottom: '8px' }}>
-              <Link to="/admin/staff-manager" style={sidebarLinkStyle('/admin/staff-manager')}>
-                <Icons.Staff /> Quản lý Nhân sự
-              </Link>
-            </li>
-            
-            {/* Chỉ OP và CHIEF thấy giao việc */}
+      <div style={{ display: 'flex', flex: 1, maxWidth: '1400px', width: '100%', margin: '0 auto' }}>
+        <aside style={{ width: '260px', background: '#fff', padding: '24px 16px', borderRight: '1px solid #f3f4f6', display: 'none' }} className="desktop-sidebar">
+          <nav>
+            <Link to="/admin/staff-manager" style={linkStyle('/admin/staff-manager')}>
+              <Icons.Staff active={isActive('/admin/staff-manager')} /> Quản lý Nhân sự
+            </Link>
             {(user.role === 'op' || user.role === 'chief') && (
-                <li style={{ marginBottom: '8px' }}>
-                <Link to="/admin/task-manager" style={sidebarLinkStyle('/admin/task-manager')}>
-                    <Icons.Task /> Điều phối & Giao việc
-                </Link>
-                </li>
-            )}
-
-            {/* Chỉ REG và CHIEF thấy kỷ luật */}
-            {(user.role === 'reg' || user.role === 'chief') && (
-                <li style={{ marginBottom: '8px' }}>
-                <Link to="/admin/discipline-manager" style={sidebarLinkStyle('/admin/discipline-manager')}>
-                    <Icons.Discipline /> Quy chế & Duyệt
-                </Link>
-                </li>
-            )}
-
-            <li style={{ marginBottom: '8px' }}>
-              <Link to="/admin/reports" style={sidebarLinkStyle('/admin/reports')}>
-                <Icons.Report /> Báo cáo tổng hợp
+              <Link to="/admin/task-manager" style={linkStyle('/admin/task-manager')}>
+                <Icons.Task active={isActive('/admin/task-manager')} /> Điều phối & Giao việc
               </Link>
-            </li>
-          </ul>
+            )}
+            {(user.role === 'reg' || user.role === 'chief') && (
+              <Link to="/admin/discipline-manager" style={linkStyle('/admin/discipline-manager')}>
+                <Icons.Discipline active={isActive('/admin/discipline-manager')} /> Quy chế & Duyệt
+              </Link>
+            )}
+            <Link to="/admin/reports" style={linkStyle('/admin/reports')}>
+              <Icons.Report active={isActive('/admin/reports')} /> Báo cáo tổng hợp
+            </Link>
+          </nav>
         </aside>
-        <main style={{ flex: 1, padding: '25px', backgroundColor: '#f5f7fa' }}>
-          <Outlet />
-        </main>
+        <main style={{ flex: 1, padding: '24px', overflowX: 'hidden' }}><Outlet /></main>
       </div>
+      <style>{`.desktop-sidebar{display:block!important}@media(max-width:768px){.desktop-sidebar{display:none!important}}`}</style>
     </div>
   );
 };

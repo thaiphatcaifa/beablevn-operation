@@ -1,36 +1,45 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { db } from '../firebase'; // Import cấu hình database từ file firebase.js bạn vừa tạo
+import { db } from '../firebase'; 
 import { ref, onValue, set, update, remove } from "firebase/database";
 
 const DataContext = createContext(null);
 
 export const DataProvider = ({ children }) => {
-  // --- 1. STATES DỮ LIỆU ---
+  // --- STATES ---
   const [staffList, setStaffList] = useState([]);
   const [tasks, setTasks] = useState([]);
   
-  // Các dữ liệu phụ trợ tạm thời vẫn lưu LocalStorage (có thể đưa lên Firebase tương tự sau này)
+  // LocalStorage cho dữ liệu cấu hình (Regulatory ban hành)
   const getInitialData = (key, defaultValue) => {
     const saved = localStorage.getItem(key);
     return saved ? JSON.parse(saved) : defaultValue;
   };
 
-  const [disciplineTypes, setDisciplineTypes] = useState(() => getInitialData('disciplineTypes', ['Trừ 10% KPI', 'Cảnh cáo', 'Sa thải']));
-  const [proposals, setProposals] = useState(() => getInitialData('proposals', []));
-  const [attendanceLogs, setAttendanceLogs] = useState(() => getInitialData('attendanceLogs', []));
-  const [facilityLogs, setFacilityLogs] = useState(() => getInitialData('facilityLogs', []));
+  // Danh sách hình thức kỷ luật (Do Regulatory quản lý)
+  const [disciplineTypes, setDisciplineTypes] = useState(() => getInitialData('disciplineTypes', [
+    'Nhắc nhở miệng',
+    'Trừ 5% KPI tháng',
+    'Cảnh cáo toàn công ty',
+    'Đình chỉ công tác'
+  ]));
 
-  // --- 2. LẮNG NGHE DỮ LIỆU REALTIME TỪ FIREBASE ---
+  // Danh sách đề xuất kỷ luật (Do Op đề xuất, Reg duyệt)
+  const [proposals, setProposals] = useState(() => getInitialData('proposals', []));
+
+  // --- FIREBASE LISTENERS ---
   useEffect(() => {
-    // Lắng nghe danh sách nhân sự (Staff)
+    // STAFF
     const staffRef = ref(db, 'staff');
     const unsubStaff = onValue(staffRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        // Chuyển đổi object từ Firebase thành array để React dễ xử lý
         const list = Object.keys(data).map(key => ({
           ...data[key],
-          firebaseKey: key // Lưu lại key để dùng cho update/delete
+          id: key, // Đảm bảo ID là key của Firebase để tránh trùng lặp
+          positions: data[key].positions || [], 
+          baseUBI: data[key].baseUBI || 0,
+          ubiPercentage: data[key].ubiPercentage || 100,
+          status: data[key].status || 'active'
         }));
         setStaffList(list);
       } else {
@@ -38,14 +47,14 @@ export const DataProvider = ({ children }) => {
       }
     });
 
-    // Lắng nghe danh sách công việc (Tasks)
+    // TASKS
     const tasksRef = ref(db, 'tasks');
     const unsubTasks = onValue(tasksRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const list = Object.keys(data).map(key => ({
           ...data[key],
-          firebaseKey: key
+          id: key // ID task
         }));
         setTasks(list);
       } else {
@@ -53,86 +62,55 @@ export const DataProvider = ({ children }) => {
       }
     });
 
-    return () => {
-      unsubStaff();
-      unsubTasks();
-    };
+    return () => { unsubStaff(); unsubTasks(); };
   }, []);
 
-  // --- 3. ĐỒNG BỘ LOCALSTORAGE CHO DỮ LIỆU PHỤ ---
+  // --- SYNC LOCALSTORAGE ---
   useEffect(() => { localStorage.setItem('disciplineTypes', JSON.stringify(disciplineTypes)); }, [disciplineTypes]);
   useEffect(() => { localStorage.setItem('proposals', JSON.stringify(proposals)); }, [proposals]);
 
-  // --- 4. CÁC HÀM THAO TÁC (ACTIONS) VỚI FIREBASE ---
+  // --- ACTIONS ---
 
-  // STAFF ACTIONS
+  // 1. STAFF
   const addStaff = (s) => {
-    const newId = Date.now();
-    const newStaff = { ...s, id: newId, status: 'active' };
-    // Lưu vào node 'staff/{id}'
-    set(ref(db, 'staff/' + newId), newStaff);
+    const newId = Date.now().toString(); // Dùng String ID
+    set(ref(db, 'staff/' + newId), { ...s, id: newId });
   };
+  const deleteStaff = (id) => remove(ref(db, 'staff/' + id));
+  const updateStaffInfo = (id, updates) => update(ref(db, 'staff/' + id), updates);
+  const updatePassword = (id, newPass) => updateStaffInfo(id, { password: newPass });
 
-  const deleteStaff = (id) => {
-    if (window.confirm("Xác nhận xóa nhân sự này khỏi hệ thống?")) {
-      remove(ref(db, 'staff/' + id));
-    }
-  };
-
-  const updateStaffInfo = (id, updates) => {
-    update(ref(db, 'staff/' + id), updates);
-  };
-
-  const updatePassword = (id, newPass) => {
-    updateStaffInfo(id, { password: newPass });
-  };
-
-  // TASK ACTIONS
+  // 2. TASKS (Operational)
   const addTask = (t) => {
-    const newId = Date.now();
-    const newTask = { 
+    const newId = Date.now().toString();
+    set(ref(db, 'tasks/' + newId), { 
       ...t, 
       id: newId, 
       progress: 0, 
-      reason: '', 
-      completedDate: null 
-    };
-    set(ref(db, 'tasks/' + newId), newTask);
+      status: 'assigned',
+      createdDate: new Date().toISOString()
+    });
   };
+  const updateTask = (taskId, newData) => update(ref(db, 'tasks/' + taskId), newData);
+  const deleteTask = (taskId) => remove(ref(db, 'tasks/' + taskId));
 
-  const updateTask = (taskId, newData) => {
-    update(ref(db, 'tasks/' + taskId), newData);
-  };
-
-  const updateTaskProgress = (id, p, reason = '') => {
-    const now = new Date().toISOString().split('T')[0];
-    const updates = { 
-      progress: p, 
-      reason: reason, 
-      completedDate: p === 100 ? now : null 
-    };
-    update(ref(db, 'tasks/' + id), updates);
-  };
-
-  // --- 5. CÁC HÀM CHO DỮ LIỆU PHỤ ---
+  // 3. DISCIPLINE (Regulatory & Op)
   const addDisciplineType = (type) => setDisciplineTypes([...disciplineTypes, type]);
   const removeDisciplineType = (type) => setDisciplineTypes(disciplineTypes.filter(t => t !== type));
   
+  // Op đề xuất, Reg duyệt
   const addProposal = (prop) => setProposals([...proposals, { ...prop, id: Date.now(), status: 'Pending' }]);
   const updateProposalStatus = (id, status) => {
     setProposals(proposals.map(p => p.id === id ? { ...p, status: status } : p));
   };
-
-  const addAttendance = (log) => setAttendanceLogs([...attendanceLogs, log]);
-  const addFacilityLog = (log) => setFacilityLogs([...facilityLogs, log]);
+  const deleteProposal = (id) => setProposals(proposals.filter(p => p.id !== id));
 
   return (
     <DataContext.Provider value={{ 
       staffList, addStaff, deleteStaff, updatePassword, updateStaffInfo,
+      tasks, addTask, updateTask, deleteTask,
       disciplineTypes, addDisciplineType, removeDisciplineType,
-      proposals, addProposal, updateProposalStatus,
-      tasks, addTask, updateTask, updateTaskProgress, 
-      attendanceLogs, addAttendance, facilityLogs, addFacilityLog 
+      proposals, addProposal, updateProposalStatus, deleteProposal
     }}>
       {children}
     </DataContext.Provider>
