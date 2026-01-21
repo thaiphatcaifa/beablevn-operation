@@ -1,131 +1,159 @@
 import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
-import { useAuth } from '../../context/AuthContext';
+
+// --- BỘ ICON MINIMALIST ---
+const Icons = {
+  Plus: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" width="20" height="20">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  ),
+  Trash: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" width="18" height="18">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+    </svg>
+  )
+};
 
 const TaskManager = () => {
-  const { user } = useAuth();
-  const { staffList, tasks, addTask, updateTask, deleteTask, disciplineTypes } = useData();
+  const { tasks, addTask, updateTask, deleteTask, staffList } = useData();
   
-  // Quyền: Op hoặc Chief
-  const isAuthorized = ['op', 'chief'].includes(user?.role);
+  // State cho Form
+  const [newTask, setNewTask] = useState({ title: '', assigneeId: '', deadline: '', description: '' });
 
-  const [form, setForm] = useState({ 
-    title: '', desc: '', assigneeId: '', deadline: '', 
-    repeat: 'none', disciplineType: '' 
-  });
-
-  const [filter, setFilter] = useState('all');
-
-  if (!isAuthorized) return <div style={{padding:'20px'}}>Bạn không có quyền Điều phối (Operational).</div>;
-
-  const handleAssign = (e) => {
+  const handleAdd = (e) => {
     e.preventDefault();
-    if (!form.assigneeId || !form.title) return alert("Vui lòng nhập đủ thông tin!");
+    if (!newTask.title || !newTask.assigneeId) return alert("Vui lòng nhập tiêu đề và chọn người thực hiện.");
     
-    // Tìm thông tin người được giao
-    const assignee = staffList.find(s => s.id === form.assigneeId);
-    
-    addTask({
-      ...form,
-      assigneeName: assignee ? assignee.name : 'Unknown',
-      assignerId: user.id,
-      assignerName: user.name,
-      createdAt: new Date().toISOString()
-    });
-    setForm({ title: '', desc: '', assigneeId: '', deadline: '', repeat: 'none', disciplineType: '' });
-    alert("Đã giao việc thành công!");
+    // Lấy tên staff từ ID
+    const staff = staffList.find(s => s.id === newTask.assigneeId);
+    const assigneeName = staff ? staff.name : 'Unknown';
+
+    addTask({ ...newTask, assigneeName });
+    setNewTask({ title: '', assigneeId: '', deadline: '', description: '' });
+    alert("Đã giao nhiệm vụ mới!");
   };
 
-  const handleCover = (task) => {
-    const newAssigneeId = prompt("Nhập ID hoặc chọn nhân sự mới để cover (Nhập ID từ danh sách bên dưới):");
-    if (!newAssigneeId) return;
-    const newStaff = staffList.find(s => s.id === newAssigneeId); // Đơn giản hóa, thực tế nên dùng Select Modal
-    if (newStaff) {
-        updateTask(task.id, { assigneeId: newStaff.id, assigneeName: newStaff.name, note: `Covered from previous assignee.` });
-        alert(`Đã chuyển việc cho ${newStaff.name}`);
-    } else {
-        alert("Không tìm thấy nhân sự!");
+  const handleDelete = (id) => {
+    if (window.confirm("Bạn chắc chắn muốn xóa nhiệm vụ này?")) {
+      deleteTask(id);
     }
   };
 
   return (
-    <div style={{ paddingBottom: '40px' }}>
-      <h2 style={{ color: '#003366', borderBottom: '2px solid #003366', paddingBottom: '10px' }}>Điều phối & Giao việc (Operational)</h2>
-      
-      {/* FORM GIAO VIỆC */}
-      <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', marginBottom: '20px' }}>
-         <h4 style={{ margin: '0 0 15px 0', color: '#003366' }}>+ Giao nhiệm vụ mới</h4>
-         <form onSubmit={handleAssign} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-            <input placeholder="Tên công việc" value={form.title} onChange={e=>setForm({...form, title: e.target.value})} style={styles.input} required />
-            <select value={form.assigneeId} onChange={e=>setForm({...form, assigneeId: e.target.value})} style={styles.input} required>
-                <option value="">-- Chọn nhân sự thực hiện --</option>
-                {staffList.filter(s => s.status === 'active').map(s => <option key={s.id} value={s.id}>{s.name} ({s.role})</option>)}
-            </select>
-            
-            <input placeholder="Mô tả chi tiết" value={form.desc} onChange={e=>setForm({...form, desc: e.target.value})} style={{...styles.input, gridColumn: '1 / -1'}} />
-            
-            <div style={{display:'flex', flexDirection:'column'}}>
-                <label style={styles.label}>Thời hạn / Khung giờ:</label>
-                <input type="datetime-local" value={form.deadline} onChange={e=>setForm({...form, deadline: e.target.value})} style={styles.input} />
-            </div>
+    <div style={{ paddingBottom: '20px' }}>
+      <h2 style={{ color: '#111827', marginTop: 0, fontSize: '1.5rem', fontWeight: '600' }}>Quản lý Nhiệm vụ</h2>
 
-            <div style={{display:'flex', flexDirection:'column'}}>
-                <label style={styles.label}>Lặp lại:</label>
-                <select value={form.repeat} onChange={e=>setForm({...form, repeat: e.target.value})} style={styles.input}>
-                    <option value="none">Không lặp lại</option>
-                    <option value="daily">Hàng ngày</option>
-                    <option value="weekly">Hàng tuần</option>
-                    <option value="monthly">Hàng tháng</option>
-                </select>
-            </div>
+      {/* FORM GIAO VIỆC - RESPONSIVE & MINIMALIST */}
+      <div style={{ background: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '24px', border: '1px solid #f3f4f6' }}>
+        <h4 style={{ margin: '0 0 20px 0', color: '#374151', fontSize: '1rem' }}>Giao nhiệm vụ mới</h4>
+        <form onSubmit={handleAdd} style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+          
+          <div style={{ flex: '1 1 300px' }}>
+             <label style={{display: 'block', fontSize: '0.8rem', color: '#6b7280', marginBottom: '6px', fontWeight: '500'}}>Tiêu đề công việc</label>
+             <input 
+                placeholder="Ví dụ: Kiểm tra kho..." 
+                value={newTask.title}
+                onChange={e => setNewTask({...newTask, title: e.target.value})}
+                style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s' }}
+             />
+          </div>
 
-            <div style={{display:'flex', flexDirection:'column', gridColumn: '1 / -1'}}>
-                <label style={styles.label}>Hình thức kỷ luật nếu vi phạm (Chọn từ danh sách ban hành):</label>
-                <select value={form.disciplineType} onChange={e=>setForm({...form, disciplineType: e.target.value})} style={{...styles.input, borderColor: '#d32f2f'}}>
-                    <option value="">-- Chọn hình thức kỷ luật --</option>
-                    {disciplineTypes.map((type, idx) => <option key={idx} value={type}>{type}</option>)}
-                </select>
-            </div>
+          <div style={{ flex: '1 1 200px' }}>
+             <label style={{display: 'block', fontSize: '0.8rem', color: '#6b7280', marginBottom: '6px', fontWeight: '500'}}>Người thực hiện</label>
+             <select 
+                value={newTask.assigneeId}
+                onChange={e => setNewTask({...newTask, assigneeId: e.target.value})}
+                style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', boxSizing: 'border-box', outline: 'none', background: 'white' }}
+             >
+                <option value="">-- Chọn nhân sự --</option>
+                {staffList.map(s => <option key={s.id} value={s.id}>{s.name} - {s.role}</option>)}
+             </select>
+          </div>
 
-            <button type="submit" style={{...styles.btn, gridColumn: '1 / -1', marginTop: '10px'}}>Giao việc</button>
-         </form>
+          <div style={{ flex: '1 1 150px' }}>
+             <label style={{display: 'block', fontSize: '0.8rem', color: '#6b7280', marginBottom: '6px', fontWeight: '500'}}>Hạn chót</label>
+             <input 
+                type="date"
+                value={newTask.deadline}
+                onChange={e => setNewTask({...newTask, deadline: e.target.value})}
+                style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', boxSizing: 'border-box', outline: 'none' }}
+             />
+          </div>
+
+          <div style={{ flex: '1 1 100%' }}>
+             <textarea 
+                placeholder="Mô tả chi tiết công việc..." 
+                value={newTask.description}
+                onChange={e => setNewTask({...newTask, description: e.target.value})}
+                style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', boxSizing: 'border-box', minHeight: '80px', outline: 'none', resize: 'vertical' }}
+             />
+          </div>
+
+          <button type="submit" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#003366', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', marginTop: '4px', fontSize: '0.9rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            <Icons.Plus /> Giao việc
+          </button>
+        </form>
       </div>
 
-      {/* DANH SÁCH CÔNG VIỆC */}
-      <h4 style={{color: '#666'}}>Danh sách công việc đang quản lý</h4>
-      <div style={{display:'flex', gap:'10px', marginBottom:'15px'}}>
-         <button onClick={()=>setFilter('all')} style={filter==='all'?styles.activeFilter:styles.filter}>Tất cả</button>
-         <button onClick={()=>setFilter('assigned')} style={filter==='assigned'?styles.activeFilter:styles.filter}>Đang thực hiện</button>
-      </div>
-
-      <div style={{display:'grid', gap:'15px'}}>
-        {tasks.filter(t => filter === 'all' || t.status === filter).map(task => (
-            <div key={task.id} style={{background:'white', padding:'15px', borderRadius:'8px', borderLeft: '4px solid #003366', boxShadow:'0 1px 3px rgba(0,0,0,0.1)'}}>
-                <div style={{display:'flex', justifyContent:'space-between'}}>
-                    <strong style={{fontSize:'1.1rem'}}>{task.title}</strong>
-                    <span style={{fontSize:'0.8rem', background:'#e6f7ff', padding:'3px 8px', borderRadius:'10px', color:'#003366'}}>{task.repeat !== 'none' ? `🔁 ${task.repeat}` : 'Một lần'}</span>
-                </div>
-                <div style={{fontSize:'0.9rem', color:'#555', margin:'5px 0'}}>Assignee: <strong>{task.assigneeName}</strong> | Deadline: {task.deadline ? new Date(task.deadline).toLocaleString() : 'N/A'}</div>
-                {task.disciplineType && <div style={{fontSize:'0.85rem', color:'#d32f2f'}}>⚠ Kỷ luật: {task.disciplineType}</div>}
-                
-                <div style={{marginTop:'10px', display:'flex', gap:'10px'}}>
-                    <button onClick={() => handleCover(task)} style={{...styles.smBtn, background:'#ff9800'}}>🔄 Chuyển người (Cover)</button>
-                    <button onClick={() => {if(window.confirm('Xóa?')) deleteTask(task.id)}} style={{...styles.smBtn, background:'#f44336'}}>Xóa</button>
-                </div>
-            </div>
-        ))}
+      {/* DANH SÁCH NHIỆM VỤ - RESPONSIVE TABLE */}
+      <div style={{ background: 'white', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden', border: '1px solid #f3f4f6' }}>
+        <h4 style={{ margin: '20px', color: '#374151', fontSize: '1rem' }}>Danh sách đang thực hiện ({tasks.length})</h4>
+        
+        <div style={{ overflowX: 'auto' }}> 
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
+            <thead>
+              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
+                <th style={{ padding: '16px 24px', fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nhiệm vụ</th>
+                <th style={{ padding: '16px 24px', fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Người làm</th>
+                <th style={{ padding: '16px 24px', fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Hạn chót</th>
+                <th style={{ padding: '16px 24px', fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tiến độ</th>
+                <th style={{ padding: '16px 24px', fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trạng thái</th>
+                <th style={{ padding: '16px 24px', fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tasks.length === 0 ? (
+                 <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#9ca3af', fontStyle: 'italic' }}>Chưa có nhiệm vụ nào.</td></tr>
+              ) : (
+                tasks.map(task => (
+                  <tr key={task.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                    <td style={{ padding: '16px 24px' }}>
+                        <div style={{ fontWeight: '600', color: '#111827', marginBottom: '4px' }}>{task.title}</div>
+                        <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>{task.description}</div>
+                    </td>
+                    <td style={{ padding: '16px 24px', color: '#4b5563', fontSize: '0.9rem' }}>{task.assigneeName}</td>
+                    <td style={{ padding: '16px 24px', color: '#4b5563', fontSize: '0.9rem' }}>{task.deadline}</td>
+                    <td style={{ padding: '16px 24px' }}>
+                      <div style={{ width: '100px', height: '6px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                         <div style={{ width: `${task.progress || 0}%`, height: '100%', background: '#059669' }}></div>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', marginTop: '6px', color: '#6b7280', fontWeight: '500' }}>{task.progress || 0}%</div>
+                    </td>
+                    <td style={{ padding: '16px 24px' }}>
+                        <span style={{ 
+                            padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600',
+                            background: task.status === 'completed' ? '#ecfdf5' : '#fffbeb',
+                            color: task.status === 'completed' ? '#047857' : '#b45309',
+                            border: task.status === 'completed' ? '1px solid #a7f3d0' : '1px solid #fde68a'
+                        }}>
+                            {task.status === 'completed' ? 'Hoàn thành' : 'Đang làm'}
+                        </span>
+                    </td>
+                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                        <button onClick={() => handleDelete(task.id)} style={{ color: '#ef4444', background: '#fee2e2', border: 'none', borderRadius: '6px', width: '32px', height: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'background 0.2s' }}>
+                            <Icons.Trash />
+                        </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
-};
-
-const styles = {
-    input: { padding: '10px', border: '1px solid #ddd', borderRadius: '4px' },
-    label: { fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '5px', color:'#666' },
-    btn: { background: '#003366', color: 'white', padding: '10px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' },
-    smBtn: { color: 'white', padding: '5px 10px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' },
-    filter: { background:'transparent', border:'1px solid #ddd', padding:'5px 15px', borderRadius:'20px', cursor:'pointer' },
-    activeFilter: { background:'#003366', color:'white', border:'1px solid #003366', padding:'5px 15px', borderRadius:'20px', cursor:'pointer' }
 };
 
 export default TaskManager;

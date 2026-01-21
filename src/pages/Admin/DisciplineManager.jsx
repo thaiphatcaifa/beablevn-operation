@@ -1,150 +1,147 @@
 import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
-import { useAuth } from '../../context/AuthContext';
+
+// --- BỘ ICON MINIMALIST ---
+const Icons = {
+  Plus: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" width="20" height="20">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  ),
+  Trash: ({ size = 18 }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" width={size} height={size}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+    </svg>
+  ),
+  Check: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="14" height="14">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+    </svg>
+  ),
+  XMark: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="14" height="14">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  )
+};
 
 const DisciplineManager = () => {
-  const { user } = useAuth();
-  const { 
-    staffList, 
-    disciplineTypes, addDisciplineType, removeDisciplineType, 
-    proposals, addProposal, updateProposalStatus, deleteProposal 
-  } = useData();
-
-  // Phân quyền
-  const isChief = user?.role === 'chief';
-  const isReg = user?.role === 'reg';
-  const isOp = user?.role === 'op';
-
-  // Op: Chỉ đề xuất. Reg/Chief: Toàn quyền.
-  const canManageRules = isChief || isReg;
-  const canApprove = isChief || isReg;
-
+  const { disciplineTypes, addDisciplineType, removeDisciplineType, proposals, updateProposalStatus, deleteProposal } = useData();
   const [newType, setNewType] = useState('');
-  const [proposalForm, setProposalForm] = useState({ staffId: '', type: '', reason: '' });
 
-  // --- 1. BAN HÀNH QUY ĐỊNH (Reg/Chief) ---
-  const handleAddType = () => {
-    if (newType) { addDisciplineType(newType); setNewType(''); }
+  // 1. Quản lý Loại hình kỷ luật
+  const handleAddType = (e) => {
+    e.preventDefault();
+    if(newType) {
+        addDisciplineType(newType);
+        setNewType('');
+    }
   };
 
-  // --- 2. ĐỀ XUẤT KỶ LUẬT (Op) ---
-  const handlePropose = (e) => {
-    e.preventDefault();
-    if (!proposalForm.staffId || !proposalForm.type) return;
-    const targetStaff = staffList.find(s => s.id === proposalForm.staffId);
-    
-    addProposal({
-        ...proposalForm,
-        staffName: targetStaff?.name || 'Unknown',
-        proposer: user.name,
-        roleProposer: user.role,
-        date: new Date().toISOString().split('T')[0]
-    });
-    setProposalForm({ staffId: '', type: '', reason: '' });
-    alert("Đã gửi đề xuất kỷ luật!");
+  // 2. Xử lý đề xuất
+  const handleApprove = (id) => {
+      if(window.confirm("Duyệt đề xuất kỷ luật này?")) updateProposalStatus(id, 'Approved');
+  };
+
+  const handleReject = (id) => {
+      if(window.confirm("Từ chối đề xuất này?")) updateProposalStatus(id, 'Rejected');
   };
 
   return (
-    <div style={{ paddingBottom: '40px' }}>
-      <h2 style={{ color: '#003366', borderBottom: '2px solid #003366', paddingBottom: '10px' }}>Quản lý Kỷ luật (Regulatory & Op)</h2>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        
-        {/* CỘT TRÁI: DANH MỤC HÌNH THỨC KỶ LUẬT */}
-        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: '#003366' }}>📋 Danh sách Hình thức Kỷ luật</h4>
-            <div style={{marginBottom: '10px', fontSize: '0.85rem', color: '#666', fontStyle: 'italic'}}>
-                (Do Regulatory Administrator ban hành)
-            </div>
-            
-            <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
-                {disciplineTypes.map((t, idx) => (
-                    <li key={idx} style={{ marginBottom: '5px' }}>
-                        {t} 
-                        {canManageRules && (
-                            <span onClick={() => removeDisciplineType(t)} style={{ marginLeft: '10px', color: 'red', cursor: 'pointer', fontWeight: 'bold' }}>[x]</span>
-                        )}
+    <div style={{ paddingBottom: '20px' }}>
+      <h2 style={{ color: '#111827', marginTop: 0, fontSize: '1.5rem', fontWeight: '600' }}>Quản lý Kỷ luật</h2>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+          
+          {/* CỘT 1: DANH MỤC HÌNH THỨC KỶ LUẬT */}
+          <div style={{ background: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #f3f4f6' }}>
+             <h4 style={{ margin: '0 0 16px 0', color: '#b91c1c', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                ⚠️ Hình thức xử lý
+             </h4>
+             <ul style={{ paddingLeft: '0', listStyle: 'none', margin: '0 0 20px 0' }}>
+                {disciplineTypes.map((type, idx) => (
+                    <li key={idx} style={{ marginBottom: '10px', padding: '10px 12px', background: '#f9fafb', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem', color: '#374151' }}>
+                        {type} 
+                        <button onClick={() => removeDisciplineType(type)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
+                            <Icons.Trash size={16} />
+                        </button>
                     </li>
                 ))}
-            </ul>
+             </ul>
+             <form onSubmit={handleAddType} style={{ display: 'flex', gap: '8px' }}>
+                <input 
+                    placeholder="Thêm hình thức mới..." 
+                    value={newType}
+                    onChange={e => setNewType(e.target.value)}
+                    style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '0.9rem', outline: 'none' }}
+                />
+                <button type="submit" style={{ background: '#374151', color: 'white', border: 'none', borderRadius: '8px', width: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <Icons.Plus />
+                </button>
+             </form>
+          </div>
 
-            {canManageRules && (
-                <div style={{ display: 'flex', gap: '5px' }}>
-                    <input value={newType} onChange={e => setNewType(e.target.value)} placeholder="Nhập hình thức mới..." style={{ flex: 1, padding: '5px' }} />
-                    <button onClick={handleAddType} style={{ background: '#28a745', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px' }}>Thêm</button>
-                </div>
-            )}
-            {!canManageRules && <div style={{ fontSize: '0.8rem', color: '#999' }}>* Bạn chỉ có quyền xem danh sách này.</div>}
-        </div>
+          {/* CỘT 2: DUYỆT ĐỀ XUẤT */}
+          <div style={{ background: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #f3f4f6' }}>
+             <h4 style={{ margin: '0 0 6px 0', color: '#003366', fontSize: '1rem' }}>📋 Duyệt đề xuất kỷ luật</h4>
+             <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '16px' }}>Đề xuất từ bộ phận vận hành (Op).</p>
+             
+             {/* BẢNG CUỘN NGANG TRÊN MOBILE */}
+             <div style={{ overflowX: 'auto' }}>
+                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '400px' }}>
+                    <thead>
+                        <tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
+                            <th style={{ padding: '12px 8px', fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase' }}>Nhân sự</th>
+                            <th style={{ padding: '12px 8px', fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase' }}>Lỗi vi phạm</th>
+                            <th style={{ padding: '12px 8px', fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase' }}>TT</th>
+                            <th style={{ padding: '12px 8px', fontSize: '0.75rem', color: '#6b7280', textAlign: 'right', textTransform: 'uppercase' }}>Xử lý</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {proposals.length === 0 ? (
+                            <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center', fontSize: '0.85rem', color: '#9ca3af', fontStyle: 'italic' }}>Không có đề xuất nào.</td></tr>
+                        ) : (
+                            proposals.map(p => (
+                                <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                                    <td style={{ padding: '12px 8px', fontSize: '0.9rem', fontWeight: '600', color: '#111827' }}>{p.staffName}</td>
+                                    <td style={{ padding: '12px 8px', fontSize: '0.85rem', color: '#4b5563' }}>{p.reason}</td>
+                                    <td style={{ padding: '12px 8px' }}>
+                                        <span style={{
+                                            fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold',
+                                            background: p.status === 'Pending' ? '#fff7ed' : (p.status === 'Approved' ? '#ecfdf5' : '#fef2f2'),
+                                            color: p.status === 'Pending' ? '#c2410c' : (p.status === 'Approved' ? '#047857' : '#b91c1c')
+                                        }}>
+                                            {p.status === 'Pending' ? 'Chờ' : (p.status === 'Approved' ? 'Duyệt' : 'Hủy')}
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: '12px 8px', textAlign: 'right' }}>
+                                        {p.status === 'Pending' && (
+                                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                                <button onClick={() => handleApprove(p.id)} style={{ background: '#059669', color: 'white', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                                    <Icons.Check />
+                                                </button>
+                                                <button onClick={() => handleReject(p.id)} style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                                    <Icons.XMark />
+                                                </button>
+                                            </div>
+                                        )}
+                                        {p.status !== 'Pending' && (
+                                            <button onClick={() => deleteProposal(p.id)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
+                                                <Icons.Trash size={16} />
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                 </table>
+             </div>
+          </div>
 
-        {/* CỘT PHẢI: TẠO ĐỀ XUẤT (Op) */}
-        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: '#d32f2f' }}>⚠ Đề xuất Kỷ luật Nhân sự</h4>
-            <form onSubmit={handlePropose} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <select value={proposalForm.staffId} onChange={e => setProposalForm({...proposalForm, staffId: e.target.value})} required style={styles.input}>
-                    <option value="">-- Chọn nhân sự vi phạm --</option>
-                    {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-                <select value={proposalForm.type} onChange={e => setProposalForm({...proposalForm, type: e.target.value})} required style={styles.input}>
-                    <option value="">-- Chọn hình thức --</option>
-                    {disciplineTypes.map((t, idx) => <option key={idx} value={t}>{t}</option>)}
-                </select>
-                <textarea placeholder="Lý do vi phạm..." value={proposalForm.reason} onChange={e => setProposalForm({...proposalForm, reason: e.target.value})} style={styles.input} />
-                <button type="submit" style={{ background: '#d32f2f', color: 'white', border: 'none', padding: '10px', borderRadius: '4px', cursor: 'pointer' }}>Gửi đề xuất</button>
-            </form>
-        </div>
-
-      </div>
-
-      {/* DANH SÁCH DUYỆT (Reg/Chief) */}
-      <div style={{ marginTop: '30px' }}>
-         <h3 style={{ color: '#003366' }}>Phê duyệt Đề xuất ({proposals.filter(p => p.status === 'Pending').length} chờ duyệt)</h3>
-         <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: '8px', overflow: 'hidden' }}>
-            <thead style={{ background: '#eee', textAlign: 'left' }}>
-                <tr>
-                    <th style={{ padding: '10px' }}>Nhân sự</th>
-                    <th style={{ padding: '10px' }}>Hình thức</th>
-                    <th style={{ padding: '10px' }}>Lý do</th>
-                    <th style={{ padding: '10px' }}>Người đề xuất</th>
-                    <th style={{ padding: '10px' }}>Trạng thái</th>
-                    <th style={{ padding: '10px' }}>Hành động</th>
-                </tr>
-            </thead>
-            <tbody>
-                {proposals.map(p => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={{ padding: '10px', fontWeight: 'bold' }}>{p.staffName}</td>
-                        <td style={{ padding: '10px', color: '#d32f2f' }}>{p.type}</td>
-                        <td style={{ padding: '10px' }}>{p.reason}</td>
-                        <td style={{ padding: '10px' }}><small>{p.proposer} ({p.roleProposer})</small></td>
-                        <td style={{ padding: '10px' }}>
-                            <span style={{ 
-                                padding: '3px 8px', borderRadius: '4px', fontSize: '0.8rem', color: 'white',
-                                background: p.status === 'Pending' ? '#ff9800' : p.status === 'Approved' ? '#28a745' : '#999' 
-                            }}>{p.status}</span>
-                        </td>
-                        <td style={{ padding: '10px' }}>
-                            {p.status === 'Pending' && canApprove && (
-                                <div style={{ display: 'flex', gap: '5px' }}>
-                                    <button onClick={() => updateProposalStatus(p.id, 'Approved')} style={{ background: '#28a745', color: 'white', border: 'none', padding: '5px', borderRadius: '3px', cursor: 'pointer' }}>✔</button>
-                                    <button onClick={() => updateProposalStatus(p.id, 'Rejected')} style={{ background: '#d32f2f', color: 'white', border: 'none', padding: '5px', borderRadius: '3px', cursor: 'pointer' }}>✘</button>
-                                </div>
-                            )}
-                            {(!canApprove && p.status === 'Pending') && <small style={{color:'#999'}}>Chờ duyệt</small>}
-                            {isChief && <button onClick={() => deleteProposal(p.id)} style={{marginLeft: '10px', background: 'transparent', border: 'none', color: '#999', cursor: 'pointer'}}>🗑</button>}
-                        </td>
-                    </tr>
-                ))}
-                {proposals.length === 0 && <tr><td colSpan="6" style={{padding:'20px', textAlign:'center', color:'#999'}}>Chưa có đề xuất nào</td></tr>}
-            </tbody>
-         </table>
       </div>
     </div>
   );
-};
-
-const styles = {
-    input: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical' }
 };
 
 export default DisciplineManager;
