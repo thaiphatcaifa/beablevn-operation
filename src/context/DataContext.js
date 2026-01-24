@@ -8,28 +8,11 @@ export const DataProvider = ({ children }) => {
   // --- STATES ---
   const [staffList, setStaffList] = useState([]);
   const [tasks, setTasks] = useState([]);
-  // THÊM MỚI: State cho Ca làm việc và Chấm công
   const [shifts, setShifts] = useState([]);
   const [attendanceLogs, setAttendanceLogs] = useState([]);
-  
-  // LocalStorage cho dữ liệu cấu hình
-  const getInitialData = (key, defaultValue) => {
-    try {
-      const saved = localStorage.getItem(key);
-      return saved ? JSON.parse(saved) : defaultValue;
-    } catch {
-      return defaultValue;
-    }
-  };
-
-  const [disciplineTypes, setDisciplineTypes] = useState(() => getInitialData('disciplineTypes', [
-    'Nhắc nhở miệng',
-    'Trừ 5% KPI tháng',
-    'Cảnh cáo toàn công ty',
-    'Đình chỉ công tác'
-  ]));
-
-  const [proposals, setProposals] = useState(() => getInitialData('proposals', []));
+  const [facilityLogs, setFacilityLogs] = useState([]); 
+  const [disciplineTypes, setDisciplineTypes] = useState([]); 
+  const [disciplineRecords, setDisciplineRecords] = useState([]);
 
   // --- FIREBASE LISTENERS ---
   useEffect(() => {
@@ -37,96 +20,101 @@ export const DataProvider = ({ children }) => {
     const staffRef = ref(db, 'staff');
     const unsubStaff = onValue(staffRef, (snapshot) => {
       const data = snapshot.val();
-      const list = data ? Object.keys(data).map(key => ({ 
-        ...data[key], 
-        id: key, 
-        positions: data[key].positions || [] 
-      })) : [];
-      setStaffList(list);
+      setStaffList(data ? Object.keys(data).map(key => ({ ...data[key], id: key, positions: data[key].positions || [] })) : []);
     });
 
     // 2. TASKS
     const tasksRef = ref(db, 'tasks');
     const unsubTasks = onValue(tasksRef, (snapshot) => {
       const data = snapshot.val();
-      const list = data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : [];
-      setTasks(list);
+      setTasks(data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : []);
     });
 
-    // 3. SHIFTS (THÊM MỚI: Lắng nghe dữ liệu Ca làm việc)
+    // 3. SHIFTS
     const shiftsRef = ref(db, 'shifts');
     const unsubShifts = onValue(shiftsRef, (snapshot) => {
       const data = snapshot.val();
-      const list = data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : [];
-      setShifts(list);
+      setShifts(data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : []);
     });
 
-    // 4. ATTENDANCE (THÊM MỚI: Lắng nghe dữ liệu Chấm công)
+    // 4. ATTENDANCE
     const attRef = ref(db, 'attendance');
     const unsubAtt = onValue(attRef, (snapshot) => {
       const data = snapshot.val();
-      const list = data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : [];
-      setAttendanceLogs(list);
+      setAttendanceLogs(data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : []);
     });
 
-    return () => { 
-      unsubStaff(); 
-      unsubTasks();
-      unsubShifts();
-      unsubAtt();
+    // 5. FACILITY LOGS
+    const facilityRef = ref(db, 'facilityLogs');
+    const unsubFacility = onValue(facilityRef, (snapshot) => {
+      const data = snapshot.val();
+      setFacilityLogs(data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : []);
+    });
+
+    // 6. DISCIPLINES
+    const discTypeRef = ref(db, 'disciplineTypes');
+    const unsubDiscType = onValue(discTypeRef, (snapshot) => {
+      const data = snapshot.val();
+      setDisciplineTypes(data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : []);
+    });
+    
+    const discRecRef = ref(db, 'disciplineRecords');
+    const unsubDiscRec = onValue(discRecRef, (snapshot) => {
+      const data = snapshot.val();
+      setDisciplineRecords(data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : []);
+    });
+
+    return () => {
+      unsubStaff(); unsubTasks(); unsubShifts(); unsubAtt();
+      unsubFacility(); unsubDiscType(); unsubDiscRec();
     };
   }, []);
-
-  // --- SYNC LOCALSTORAGE ---
-  useEffect(() => { localStorage.setItem('disciplineTypes', JSON.stringify(disciplineTypes)); }, [disciplineTypes]);
-  useEffect(() => { localStorage.setItem('proposals', JSON.stringify(proposals)); }, [proposals]);
 
   // --- ACTIONS ---
 
   // Staff
-  const addStaff = (s) => {
-    const newId = Date.now().toString();
-    set(ref(db, 'staff/' + newId), { ...s, id: newId });
-  };
+  const addStaff = (s) => { const newId = Date.now().toString(); set(ref(db, 'staff/' + newId), { ...s, id: newId }); };
   const deleteStaff = (id) => remove(ref(db, 'staff/' + id));
   const updateStaffInfo = (id, updates) => update(ref(db, 'staff/' + id), updates);
-  const updatePassword = (id, newPass) => updateStaffInfo(id, { password: newPass });
 
   // Tasks
-  const addTask = (t) => {
-    const newId = Date.now().toString();
-    set(ref(db, 'tasks/' + newId), { 
-      ...t, 
-      id: newId, 
-      progress: 0, 
-      status: 'assigned',
-      createdDate: new Date().toISOString()
-    });
-  };
+  const addTask = (t) => { const newId = Date.now().toString(); set(ref(db, 'tasks/' + newId), { ...t, id: newId, progress: 0, status: 'assigned', createdDate: new Date().toISOString() }); };
   const updateTask = (taskId, newData) => update(ref(db, 'tasks/' + taskId), newData);
   const deleteTask = (taskId) => remove(ref(db, 'tasks/' + taskId));
+  const updateTaskProgress = (taskId, progress, reason) => update(ref(db, 'tasks/' + taskId), { progress, reason });
+  
+  // MỚI: Hàm kết thúc task để tính hiệu suất
+  const finishTask = (taskId) => {
+    update(ref(db, 'tasks/' + taskId), { 
+      status: 'completed',
+      finishedAt: new Date().toISOString() 
+    });
+  };
+
+  // Facility
+  const addFacilityLog = (log) => { const newId = Date.now().toString(); set(ref(db, 'facilityLogs/' + newId), { ...log, id: newId, timestamp: new Date().toISOString() }); };
 
   // Discipline
-  const addDisciplineType = (type) => setDisciplineTypes([...disciplineTypes, type]);
-  const removeDisciplineType = (type) => setDisciplineTypes(disciplineTypes.filter(t => t !== type));
-  const addProposal = (prop) => setProposals([...proposals, { ...prop, id: Date.now(), status: 'Pending' }]);
-  const updateProposalStatus = (id, status) => setProposals(proposals.map(p => p.id === id ? { ...p, status: status } : p));
-  const deleteProposal = (id) => setProposals(proposals.filter(p => p.id !== id));
+  const addDisciplineType = (typeObj) => { const newId = Date.now().toString(); set(ref(db, 'disciplineTypes/' + newId), { ...typeObj, id: newId }); };
+  const updateDisciplineTypeStatus = (id, status) => update(ref(db, 'disciplineTypes/' + id), { status });
+  const removeDisciplineType = (id) => remove(ref(db, 'disciplineTypes/' + id));
+  
+  const addDisciplineRecord = (record) => { const newId = Date.now().toString(); set(ref(db, 'disciplineRecords/' + newId), { ...record, id: newId, status: 'Active' }); };
+  const updateDisciplineRecordStatus = (id, status) => update(ref(db, 'disciplineRecords/' + id), { status });
+  const deleteDisciplineRecord = (id) => remove(ref(db, 'disciplineRecords/' + id));
 
-  // THÊM MỚI: Attendance Actions
-  const addAttendance = (log) => {
-    const newId = Date.now().toString();
-    set(ref(db, 'attendance/' + newId), { ...log, id: newId });
-  };
+  // Attendance
+  const addAttendance = (log) => { const newId = Date.now().toString(); set(ref(db, 'attendance/' + newId), { ...log, id: newId }); };
+  const updateAttendanceLog = (logId, updates) => { update(ref(db, 'attendance/' + logId), updates); };
 
   return (
     <DataContext.Provider value={{ 
-      staffList, addStaff, deleteStaff, updatePassword, updateStaffInfo,
-      tasks, addTask, updateTask, deleteTask,
-      disciplineTypes, addDisciplineType, removeDisciplineType,
-      proposals, addProposal, updateProposalStatus, deleteProposal,
-      // QUAN TRỌNG: Phải export các biến này ra
-      shifts, attendanceLogs, addAttendance
+      staffList, addStaff, deleteStaff, updateStaffInfo,
+      tasks, addTask, updateTask, deleteTask, updateTaskProgress, finishTask, // Export hàm này
+      shifts, attendanceLogs, addAttendance, updateAttendanceLog,
+      facilityLogs, addFacilityLog,
+      disciplineTypes, addDisciplineType, updateDisciplineTypeStatus, removeDisciplineType,
+      disciplineRecords, addDisciplineRecord, updateDisciplineRecordStatus, deleteDisciplineRecord
     }}>
       {children}
     </DataContext.Provider>
