@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 const DisciplineManager = () => {
   const { user } = useAuth();
   const { 
-      disciplineTypes, addDisciplineType, updateDisciplineTypeStatus, softDeleteDisciplineType,
+      disciplineTypes, addDisciplineType, updateDisciplineTypeStatus, softDeleteDisciplineType, proposeDeleteDisciplineType,
       disciplineRecords, updateDisciplineRecordStatus, deleteDisciplineRecord,
       staffList 
   } = useData();
@@ -19,7 +19,6 @@ const DisciplineManager = () => {
   // --- LOGIC HÌNH THỨC KỶ LUẬT ---
   const handleAddType = (e) => {
       e.preventDefault();
-      // Op đề xuất -> Pending, Reg/Chief -> Active
       const status = isOp ? 'Pending' : 'Active';
       addDisciplineType({ 
           name: newType, 
@@ -29,15 +28,25 @@ const DisciplineManager = () => {
       setNewType('');
   };
 
-  // MỚI: Xử lý xóa hình thức kỷ luật (Chỉ Chief)
-  const handleDeleteType = (id) => {
-      const reason = window.prompt("Nhập lý do xóa hình thức kỷ luật này:");
+  // MỚI: Regulatory Admin đề xuất xóa
+  const handleProposeDelete = (id) => {
+      const reason = window.prompt("Nhập lý do đề xuất xóa:");
       if (reason) {
-          softDeleteDisciplineType(id, {
-              deletedBy: user.name || user.username,
-              deleteReason: reason
+          proposeDeleteDisciplineType(id, {
+              reason: reason,
+              by: user.name || user.username
           });
-          alert("Đã xóa thành công!");
+          alert("Đã gửi đề xuất xóa!");
+      }
+  };
+
+  // MỚI: Chief Admin duyệt xóa (chỉ khi có đề xuất)
+  const handleApproveDelete = (type) => {
+      if(window.confirm(`Xác nhận xóa hình thức này?\nLý do đề xuất: ${type.deleteProposalReason}`)) {
+          softDeleteDisciplineType(type.id, {
+              deletedBy: user.name || user.username,
+              deleteReason: type.deleteProposalReason // Sử dụng lý do đã đề xuất
+          });
       }
   };
 
@@ -54,7 +63,7 @@ const DisciplineManager = () => {
       }
   };
 
-  // Lọc danh sách hiển thị ở mục 1 (Chỉ hiện cái chưa xóa)
+  // Lọc danh sách hiện hành (chưa bị xóa mềm)
   const activeDisciplineTypes = disciplineTypes.filter(d => d.status !== 'Deleted');
 
   return (
@@ -63,40 +72,67 @@ const DisciplineManager = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '20px' }}>
           
-          {/* CỘT 1: DANH MỤC HÌNH THỨC (HIỆN HÀNH) */}
+          {/* CỘT 1: DANH MỤC HÌNH THỨC */}
           <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
              <h4 style={{color: '#003366'}}>1. Danh mục hình thức xử lý (Hiện hành)</h4>
-             <ul style={{ listStyle: 'none', padding: 0 }}>
-                {activeDisciplineTypes.map(d => (
-                    <li key={d.id} style={{ padding: '10px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>
-                            {d.name} 
-                            <span style={{ fontSize: '0.7rem', marginLeft: '10px', padding: '2px 6px', borderRadius: '4px', background: d.status==='Active'?'#ecfdf5':'#fff7ed', color: d.status==='Active'?'green':'orange' }}>
-                                {d.status === 'Active' ? 'Đã duyệt' : 'Chờ duyệt'}
-                            </span>
-                        </span>
-                        
-                        {/* Action Buttons */}
-                        <div style={{display:'flex', gap:'5px'}}>
-                            {/* Reg Admin duyệt đề xuất của Op */}
-                            {isReg && d.status === 'Pending' && (
-                                <>
-                                    <button onClick={() => updateDisciplineTypeStatus(d.id, 'Active')} style={{color: 'white', background:'green', border:'none', padding:'2px 5px', borderRadius:'3px', cursor:'pointer'}}>✓</button>
-                                    <button onClick={() => updateDisciplineTypeStatus(d.id, 'Rejected')} style={{color: 'white', background:'red', border:'none', padding:'2px 5px', borderRadius:'3px', cursor:'pointer'}}>✕</button>
-                                </>
-                            )}
-                            
-                            {/* MỚI: Chief Admin xóa hình thức đã ban hành */}
-                            {isChief && (
-                                <button onClick={() => handleDeleteType(d.id)} style={{color: 'white', background:'#ef4444', border:'none', padding:'4px 8px', borderRadius:'3px', cursor:'pointer', fontSize:'0.75rem', fontWeight:'bold'}}>
-                                    Xóa
-                                </button>
-                            )}
-                        </div>
-                    </li>
-                ))}
-             </ul>
-             {(isOp || isReg || isChief) && (
+             <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse', marginBottom: '15px' }}>
+                <thead>
+                    <tr style={{textAlign:'left', borderBottom: '1px solid #eee', color:'#666'}}>
+                        <th style={{padding:'8px', width: '40px'}}>STT</th> {/* MỚI: Cột STT */}
+                        <th style={{padding:'8px'}}>Hình thức</th>
+                        <th style={{padding:'8px'}}>Trạng thái</th>
+                        <th style={{padding:'8px', textAlign:'right'}}>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {activeDisciplineTypes.map((d, index) => (
+                        <tr key={d.id} style={{ borderBottom: '1px solid #f9f9f9' }}>
+                            <td style={{padding:'8px', textAlign:'center'}}>{index + 1}</td>
+                            <td style={{padding:'8px'}}>
+                                {d.name}
+                                {/* Hiển thị trạng thái đang chờ xóa */}
+                                {d.isDeleteProposed && (
+                                    <div style={{fontSize:'0.75rem', color:'#d97706', marginTop:'4px'}}>
+                                        ⚠️ Đề xuất xóa: {d.deleteProposalReason}
+                                    </div>
+                                )}
+                            </td>
+                            <td style={{padding:'8px'}}>
+                                <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', background: d.status==='Active'?'#ecfdf5':'#fff7ed', color: d.status==='Active'?'green':'orange' }}>
+                                    {d.status === 'Active' ? 'Đã duyệt' : 'Chờ duyệt'}
+                                </span>
+                            </td>
+                            <td style={{padding:'8px', textAlign:'right'}}>
+                                <div style={{display:'flex', gap:'5px', justifyContent:'flex-end'}}>
+                                    {/* Reg duyệt đề xuất thêm */}
+                                    {isReg && d.status === 'Pending' && (
+                                        <>
+                                            <button onClick={() => updateDisciplineTypeStatus(d.id, 'Active')} style={{color: 'green', border:'1px solid green', background:'none', borderRadius:'3px', cursor:'pointer', fontSize:'0.7rem'}}>✓</button>
+                                            <button onClick={() => updateDisciplineTypeStatus(d.id, 'Rejected')} style={{color: 'red', border:'1px solid red', background:'none', borderRadius:'3px', cursor:'pointer', fontSize:'0.7rem'}}>✕</button>
+                                        </>
+                                    )}
+                                    
+                                    {/* MỚI: Reg đề xuất xóa */}
+                                    {isReg && d.status === 'Active' && !d.isDeleteProposed && (
+                                        <button onClick={() => handleProposeDelete(d.id)} style={{fontSize:'0.7rem', background:'#fee2e2', color:'#b91c1c', border:'none', padding:'4px 8px', borderRadius:'4px', cursor:'pointer'}}>
+                                            Đề xuất xóa
+                                        </button>
+                                    )}
+
+                                    {/* MỚI: Chief duyệt xóa (chỉ khi có đề xuất) */}
+                                    {isChief && d.isDeleteProposed && (
+                                        <button onClick={() => handleApproveDelete(d)} style={{fontSize:'0.7rem', background:'#b91c1c', color:'white', border:'none', padding:'4px 8px', borderRadius:'4px', cursor:'pointer', fontWeight:'bold'}}>
+                                            Duyệt xóa
+                                        </button>
+                                    )}
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+             </table>
+
+             {(isOp || isReg) && (
                  <form onSubmit={handleAddType} style={{ marginTop: '10px', display: 'flex', gap: '5px' }}>
                     <input value={newType} onChange={e => setNewType(e.target.value)} placeholder={isOp ? "Đề xuất hình thức..." : "Thêm hình thức..."} style={{ flex: 1, padding: '8px', borderRadius:'4px', border:'1px solid #ccc' }} />
                     <button type="submit" style={{ padding: '8px 15px', background:'#333', color:'white', border:'none', borderRadius:'4px', cursor:'pointer' }}>{isOp ? 'Đề xuất' : 'Thêm'}</button>
@@ -104,22 +140,32 @@ const DisciplineManager = () => {
              )}
           </div>
 
-          {/* CỘT 2: HỒ SƠ VI PHẠM (GIỮ NGUYÊN) */}
+          {/* CỘT 2: HỒ SƠ VI PHẠM */}
           <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
              <h4 style={{color: '#003366'}}>2. Hồ sơ nhân sự vi phạm</h4>
              <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
                 <thead>
-                    <tr style={{textAlign:'left', borderBottom: '2px solid #eee'}}><th>Nhân sự</th><th>Vi phạm</th><th>Hình thức</th><th>Xử lý</th></tr>
+                    <tr style={{textAlign:'left', borderBottom: '2px solid #eee', color:'#666'}}>
+                        <th style={{padding:'8px'}}>Ngày vi phạm</th> {/* MỚI: Cột ngày */}
+                        <th style={{padding:'8px'}}>Nhân sự</th>
+                        <th style={{padding:'8px'}}>Vi phạm</th>
+                        <th style={{padding:'8px'}}>Hình thức</th>
+                        <th style={{padding:'8px'}}>Xử lý</th>
+                    </tr>
                 </thead>
                 <tbody>
                     {disciplineRecords.map(rec => {
                         const staff = staffList.find(s => s.id === rec.staffId);
                         return (
                             <tr key={rec.id} style={{ borderBottom: '1px solid #eee' }}>
-                                <td style={{padding:'10px 0'}}>{staff?.name}</td>
-                                <td>{rec.violation}</td>
-                                <td style={{color:'#b91c1c', fontWeight:'bold'}}>{rec.penaltyName}</td>
-                                <td>
+                                <td style={{padding:'8px', color:'#555'}}>
+                                    {/* Hiển thị ngày vi phạm, fallback nếu chưa có dữ liệu */}
+                                    {rec.date ? new Date(rec.date).toLocaleDateString('vi-VN') : (rec.time ? new Date(rec.time).toLocaleDateString('vi-VN') : '-')}
+                                </td>
+                                <td style={{padding:'8px'}}>{staff?.name}</td>
+                                <td style={{padding:'8px'}}>{rec.violation}</td>
+                                <td style={{padding:'8px', color:'#b91c1c', fontWeight:'bold'}}>{rec.penaltyName}</td>
+                                <td style={{padding:'8px'}}>
                                     {rec.status === 'Active' && isReg && (
                                         <button onClick={() => handleRequestRemoval(rec.id)} style={{fontSize:'0.75rem', background:'orange', color:'white', border:'none', padding:'3px 6px', borderRadius:'3px', cursor:'pointer'}}>Đề xuất xóa</button>
                                     )}
@@ -138,7 +184,7 @@ const DisciplineManager = () => {
           </div>
       </div>
 
-      {/* MỚI: MỤC 3 - DANH MỤC HIỆU CHỈNH (CHỈ DÀNH CHO CHIEF HOẶC REG) */}
+      {/* MỤC 3: DANH MỤC HIỆU CHỈNH (CHIEF/REG) */}
       {(isChief || isReg) && (
           <div style={{ marginTop: '30px', background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
               <h4 style={{color: '#003366', marginTop: 0}}>3. Danh mục các hình thức kỷ luật đã được hiệu chỉnh</h4>

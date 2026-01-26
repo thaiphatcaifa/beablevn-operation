@@ -9,7 +9,8 @@ const FacilityCheck = () => {
   const [checkType, setCheckType] = useState('Đầu giờ'); 
   const [selectedArea, setSelectedArea] = useState('');
 
-  const checklistConfig = [
+  // --- CẤU HÌNH CHECKLIST THEO KHU VỰC (MỚI) ---
+  const defaultChecklist = [
     { item: 'Máy lạnh', options: ['Mát', 'Chảy nước', 'Không lạnh', 'Hỏng'], goodStatus: 'Mát' },
     { item: 'Máy chiếu', options: ['Tốt', 'Lệch khung', 'Hư hỏng'], goodStatus: 'Tốt' },
     { item: 'Đèn chiếu sáng', options: ['Tốt', 'Hư hỏng'], goodStatus: 'Tốt' },
@@ -19,11 +20,61 @@ const FacilityCheck = () => {
     { item: 'Cây cối', options: ['Xanh tốt', 'Héo úa'], goodStatus: 'Xanh tốt' }
   ];
 
+  const getChecklistForArea = (area) => {
+      // 1. CANTEEN (Đã xóa Máy lạnh, Máy chiếu, Màn hình CC. Thêm Sân, Quạt, Quầy, Kệ)
+      if (area === 'Canteen') {
+          return [
+              { item: 'Đèn chiếu sáng', options: ['Tốt', 'Hư hỏng'], goodStatus: 'Tốt' },
+              { item: 'Bàn ghế', options: ['Sạch & Tốt', 'Hư hỏng'], goodStatus: 'Sạch & Tốt' },
+              { item: 'Loa', options: ['Còn pin', 'Hết pin', 'Rè'], goodStatus: 'Còn pin' },
+              { item: 'Cây cối', options: ['Xanh tốt', 'Héo úa'], goodStatus: 'Xanh tốt' },
+              
+              { item: 'Sân', options: ['Sạch sẽ', 'Chưa đổ rác', 'Bừa bộn'], goodStatus: 'Sạch sẽ' },
+              { item: 'Quạt', options: ['Tốt', 'Bám bụi', 'Hư hỏng'], goodStatus: 'Tốt' },
+              { item: 'Quầy pha chế', options: ['Sạch sẽ', 'Chưa cất nguyên liệu', 'Chưa rút điện', 'Bừa bộn'], goodStatus: 'Sạch sẽ' },
+              { item: 'Kệ nguyên liệu', options: ['Sạch sẽ', 'Chưa lau dọn'], goodStatus: 'Sạch sẽ' }
+          ];
+      }
+      
+      // 2. KHO TẦNG 3 (Đã xóa Máy chiếu, Màn hình CC. Thêm Sàn, Kệ tủ, Tủ mát, Tủ đông)
+      if (area === 'Kho Tầng 3') {
+          return [
+              { item: 'Máy lạnh', options: ['Mát', 'Chảy nước', 'Không lạnh', 'Hỏng'], goodStatus: 'Mát' },
+              { item: 'Đèn chiếu sáng', options: ['Tốt', 'Hư hỏng'], goodStatus: 'Tốt' },
+              { item: 'Bàn ghế', options: ['Sạch & Tốt', 'Hư hỏng'], goodStatus: 'Sạch & Tốt' },
+              { item: 'Loa', options: ['Còn pin', 'Hết pin', 'Rè'], goodStatus: 'Còn pin' },
+              { item: 'Cây cối', options: ['Xanh tốt', 'Héo úa'], goodStatus: 'Xanh tốt' },
+              
+              { item: 'Sàn', options: ['Sạch sẽ', 'Chưa lau dọn'], goodStatus: 'Sạch sẽ' },
+              { item: 'Kệ tủ', options: ['Sạch sẽ', 'Bừa bộn'], goodStatus: 'Sạch sẽ' },
+              { item: 'Tủ mát', options: ['Đã kiểm HSD và lau dọn', 'Chưa kiểm HSD', 'Chưa lau dọn'], goodStatus: 'Đã kiểm HSD và lau dọn' },
+              { item: 'Tủ đông', options: ['Đã kiểm HSD', 'Chưa kiểm'], goodStatus: 'Đã kiểm HSD' }
+          ];
+      }
+
+      // 3. PHÒNG LAB (Đã xóa Máy chiếu, Màn hình CC, Loa. Thêm PC, Tai nghe, Phím)
+      if (area === 'Phòng Lab') {
+          return [
+              { item: 'Máy lạnh', options: ['Mát', 'Chảy nước', 'Không lạnh', 'Hỏng'], goodStatus: 'Mát' },
+              { item: 'Đèn chiếu sáng', options: ['Tốt', 'Hư hỏng'], goodStatus: 'Tốt' },
+              { item: 'Bàn ghế', options: ['Sạch & Tốt', 'Hư hỏng'], goodStatus: 'Sạch & Tốt' },
+              { item: 'Cây cối', options: ['Xanh tốt', 'Héo úa'], goodStatus: 'Xanh tốt' },
+              
+              { item: 'Máy PC', options: ['Tốt', 'Hư hỏng', 'Mất'], goodStatus: 'Tốt' },
+              { item: 'Tai nghe', options: ['Tốt', 'Hư hỏng', 'Mất'], goodStatus: 'Tốt' },
+              { item: 'Bàn phím', options: ['Tốt', 'Hư hỏng', 'Mất'], goodStatus: 'Tốt' }
+          ];
+      }
+
+      return defaultChecklist;
+  };
+
   const areas = ['Phòng 1', 'Phòng 2', 'Phòng 3', 'Phòng Lab', 'Sảnh OA', 'CC Tầng G', 'Kho Tầng 3', 'Canteen'];
 
   const [tempData, setTempData] = useState({});
   const currentKey = `${checkType}_${selectedArea}`;
   const currentStatusMap = useMemo(() => tempData[currentKey] || {}, [tempData, currentKey]);
+  const currentChecklist = useMemo(() => getChecklistForArea(selectedArea), [selectedArea]);
 
   const handleStatusChange = (item, status) => {
     setTempData(prev => ({
@@ -37,14 +88,14 @@ const FacilityCheck = () => {
     if (!selectedArea) return alert("Vui lòng chọn khu vực!");
 
     // CHECK ALL ITEMS logic
-    const missingItems = checklistConfig.filter(config => !currentStatusMap[config.item]);
+    const missingItems = currentChecklist.filter(config => !currentStatusMap[config.item]);
     if (missingItems.length > 0) {
       alert(`Bạn chưa kiểm tra: ${missingItems.map(c => c.item).join(', ')}. Vui lòng hoàn thành hết trước khi gửi!`);
       return;
     }
 
     // Submit to server
-    checklistConfig.forEach(config => {
+    currentChecklist.forEach(config => {
       addFacilityLog({
         staffName: user.name,
         type: checkType,
@@ -97,7 +148,7 @@ const FacilityCheck = () => {
               </tr>
             </thead>
             <tbody>
-              {checklistConfig.map((config) => (
+              {currentChecklist.map((config) => (
                 <tr key={config.item}>
                   <td style={{ fontWeight: '500' }}>{config.item}</td>
                   <td>

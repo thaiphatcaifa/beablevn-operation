@@ -13,7 +13,7 @@ export const DataProvider = ({ children }) => {
   
   const [facilityLogs, setFacilityLogs] = useState([]); 
   
-  // Discipline Types: { id, name, status, createdBy, createdAt, deletedBy, deletedAt, deleteReason }
+  // Discipline Types: { id, name, status, createdBy, createdAt, deletedBy, deletedAt, deleteReason, ... }
   const [disciplineTypes, setDisciplineTypes] = useState([]); 
   const [disciplineRecords, setDisciplineRecords] = useState([]);
 
@@ -102,18 +102,28 @@ export const DataProvider = ({ children }) => {
       set(ref(db, 'disciplineTypes/' + newId), { 
           ...typeObj, 
           id: newId,
-          createdAt: new Date().toISOString() // Thêm ngày tạo
+          createdAt: new Date().toISOString() 
       }); 
   };
   const updateDisciplineTypeStatus = (id, status) => update(ref(db, 'disciplineTypes/' + id), { status });
   
-  // MỚI: Xóa mềm (Soft Delete) hình thức kỷ luật có lý do
+  // Soft delete (Lưu lịch sử xóa)
   const softDeleteDisciplineType = (id, deleteInfo) => {
       update(ref(db, 'disciplineTypes/' + id), {
           status: 'Deleted',
           deletedBy: deleteInfo.deletedBy,
           deleteReason: deleteInfo.deleteReason,
           deletedAt: new Date().toISOString()
+      });
+  };
+
+  // MỚI: Đề xuất xóa (Dành cho Regulatory Admin)
+  const proposeDeleteDisciplineType = (id, info) => {
+      update(ref(db, 'disciplineTypes/' + id), {
+          isDeleteProposed: true,
+          deleteProposalReason: info.reason,
+          deleteProposedBy: info.by,
+          deleteProposedAt: new Date().toISOString()
       });
   };
 
@@ -132,7 +142,7 @@ export const DataProvider = ({ children }) => {
       tasks, addTask, updateTask, deleteTask, updateTaskProgress, finishTask,
       shifts, attendanceLogs, addAttendance, updateAttendanceLog,
       facilityLogs, addFacilityLog,
-      disciplineTypes, addDisciplineType, updateDisciplineTypeStatus, softDeleteDisciplineType, // Export hàm mới
+      disciplineTypes, addDisciplineType, updateDisciplineTypeStatus, softDeleteDisciplineType, proposeDeleteDisciplineType, // Export hàm mới
       disciplineRecords, addDisciplineRecord, updateDisciplineRecordStatus, deleteDisciplineRecord
     }}>
       {children}
