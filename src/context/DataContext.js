@@ -10,7 +10,10 @@ export const DataProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [attendanceLogs, setAttendanceLogs] = useState([]);
+  
   const [facilityLogs, setFacilityLogs] = useState([]); 
+  
+  // Discipline Types: { id, name, status, createdBy, createdAt, deletedBy, deletedAt, deleteReason }
   const [disciplineTypes, setDisciplineTypes] = useState([]); 
   const [disciplineRecords, setDisciplineRecords] = useState([]);
 
@@ -83,7 +86,6 @@ export const DataProvider = ({ children }) => {
   const deleteTask = (taskId) => remove(ref(db, 'tasks/' + taskId));
   const updateTaskProgress = (taskId, progress, reason) => update(ref(db, 'tasks/' + taskId), { progress, reason });
   
-  // MỚI: Hàm kết thúc task để tính hiệu suất
   const finishTask = (taskId) => {
     update(ref(db, 'tasks/' + taskId), { 
       status: 'completed',
@@ -94,11 +96,28 @@ export const DataProvider = ({ children }) => {
   // Facility
   const addFacilityLog = (log) => { const newId = Date.now().toString(); set(ref(db, 'facilityLogs/' + newId), { ...log, id: newId, timestamp: new Date().toISOString() }); };
 
-  // Discipline
-  const addDisciplineType = (typeObj) => { const newId = Date.now().toString(); set(ref(db, 'disciplineTypes/' + newId), { ...typeObj, id: newId }); };
+  // Discipline Types
+  const addDisciplineType = (typeObj) => { 
+      const newId = Date.now().toString(); 
+      set(ref(db, 'disciplineTypes/' + newId), { 
+          ...typeObj, 
+          id: newId,
+          createdAt: new Date().toISOString() // Thêm ngày tạo
+      }); 
+  };
   const updateDisciplineTypeStatus = (id, status) => update(ref(db, 'disciplineTypes/' + id), { status });
-  const removeDisciplineType = (id) => remove(ref(db, 'disciplineTypes/' + id));
   
+  // MỚI: Xóa mềm (Soft Delete) hình thức kỷ luật có lý do
+  const softDeleteDisciplineType = (id, deleteInfo) => {
+      update(ref(db, 'disciplineTypes/' + id), {
+          status: 'Deleted',
+          deletedBy: deleteInfo.deletedBy,
+          deleteReason: deleteInfo.deleteReason,
+          deletedAt: new Date().toISOString()
+      });
+  };
+
+  // Discipline Records
   const addDisciplineRecord = (record) => { const newId = Date.now().toString(); set(ref(db, 'disciplineRecords/' + newId), { ...record, id: newId, status: 'Active' }); };
   const updateDisciplineRecordStatus = (id, status) => update(ref(db, 'disciplineRecords/' + id), { status });
   const deleteDisciplineRecord = (id) => remove(ref(db, 'disciplineRecords/' + id));
@@ -110,10 +129,10 @@ export const DataProvider = ({ children }) => {
   return (
     <DataContext.Provider value={{ 
       staffList, addStaff, deleteStaff, updateStaffInfo,
-      tasks, addTask, updateTask, deleteTask, updateTaskProgress, finishTask, // Export hàm này
+      tasks, addTask, updateTask, deleteTask, updateTaskProgress, finishTask,
       shifts, attendanceLogs, addAttendance, updateAttendanceLog,
       facilityLogs, addFacilityLog,
-      disciplineTypes, addDisciplineType, updateDisciplineTypeStatus, removeDisciplineType,
+      disciplineTypes, addDisciplineType, updateDisciplineTypeStatus, softDeleteDisciplineType, // Export hàm mới
       disciplineRecords, addDisciplineRecord, updateDisciplineRecordStatus, deleteDisciplineRecord
     }}>
       {children}
