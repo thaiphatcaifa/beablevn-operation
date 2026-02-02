@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getDatabase } from "firebase/database"; // Thêm dòng này để dùng Realtime Database
+import { getDatabase } from "firebase/database"; 
+import { getAuth } from "firebase/auth"; // 1. Import thêm getAuth
 
 const firebaseConfig = {
   apiKey: "AIzaSyCcDf-QwrU2zkkQan49gSdq6AkjY5JI2rQ",
@@ -13,4 +14,5 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getDatabase(app); // Xuất database để các file khác sử dụng
+export const db = getDatabase(app); 
+export const auth = getAuth(app); // 2. Export biến auth
