@@ -43,6 +43,7 @@ const AdminLayout = () => {
   if (!user) return <Navigate to="/" />;
 
   const isActive = (path) => location.pathname.includes(path);
+  const isScheduler = user?.role === 'scheduler';
 
   // Style cho Sidebar Desktop
   const sidebarLinkStyle = (path) => ({
@@ -98,18 +99,26 @@ const AdminLayout = () => {
         </div>
         
         <nav style={{ flex: 1, padding: '24px' }}>
-          <Link to="/admin/staff-manager" style={sidebarLinkStyle('staff-manager')}>
-            <Icons.Staff active={isActive('staff-manager')} /> <span>Nhân sự</span>
-          </Link>
+          {!isScheduler && (
+             <Link to="/admin/staff-manager" style={sidebarLinkStyle('staff-manager')}>
+                <Icons.Staff active={isActive('staff-manager')} /> <span>Nhân sự</span>
+             </Link>
+          )}
+          
           <Link to="/admin/task-manager" style={sidebarLinkStyle('task-manager')}>
             <Icons.Task active={isActive('task-manager')} /> <span>Nhiệm vụ</span>
           </Link>
-          <Link to="/admin/discipline-manager" style={sidebarLinkStyle('discipline-manager')}>
-            <Icons.Discipline active={isActive('discipline-manager')} /> <span>Kỷ luật</span>
-          </Link>
-          <Link to="/admin/reports" style={sidebarLinkStyle('reports')}>
-            <Icons.Report active={isActive('reports')} /> <span>Báo cáo</span>
-          </Link>
+
+          {!isScheduler && (
+             <>
+               <Link to="/admin/discipline-manager" style={sidebarLinkStyle('discipline-manager')}>
+                  <Icons.Discipline active={isActive('discipline-manager')} /> <span>Kỷ luật</span>
+               </Link>
+               <Link to="/admin/reports" style={sidebarLinkStyle('reports')}>
+                  <Icons.Report active={isActive('reports')} /> <span>Báo cáo</span>
+               </Link>
+             </>
+          )}
         </nav>
 
         <div style={{ padding: '24px', borderTop: '1px solid #f3f4f6' }}>
@@ -135,22 +144,28 @@ const AdminLayout = () => {
 
       {/* 4. MOBILE BOTTOM NAV (MOBILE ONLY) */}
       <nav className="admin-bottom-nav">
-        <Link to="/admin/staff-manager" style={mobileNavItemStyle('staff-manager')}>
-            <Icons.Staff active={isActive('staff-manager')} />
-            <span style={{ fontSize: '0.65rem', marginTop: '4px', fontWeight: isActive('staff-manager') ? '600' : '500' }}>Nhân sự</span>
-        </Link>
+        {!isScheduler && (
+            <Link to="/admin/staff-manager" style={mobileNavItemStyle('staff-manager')}>
+                <Icons.Staff active={isActive('staff-manager')} />
+                <span style={{ fontSize: '0.65rem', marginTop: '4px', fontWeight: isActive('staff-manager') ? '600' : '500' }}>Nhân sự</span>
+            </Link>
+        )}
         <Link to="/admin/task-manager" style={mobileNavItemStyle('task-manager')}>
             <Icons.Task active={isActive('task-manager')} />
             <span style={{ fontSize: '0.65rem', marginTop: '4px', fontWeight: isActive('task-manager') ? '600' : '500' }}>Nhiệm vụ</span>
         </Link>
-        <Link to="/admin/discipline-manager" style={mobileNavItemStyle('discipline-manager')}>
-            <Icons.Discipline active={isActive('discipline-manager')} />
-            <span style={{ fontSize: '0.65rem', marginTop: '4px', fontWeight: isActive('discipline-manager') ? '600' : '500' }}>Kỷ luật</span>
-        </Link>
-        <Link to="/admin/reports" style={mobileNavItemStyle('reports')}>
-            <Icons.Report active={isActive('reports')} />
-            <span style={{ fontSize: '0.65rem', marginTop: '4px', fontWeight: isActive('reports') ? '600' : '500' }}>Báo cáo</span>
-        </Link>
+        {!isScheduler && (
+           <>
+              <Link to="/admin/discipline-manager" style={mobileNavItemStyle('discipline-manager')}>
+                  <Icons.Discipline active={isActive('discipline-manager')} />
+                  <span style={{ fontSize: '0.65rem', marginTop: '4px', fontWeight: isActive('discipline-manager') ? '600' : '500' }}>Kỷ luật</span>
+              </Link>
+              <Link to="/admin/reports" style={mobileNavItemStyle('reports')}>
+                  <Icons.Report active={isActive('reports')} />
+                  <span style={{ fontSize: '0.65rem', marginTop: '4px', fontWeight: isActive('reports') ? '600' : '500' }}>Báo cáo</span>
+              </Link>
+           </>
+        )}
       </nav>
     </div>
   );

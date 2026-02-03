@@ -115,6 +115,7 @@ const StaffManager = () => {
           case 'chief': return 'Chief Admin';
           case 'reg': return 'Regulatory Admin';
           case 'op': return 'Operational Admin';
+          case 'scheduler': return 'Scheduler'; // MỚI
           default: return 'Staff';
       }
   };
@@ -241,6 +242,7 @@ const StaffManager = () => {
                               <option value="op">Operational Admin</option>
                               <option value="reg">Regulatory Admin</option>
                               <option value="chief">Chief Admin</option>
+                              <option value="scheduler">Scheduler (Lên lịch)</option> {/* MỚI */}
                           </select>
                           <div style={{display:'flex', flexWrap:'wrap', gap:'6px', marginTop:'8px'}}>
                               {['ST','TT','CCS','CCO','CCA','FFM','FFS','FFA'].map(r => (

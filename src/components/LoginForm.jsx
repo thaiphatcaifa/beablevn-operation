@@ -24,7 +24,7 @@ const LoginForm = () => {
             // --- LOGIC CŨ: KIỂM TRA TRONG DANH SÁCH NHÂN SỰ ---
             const safeStaffList = Array.isArray(staffList) ? staffList : [];
 
-            // Tìm tài khoản khớp username VÀ password (như code cũ)
+            // Tìm tài khoản khớp username VÀ password
             // formData.id ở đây đóng vai trò là username
             const account = safeStaffList.find(s => s.username === formData.id && s.password === formData.password);
 
@@ -39,10 +39,16 @@ const LoginForm = () => {
                 // Đăng nhập thành công: Lưu thông tin vào AuthContext
                 login(account);
 
-                // Điều hướng phân quyền (Logic cũ)
-                if (['chief', 'reg', 'op'].includes(account.role)) {
-                    navigate('/admin/staff-manager');
+                // --- SỬA LỖI TẠI ĐÂY: Thêm 'scheduler' vào danh sách Admin ---
+                if (['chief', 'reg', 'op', 'scheduler'].includes(account.role)) {
+                    // Nếu là Scheduler, chuyển thẳng đến Task Manager (vì họ không có quyền vào Staff Manager)
+                    if (account.role === 'scheduler') {
+                        navigate('/admin/task-manager');
+                    } else {
+                        navigate('/admin/staff-manager');
+                    }
                 } else {
+                    // Các vai trò khác (Staff) chuyển về trang chấm công
                     navigate('/staff/attendance');
                 }
             } else {
