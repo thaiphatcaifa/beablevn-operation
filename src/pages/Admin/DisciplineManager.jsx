@@ -2,238 +2,332 @@ import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
+// --- ICONS ---
+const Icons = {
+  Add: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>),
+  Trash: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>),
+  Restore: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>),
+  Check: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>),
+  XMark: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>),
+  ProposeDelete: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>)
+};
+
 const DisciplineManager = () => {
   const { user } = useAuth();
   const { 
-      disciplineTypes, addDisciplineType, updateDisciplineTypeStatus, softDeleteDisciplineType, proposeDeleteDisciplineType,
-      disciplineRecords, updateDisciplineRecordStatus, deleteDisciplineRecord,
-      staffList 
+    disciplineTypes, addDisciplineType, updateDisciplineTypeStatus, 
+    softDeleteDisciplineType, proposeDeleteDisciplineType,
+    disciplineRecords, staffList 
   } = useData();
-  
-  const [newType, setNewType] = useState('');
 
-  const isOp = user.role === 'op';
-  const isReg = user.role === 'reg';
-  const isChief = user.role === 'chief';
+  // --- CONSTANTS ---
+  const DISC_LEVELS = [
+      "1. Nhắc nhở",
+      "2. Khiển trách",
+      "3. Cảnh cáo",
+      "4. Xem xét cách chức",
+      "5. Xem xét sa thải"
+  ];
 
-  // --- LOGIC HÌNH THỨC KỶ LUẬT ---
-  const handleAddType = (e) => {
+  // State cho form tạo mới
+  const [newType, setNewType] = useState({ 
+      name: '', 
+      description: '', 
+      level: DISC_LEVELS[0]
+  });
+
+  // --- PHÂN QUYỀN ---
+  const isChief = user?.role === 'chief';
+  const isReg = user?.role === 'reg';
+  const isOp = user?.role === 'op'; // Operational Admin
+  const canApprove = isChief || isReg; // Người có quyền duyệt (Reg/Chief)
+
+  // --- LỌC DANH SÁCH (MỤC 1) ---
+  const displayedTypes = disciplineTypes.filter(t => {
+      // 1. Không hiển thị các mục đã xóa mềm (Deleted)
+      if (t.status === 'Deleted') return false;
+
+      // 2. Operational Admin:
+      // - Thấy Active (để áp dụng cho nhân sự)
+      // - Thấy Pending/Suspended DO MÌNH TẠO (để theo dõi tình trạng)
+      if (isOp) {
+          return t.status === 'Active' || t.createdBy === user.username;
+      }
+
+      // 3. Reg/Chief: Thấy tất cả (Active, Pending, Suspended) để quản lý
+      return true;
+  });
+
+  const deletedTypes = disciplineTypes.filter(t => t.status === 'Deleted');
+
+  // --- HANDLERS ---
+  const handleAdd = (e) => {
       e.preventDefault();
-      const status = isOp ? 'Pending' : 'Active';
-      addDisciplineType({ 
-          name: newType, 
-          status, 
-          createdBy: user.name || user.username 
+      if (!newType.name) return alert("Vui lòng nhập tên hình thức!");
+      
+      // LOGIC TRẠNG THÁI KHI TẠO MỚI
+      // - Op Admin: 'Pending' (Chờ duyệt)
+      // - Reg/Chief: 'Active' (Đã duyệt)
+      const initialStatus = isOp ? 'Pending' : 'Active';
+
+      addDisciplineType({
+          ...newType,
+          status: initialStatus,
+          createdBy: user.username,
+          createdAt: new Date().toISOString()
       });
-      setNewType('');
+      
+      setNewType({ name: '', description: '', level: DISC_LEVELS[0] });
+      alert(isOp ? "Đã gửi đề xuất hình thức kỷ luật!" : "Đã ban hành hình thức kỷ luật mới!");
   };
 
-  // MỚI: Regulatory Admin đề xuất xóa
-  const handleProposeDelete = (id) => {
-      const reason = window.prompt("Nhập lý do đề xuất xóa:");
-      if (reason) {
-          proposeDeleteDisciplineType(id, {
+  // Xử lý Duyệt / Đình chỉ (Dành cho Reg/Chief)
+  const handleApprove = (id) => {
+      if(window.confirm("Phê duyệt hình thức này?")) {
+          updateDisciplineTypeStatus(id, 'Active');
+      }
+  };
+
+  const handleReject = (id) => {
+      if(window.confirm("Đình chỉ (Từ chối) hình thức này?")) {
+          updateDisciplineTypeStatus(id, 'Suspended');
+      }
+  };
+
+  // Xử lý Xóa / Đề xuất Xóa
+  const handleDeleteAction = (type) => {
+      // 1. Logic cho Reg Admin: Đề xuất xóa
+      if (isReg) {
+          const reason = window.prompt("Nhập lý do ĐỀ XUẤT XÓA hình thức này:");
+          if (!reason) return;
+          
+          proposeDeleteDisciplineType(type.id, {
               reason: reason,
-              by: user.name || user.username
+              by: user.username
           });
-          alert("Đã gửi đề xuất xóa!");
+          alert("Đã gửi đề xuất xóa lên Chief Admin.");
+          return;
+      }
+
+      // 2. Logic cho Chief Admin: Xóa thật (Chỉ xóa cái đã được đề xuất)
+      if (isChief) {
+          if (!type.isDeleteProposed) {
+              alert("Chỉ có thể xóa các hình thức đã được Regulatory đề xuất xóa!");
+              return;
+          }
+          if(window.confirm(`Xác nhận xóa vĩnh viễn hình thức này?\nLý do đề xuất: ${type.deleteProposalReason}`)) {
+              const info = {
+                  deletedBy: user.username,
+                  deleteReason: type.deleteProposalReason
+              };
+              softDeleteDisciplineType(type.id, info);
+          }
       }
   };
 
-  // MỚI: Chief Admin duyệt xóa (chỉ khi có đề xuất)
-  const handleApproveDelete = (type) => {
-      if(window.confirm(`Xác nhận xóa hình thức này?\nLý do đề xuất: ${type.deleteProposalReason}`)) {
-          softDeleteDisciplineType(type.id, {
-              deletedBy: user.name || user.username,
-              deleteReason: type.deleteProposalReason // Sử dụng lý do đã đề xuất
-          });
+  const handleRestore = (id) => {
+      if(window.confirm("Khôi phục hình thức này?")) {
+          updateDisciplineTypeStatus(id, 'Active');
       }
   };
 
-  // --- LOGIC HỒ SƠ VI PHẠM ---
-  const handleRequestRemoval = (recordId) => {
-      if(window.confirm('Bạn muốn đề xuất xóa vi phạm này?')) {
-          updateDisciplineRecordStatus(recordId, 'PendingRemoval');
-      }
+  // Helper hiển thị trạng thái
+  const renderStatusBadge = (t) => {
+      if (t.status === 'Pending') return <span style={{color:'#d97706', background:'#fef3c7', padding:'2px 8px', borderRadius:'4px', fontSize:'0.8rem', fontWeight:'bold'}}>⏳ Chờ duyệt</span>;
+      if (t.status === 'Suspended') return <span style={{color:'#dc2626', background:'#fee2e2', padding:'2px 8px', borderRadius:'4px', fontSize:'0.8rem', fontWeight:'bold'}}>⛔ Đình chỉ</span>;
+      if (t.isDeleteProposed) return <span style={{color:'#c026d3', background:'#fae8ff', padding:'2px 8px', borderRadius:'4px', fontSize:'0.8rem', fontWeight:'bold'}}>⚠️ Đề xuất xóa</span>;
+      return <span style={{color:'green', fontSize:'0.8rem'}}>● Hiệu lực</span>;
   };
-
-  const handleApproveRemoval = (recordId) => {
-      if(window.confirm('Chấp thuận xóa vĩnh viễn vi phạm này?')) {
-          deleteDisciplineRecord(recordId);
-      }
-  };
-
-  // Lọc danh sách hiện hành (chưa bị xóa mềm)
-  const activeDisciplineTypes = disciplineTypes.filter(d => d.status !== 'Deleted');
 
   return (
-    <div style={{ paddingBottom: '20px' }}>
-      <h2 style={{ color: '#b91c1c' }}>Quản lý Kỷ luật</h2>
+    <div style={{ paddingBottom: '40px' }}>
+      <h2 style={{ color: '#003366', borderBottom: '1px solid #e5e7eb', paddingBottom: '15px' }}>Quản lý Kỷ luật</h2>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '20px' }}>
-          
-          {/* CỘT 1: DANH MỤC HÌNH THỨC */}
-          <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
-             <h4 style={{color: '#003366'}}>1. Danh mục hình thức xử lý (Hiện hành)</h4>
-             <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse', marginBottom: '15px' }}>
-                <thead>
-                    <tr style={{textAlign:'left', borderBottom: '1px solid #eee', color:'#666'}}>
-                        <th style={{padding:'8px', width: '40px'}}>STT</th> {/* MỚI: Cột STT */}
-                        <th style={{padding:'8px'}}>Hình thức</th>
-                        <th style={{padding:'8px'}}>Trạng thái</th>
-                        <th style={{padding:'8px', textAlign:'right'}}>Hành động</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {activeDisciplineTypes.map((d, index) => (
-                        <tr key={d.id} style={{ borderBottom: '1px solid #f9f9f9' }}>
-                            <td style={{padding:'8px', textAlign:'center'}}>{index + 1}</td>
-                            <td style={{padding:'8px'}}>
-                                {d.name}
-                                {/* Hiển thị trạng thái đang chờ xóa */}
-                                {d.isDeleteProposed && (
-                                    <div style={{fontSize:'0.75rem', color:'#d97706', marginTop:'4px'}}>
-                                        ⚠️ Đề xuất xóa: {d.deleteProposalReason}
-                                    </div>
-                                )}
-                            </td>
-                            <td style={{padding:'8px'}}>
-                                <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', background: d.status==='Active'?'#ecfdf5':'#fff7ed', color: d.status==='Active'?'green':'orange' }}>
-                                    {d.status === 'Active' ? 'Đã duyệt' : 'Chờ duyệt'}
-                                </span>
-                            </td>
-                            <td style={{padding:'8px', textAlign:'right'}}>
-                                <div style={{display:'flex', gap:'5px', justifyContent:'flex-end'}}>
-                                    {/* Reg duyệt đề xuất thêm */}
-                                    {isReg && d.status === 'Pending' && (
-                                        <>
-                                            <button onClick={() => updateDisciplineTypeStatus(d.id, 'Active')} style={{color: 'green', border:'1px solid green', background:'none', borderRadius:'3px', cursor:'pointer', fontSize:'0.7rem'}}>✓</button>
-                                            <button onClick={() => updateDisciplineTypeStatus(d.id, 'Rejected')} style={{color: 'red', border:'1px solid red', background:'none', borderRadius:'3px', cursor:'pointer', fontSize:'0.7rem'}}>✕</button>
-                                        </>
-                                    )}
-                                    
-                                    {/* MỚI: Reg đề xuất xóa */}
-                                    {isReg && d.status === 'Active' && !d.isDeleteProposed && (
-                                        <button onClick={() => handleProposeDelete(d.id)} style={{fontSize:'0.7rem', background:'#fee2e2', color:'#b91c1c', border:'none', padding:'4px 8px', borderRadius:'4px', cursor:'pointer'}}>
-                                            Đề xuất xóa
-                                        </button>
-                                    )}
-
-                                    {/* MỚI: Chief duyệt xóa (chỉ khi có đề xuất) */}
-                                    {isChief && d.isDeleteProposed && (
-                                        <button onClick={() => handleApproveDelete(d)} style={{fontSize:'0.7rem', background:'#b91c1c', color:'white', border:'none', padding:'4px 8px', borderRadius:'4px', cursor:'pointer', fontWeight:'bold'}}>
-                                            Duyệt xóa
-                                        </button>
-                                    )}
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-             </table>
-
-             {(isOp || isReg) && (
-                 <form onSubmit={handleAddType} style={{ marginTop: '10px', display: 'flex', gap: '5px' }}>
-                    <input value={newType} onChange={e => setNewType(e.target.value)} placeholder={isOp ? "Đề xuất hình thức..." : "Thêm hình thức..."} style={{ flex: 1, padding: '8px', borderRadius:'4px', border:'1px solid #ccc' }} />
-                    <button type="submit" style={{ padding: '8px 15px', background:'#333', color:'white', border:'none', borderRadius:'4px', cursor:'pointer' }}>{isOp ? 'Đề xuất' : 'Thêm'}</button>
-                 </form>
-             )}
-          </div>
-
-          {/* CỘT 2: HỒ SƠ VI PHẠM */}
-          <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
-             <h4 style={{color: '#003366'}}>2. Hồ sơ nhân sự vi phạm</h4>
-             <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
-                <thead>
-                    <tr style={{textAlign:'left', borderBottom: '2px solid #eee', color:'#666'}}>
-                        <th style={{padding:'8px'}}>Ngày vi phạm</th> {/* MỚI: Cột ngày */}
-                        <th style={{padding:'8px'}}>Nhân sự</th>
-                        <th style={{padding:'8px'}}>Vi phạm</th>
-                        <th style={{padding:'8px'}}>Hình thức</th>
-                        <th style={{padding:'8px'}}>Xử lý</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {disciplineRecords.map(rec => {
-                        const staff = staffList.find(s => s.id === rec.staffId);
-                        return (
-                            <tr key={rec.id} style={{ borderBottom: '1px solid #eee' }}>
-                                <td style={{padding:'8px', color:'#555'}}>
-                                    {/* Hiển thị ngày vi phạm, fallback nếu chưa có dữ liệu */}
-                                    {rec.date ? new Date(rec.date).toLocaleDateString('vi-VN') : (rec.time ? new Date(rec.time).toLocaleDateString('vi-VN') : '-')}
-                                </td>
-                                <td style={{padding:'8px'}}>{staff?.name}</td>
-                                <td style={{padding:'8px'}}>{rec.violation}</td>
-                                <td style={{padding:'8px', color:'#b91c1c', fontWeight:'bold'}}>{rec.penaltyName}</td>
-                                <td style={{padding:'8px'}}>
-                                    {rec.status === 'Active' && isReg && (
-                                        <button onClick={() => handleRequestRemoval(rec.id)} style={{fontSize:'0.75rem', background:'orange', color:'white', border:'none', padding:'3px 6px', borderRadius:'3px', cursor:'pointer'}}>Đề xuất xóa</button>
-                                    )}
-                                    {rec.status === 'PendingRemoval' && (
-                                        <span style={{color: 'orange', fontSize: '0.75rem'}}>Chờ Chief duyệt</span>
-                                    )}
-                                    {rec.status === 'PendingRemoval' && isChief && (
-                                        <button onClick={() => handleApproveRemoval(rec.id)} style={{fontSize:'0.75rem', background:'red', color:'white', border:'none', padding:'3px 6px', borderRadius:'3px', cursor:'pointer', fontWeight:'bold'}}>DUYỆT XÓA</button>
-                                    )}
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-             </table>
-          </div>
+      {/* 1. FORM TẠO MỚI / ĐỀ XUẤT */}
+      <div style={styles.card}>
+          <h4 style={{ margin: '0 0 15px 0', color: '#003366' }}>
+              {isOp ? 'Đề xuất hình thức kỷ luật mới' : 'Ban hành hình thức kỷ luật mới'}
+          </h4>
+          <form onSubmit={handleAdd} style={{ display: 'grid', gap: '15px', gridTemplateColumns: '1fr 1fr 2fr auto' }}>
+              <input 
+                  placeholder="Tên hình thức (Vd: Đi trễ...)" 
+                  value={newType.name}
+                  onChange={e => setNewType({...newType, name: e.target.value})}
+                  style={styles.input}
+                  required
+              />
+              <select 
+                  value={newType.level}
+                  onChange={e => setNewType({...newType, level: e.target.value})}
+                  style={styles.select}
+              >
+                  {DISC_LEVELS.map(lvl => (
+                      <option key={lvl} value={lvl}>{lvl}</option>
+                  ))}
+              </select>
+              <input 
+                  placeholder="Mô tả / Quy định áp dụng..." 
+                  value={newType.description}
+                  onChange={e => setNewType({...newType, description: e.target.value})}
+                  style={styles.input}
+              />
+              <button type="submit" style={styles.btnAdd}>
+                  <Icons.Add /> {isOp ? 'Đề xuất' : 'Lưu'}
+              </button>
+          </form>
       </div>
 
-      {/* MỤC 3: DANH MỤC HIỆU CHỈNH (CHIEF/REG) */}
-      {(isChief || isReg) && (
-          <div style={{ marginTop: '30px', background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
-              <h4 style={{color: '#003366', marginTop: 0}}>3. Danh mục các hình thức kỷ luật đã được hiệu chỉnh</h4>
-              <div style={{overflowX: 'auto'}}>
-                <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{textAlign:'left', background: '#f9fafb', color:'#666'}}>
-                            <th style={{padding:'10px'}}>Hình thức kỷ luật</th>
-                            <th style={{padding:'10px'}}>Ngày ban hành</th>
-                            <th style={{padding:'10px'}}>Người ban hành</th>
-                            <th style={{padding:'10px'}}>Trạng thái</th>
-                            <th style={{padding:'10px'}}>Ngày xóa</th>
-                            <th style={{padding:'10px'}}>Người xóa</th>
-                            <th style={{padding:'10px'}}>Lý do xóa</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {disciplineTypes.length === 0 ? (
-                            <tr><td colSpan="7" style={{padding:'20px', textAlign:'center'}}>Chưa có dữ liệu</td></tr>
-                        ) : (
-                            disciplineTypes.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).map(d => (
-                                <tr key={d.id} style={{borderBottom: '1px solid #eee'}}>
-                                    <td style={{padding:'10px', fontWeight:'500'}}>{d.name}</td>
-                                    <td style={{padding:'10px'}}>{d.createdAt ? new Date(d.createdAt).toLocaleDateString('vi-VN') : '-'}</td>
-                                    <td style={{padding:'10px'}}>{d.createdBy || 'System'}</td>
-                                    <td style={{padding:'10px'}}>
-                                        <span style={{
-                                            padding:'4px 8px', borderRadius:'4px', fontSize:'0.75rem', fontWeight:'bold',
-                                            background: d.status === 'Deleted' ? '#fee2e2' : '#ecfdf5',
-                                            color: d.status === 'Deleted' ? '#b91c1c' : '#047857'
-                                        }}>
-                                            {d.status === 'Deleted' ? 'Đã xóa' : (d.status === 'Active' ? 'Hiệu lực' : 'Chờ duyệt')}
-                                        </span>
-                                    </td>
-                                    <td style={{padding:'10px', color: '#666'}}>
-                                        {d.status === 'Deleted' && d.deletedAt ? new Date(d.deletedAt).toLocaleDateString('vi-VN') : '-'}
-                                    </td>
-                                    <td style={{padding:'10px'}}>{d.deletedBy || '-'}</td>
-                                    <td style={{padding:'10px', fontStyle: 'italic', color: '#666'}}>{d.deleteReason || '-'}</td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-              </div>
+      {/* 2. DANH SÁCH HIỆN HÀNH */}
+      <div style={{...styles.card, marginTop: '20px'}}>
+          <h4 style={{ margin: '0 0 15px 0', color: '#003366' }}>1. Danh mục hình thức kỷ luật (Hiện hành)</h4>
+          <table style={styles.table}>
+              <thead>
+                  <tr style={{textAlign:'left', background:'#f9fafb', color:'#6b7280'}}>
+                      <th style={{padding:'10px'}}>Hình thức</th>
+                      <th style={{padding:'10px'}}>Mức độ Kỷ luật</th>
+                      <th style={{padding:'10px'}}>Mô tả</th>
+                      <th style={{padding:'10px'}}>Tình trạng</th>
+                      <th style={{padding:'10px'}}>Hành động</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  {displayedTypes.map(t => (
+                      <tr key={t.id} style={{borderBottom:'1px solid #f3f4f6'}}>
+                          <td style={{padding:'10px', fontWeight:'600'}}>{t.name}</td>
+                          <td style={{padding:'10px'}}>
+                              <span style={styles.levelBadge}>{t.level || '---'}</span>
+                          </td>
+                          <td style={{padding:'10px', color:'#4b5563', fontSize:'0.9rem'}}>{t.description}</td>
+                          <td style={{padding:'10px'}}>
+                              {renderStatusBadge(t)}
+                              {t.isDeleteProposed && (
+                                  <div style={{fontSize:'0.75rem', color:'#666', marginTop:'4px', fontStyle:'italic'}}>
+                                      Lý do xóa: {t.deleteProposalReason}
+                                  </div>
+                              )}
+                          </td>
+                          <td style={{padding:'10px'}}>
+                              <div style={{display:'flex', gap:'8px'}}>
+                                  {/* DUYỆT / TỪ CHỐI (Chỉ Reg/Chief thấy với Pending) */}
+                                  {canApprove && t.status === 'Pending' && (
+                                      <>
+                                          <button onClick={() => handleApprove(t.id)} style={styles.btnIconGreen} title="Duyệt">
+                                              <Icons.Check />
+                                          </button>
+                                          <button onClick={() => handleReject(t.id)} style={styles.btnIconRed} title="Đình chỉ">
+                                              <Icons.XMark />
+                                          </button>
+                                      </>
+                                  )}
+
+                                  {/* ĐỀ XUẤT XÓA (Reg Admin) */}
+                                  {isReg && t.status === 'Active' && !t.isDeleteProposed && (
+                                      <button onClick={() => handleDeleteAction(t)} style={styles.btnIconOrange} title="Đề xuất xóa">
+                                          <Icons.ProposeDelete />
+                                      </button>
+                                  )}
+
+                                  {/* XÓA THẬT (Chief Admin - Chỉ xóa khi có đề xuất) */}
+                                  {isChief && t.isDeleteProposed && (
+                                      <button onClick={() => handleDeleteAction(t)} style={styles.btnIconRed} title="Xóa vĩnh viễn">
+                                          <Icons.Trash />
+                                      </button>
+                                  )}
+                              </div>
+                          </td>
+                      </tr>
+                  ))}
+                  {displayedTypes.length === 0 && <tr><td colSpan="5" style={{textAlign:'center', padding:'20px', color:'#9ca3af'}}>Chưa có dữ liệu</td></tr>}
+              </tbody>
+          </table>
+      </div>
+
+      {/* 3. DANH SÁCH HỒ SƠ VI PHẠM */}
+      <div style={{...styles.card, marginTop: '20px'}}>
+          <h4 style={{ margin: '0 0 15px 0', color: '#003366' }}>2. Hồ sơ nhân sự vi phạm</h4>
+          <table style={styles.table}>
+              <thead>
+                  <tr style={{textAlign:'left', background:'#f9fafb', color:'#6b7280'}}>
+                      <th style={{padding:'10px'}}>Nhân sự</th>
+                      <th style={{padding:'10px'}}>Vi phạm</th>
+                      <th style={{padding:'10px'}}>Mức độ Kỷ luật</th>
+                      <th style={{padding:'10px'}}>Ngày ghi nhận</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  {disciplineRecords.map(rec => {
+                      const staff = staffList.find(s => s.id === rec.staffId);
+                      const discType = disciplineTypes.find(d => d.id === rec.disciplineId);
+                      
+                      return (
+                          <tr key={rec.id} style={{borderBottom:'1px solid #f3f4f6'}}>
+                              <td style={{padding:'10px', fontWeight:'600'}}>{staff ? staff.name : 'Unknown'}</td>
+                              <td style={{padding:'10px'}}>{rec.taskTitle || '---'}</td>
+                              <td style={{padding:'10px'}}>
+                                  <span style={styles.levelBadge}>
+                                      {discType ? discType.level : (rec.disciplineName || '---')}
+                                  </span>
+                              </td>
+                              <td style={{padding:'10px', color:'#6b7280'}}>
+                                  {new Date(rec.date).toLocaleDateString('vi-VN')}
+                              </td>
+                          </tr>
+                      );
+                  })}
+                  {disciplineRecords.length === 0 && <tr><td colSpan="4" style={{textAlign:'center', padding:'20px', color:'#9ca3af'}}>Chưa có hồ sơ vi phạm</td></tr>}
+              </tbody>
+          </table>
+      </div>
+
+      {/* 4. LỊCH SỬ HIỆU CHỈNH (CHỈ CHIEF & REG THẤY) */}
+      {!isOp && deletedTypes.length > 0 && (
+          <div style={{...styles.card, marginTop: '20px', background:'#fff1f2', border:'1px solid #fecdd3'}}>
+              <h4 style={{ margin: '0 0 15px 0', color: '#991b1b' }}>3. Hình thức kỷ luật đã hiệu chỉnh (Deleted)</h4>
+              <table style={styles.table}>
+                  <thead>
+                      <tr style={{textAlign:'left', color:'#991b1b'}}>
+                          <th style={{padding:'10px'}}>Hình thức</th>
+                          <th style={{padding:'10px'}}>Mức độ</th>
+                          <th style={{padding:'10px'}}>Lý do hủy</th>
+                          <th style={{padding:'10px'}}>Người hủy</th>
+                          <th style={{padding:'10px'}}>Khôi phục</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {deletedTypes.map(t => (
+                          <tr key={t.id} style={{borderBottom:'1px solid #fecdd3'}}>
+                              <td style={{padding:'10px', fontWeight:'600'}}>{t.name}</td>
+                              <td style={{padding:'10px'}}>{t.level}</td>
+                              <td style={{padding:'10px', fontStyle:'italic'}}>{t.deleteReason}</td>
+                              <td style={{padding:'10px'}}>{t.deletedBy}</td>
+                              <td style={{padding:'10px'}}>
+                                  {isChief && (
+                                      <button onClick={() => handleRestore(t.id)} style={styles.btnIconBlue} title="Khôi phục">
+                                          <Icons.Restore />
+                                      </button>
+                                  )}
+                              </td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
           </div>
       )}
     </div>
   );
+};
+
+const styles = {
+    card: { background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' },
+    input: { padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none' },
+    select: { padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', background: 'white' },
+    btnAdd: { background: '#003366', color: 'white', border: 'none', borderRadius: '6px', padding: '0 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '600' },
+    table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' },
+    btnIconRed: { background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' },
+    btnIconGreen: { background: 'none', border: 'none', color: '#16a34a', cursor: 'pointer', padding: '4px' },
+    btnIconBlue: { background: 'none', border: 'none', color: '#003366', cursor: 'pointer', padding: '4px' },
+    btnIconOrange: { background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', padding: '4px' },
+    levelBadge: { background: '#f3f4f6', color: '#374151', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: '500', border: '1px solid #e5e7eb' }
 };
 
 export default DisciplineManager;

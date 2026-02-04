@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
-// --- BỘ ICON MINIMALIST (Tối giản, Thẩm mỹ) ---
+// --- BỘ ICON MINIMALIST ---
 const Icons = {
   Edit: () => (
     <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -35,12 +35,15 @@ const StaffManager = () => {
   const { user } = useAuth();
   const { staffList, addStaff, deleteStaff, updateStaffInfo } = useData();
 
-  // State cho Form tạo mới (Quick Add)
+  // State cho Form tạo mới
   const [formData, setFormData] = useState({ name: '', username: '', password: '' });
   
   // State cho chế độ chỉnh sửa
   const [editMode, setEditMode] = useState(null);
   const [editForm, setEditForm] = useState({});
+
+  // Danh sách các vị trí
+  const POSITIONS = ['ST','TT','CCS','CCO','CCA','FFM','FFS','FFA'];
 
   // Chỉ Chief Admin mới được truy cập
   const isChief = user?.role === 'chief';
@@ -52,14 +55,15 @@ const StaffManager = () => {
     e.preventDefault();
     if (!formData.name || !formData.username || !formData.password) return;
     
-    // Khởi tạo nhân sự với các trường tài chính mặc định = 0
+    // Khởi tạo nhân sự với các trường tài chính mặc định
     addStaff({ 
         ...formData, 
         role: 'staff', 
         positions: [], 
         ubi1Base: 0, ubi1Percent: 100,
         ubi2Base: 0, ubi2Percent: 100,
-        remuneration: 0,
+        // Khởi tạo 5 mức Remuneration rỗng
+        remunerations: Array(5).fill({ amount: 0, position: '', keywords: '' }),
         status: 'active' 
     });
     setFormData({ name: '', username: '', password: '' });
@@ -67,17 +71,29 @@ const StaffManager = () => {
 
   const startEdit = (staff) => {
     setEditMode(staff.id);
-    // Copy data vào form edit, thêm trường newPassword rỗng
+    
+    // Đảm bảo luôn có đủ 5 phần tử cho Remunerations
+    let currentRems = staff.remunerations || [];
+    if (!Array.isArray(currentRems)) currentRems = [];
+    while (currentRems.length < 5) {
+        currentRems.push({ amount: 0, position: '', keywords: '' });
+    }
+
     setEditForm({ 
         ...staff, 
         newPassword: '',
-        // Đảm bảo các trường số có giá trị để không bị lỗi uncontrolled input
         ubi1Base: staff.ubi1Base || 0,
         ubi1Percent: staff.ubi1Percent || 100,
         ubi2Base: staff.ubi2Base || 0,
         ubi2Percent: staff.ubi2Percent || 100,
-        remuneration: staff.remuneration || 0
+        remunerations: currentRems
     }); 
+  };
+
+  const handleRemunerationChange = (index, field, value) => {
+      const newRems = [...editForm.remunerations];
+      newRems[index] = { ...newRems[index], [field]: value };
+      setEditForm({ ...editForm, remunerations: newRems });
   };
 
   const saveEdit = (id) => {
@@ -89,12 +105,17 @@ const StaffManager = () => {
         updates.password = newPassword;
     }
     
-    // Ép kiểu số cho chắc chắn
+    // Ép kiểu số
     updates.ubi1Base = Number(updates.ubi1Base);
     updates.ubi1Percent = Number(updates.ubi1Percent);
     updates.ubi2Base = Number(updates.ubi2Base);
     updates.ubi2Percent = Number(updates.ubi2Percent);
-    updates.remuneration = Number(updates.remuneration);
+    
+    // Xử lý Remunerations: Đảm bảo amount là số
+    updates.remunerations = updates.remunerations.map(r => ({
+        ...r,
+        amount: Number(r.amount)
+    }));
 
     updateStaffInfo(id, updates);
     setEditMode(null);
@@ -115,17 +136,16 @@ const StaffManager = () => {
           case 'chief': return 'Chief Admin';
           case 'reg': return 'Regulatory Admin';
           case 'op': return 'Operational Admin';
-          case 'scheduler': return 'Scheduler'; // MỚI
+          case 'scheduler': return 'Scheduler';
           default: return 'Staff';
       }
   };
 
-  // Hàm tính tổng thu nhập ước tính để hiển thị
-  const calculateTotal = (s) => {
+  // Hàm tính tổng thu nhập ước tính (UBI)
+  const calculateUBITotal = (s) => {
       const ubi1 = (s.ubi1Base || 0) * (s.ubi1Percent || 0) / 100;
       const ubi2 = (s.ubi2Base || 0) * (s.ubi2Percent || 0) / 100;
-      const rem = s.remuneration || 0;
-      return ubi1 + ubi2 + rem;
+      return ubi1 + ubi2;
   };
 
   return (
@@ -134,7 +154,7 @@ const StaffManager = () => {
         Quản lý Nhân sự (Chief Admin)
       </h2>
 
-      {/* 1. FORM TẠO MỚI (QUICK ADD) - GIỮ NGUYÊN GIAO DIỆN CŨ */}
+      {/* 1. FORM TẠO MỚI */}
       <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', border: '1px solid #f0f0f0' }}>
         <h4 style={{ margin: '0 0 15px 0', color: '#003366', fontWeight: '600' }}>+ Tạo tài khoản mới</h4>
         <form onSubmit={handleAdd} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -167,7 +187,7 @@ const StaffManager = () => {
       </div>
 
       {/* 2. DANH SÁCH NHÂN SỰ */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
         {staffList.map(staff => (
           <div key={staff.id} style={{ 
               background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '20px', 
@@ -176,7 +196,7 @@ const StaffManager = () => {
               transition: 'all 0.2s ease'
           }}>
             
-            {/* HEADER CARD: Avatar + Tên + Role */}
+            {/* HEADER CARD */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', borderBottom: '1px solid #f5f5f5', paddingBottom: '10px' }}>
                <div style={{display:'flex', alignItems:'center', gap: '10px'}}>
                   <div style={{width:'40px', height:'40px', background:'#e6f7ff', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'#003366', fontWeight:'bold', fontSize:'1rem'}}>
@@ -195,7 +215,7 @@ const StaffManager = () => {
             {/* BODY CARD */}
             <div style={{ flex: 1 }}>
               {editMode === staff.id ? (
-                  // --- GIAO DIỆN CHỈNH SỬA (LAYOUT 3 PHẦN MỚI) ---
+                  // --- GIAO DIỆN CHỈNH SỬA (EDIT) ---
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                       
                       {/* PHẦN 1: ĐỊNH DANH */}
@@ -242,10 +262,10 @@ const StaffManager = () => {
                               <option value="op">Operational Admin</option>
                               <option value="reg">Regulatory Admin</option>
                               <option value="chief">Chief Admin</option>
-                              <option value="scheduler">Scheduler (Lên lịch)</option> {/* MỚI */}
+                              <option value="scheduler">Scheduler (Lên lịch)</option>
                           </select>
                           <div style={{display:'flex', flexWrap:'wrap', gap:'6px', marginTop:'8px'}}>
-                              {['ST','TT','CCS','CCO','CCA','FFM','FFS','FFA'].map(r => (
+                              {POSITIONS.map(r => (
                                   <label key={r} style={styles.checkboxLabel}>
                                       <input 
                                         type="checkbox" 
@@ -265,7 +285,7 @@ const StaffManager = () => {
                           </select>
                       </div>
 
-                      {/* PHẦN 3: TÀI CHÍNH (CẬP NHẬT MỚI) */}
+                      {/* PHẦN 3: TÀI CHÍNH (CẬP NHẬT MỚI: 5 MỨC R) */}
                       <div style={styles.sectionBox}>
                           <div style={styles.sectionTitle}>3. Tài chính</div>
                           
@@ -307,16 +327,40 @@ const StaffManager = () => {
                               />
                           </div>
 
-                          {/* Remuneration */}
-                          <div style={styles.financeRow}>
-                              <span style={styles.financeLabel}>Remuneration</span>
-                              <input 
-                                type="number" 
-                                placeholder="Thù lao (VNĐ)"
-                                value={editForm.remuneration} 
-                                onChange={e => setEditForm({...editForm, remuneration: Number(e.target.value)})} 
-                                style={{...styles.inputFull, flex: 3}} // Chiếm hết phần còn lại
-                              />
+                          <div style={{height: '1px', background: '#e5e7eb', margin: '10px 0'}}></div>
+
+                          {/* REMUNERATIONS R1 - R5 */}
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                              <div style={{fontSize: '0.75rem', fontWeight:'600', color:'#4b5563', display: 'flex', justifyContent:'space-between'}}>
+                                  <span>Remuneration (R1-R5)</span>
+                                  <span>Vị trí - Keywords</span>
+                              </div>
+                              {editForm.remunerations.map((rem, idx) => (
+                                  <div key={idx} style={{display: 'flex', gap: '5px', alignItems: 'center'}}>
+                                      <span style={{fontSize: '0.75rem', color: '#6b7280', width: '20px'}}>R{idx+1}</span>
+                                      <input 
+                                          type="number" 
+                                          placeholder="VNĐ"
+                                          value={rem.amount}
+                                          onChange={(e) => handleRemunerationChange(idx, 'amount', e.target.value)}
+                                          style={{...styles.inputFull, flex: 1.5}}
+                                      />
+                                      <select
+                                          value={rem.position}
+                                          onChange={(e) => handleRemunerationChange(idx, 'position', e.target.value)}
+                                          style={{...styles.inputFull, flex: 1, padding: '8px 2px'}}
+                                      >
+                                          <option value="">--</option>
+                                          {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                                      </select>
+                                      <input 
+                                          placeholder="Keywords"
+                                          value={rem.keywords}
+                                          onChange={(e) => handleRemunerationChange(idx, 'keywords', e.target.value)}
+                                          style={{...styles.inputFull, flex: 1.5}}
+                                      />
+                                  </div>
+                              ))}
                           </div>
                       </div>
 
@@ -339,16 +383,30 @@ const StaffManager = () => {
                               )) : <span style={{fontSize:'0.75rem', color:'#9ca3af', fontStyle:'italic'}}>Chưa xét vị trí</span>}
                           </div>
                           
-                          {/* Tổng quan Tài chính */}
+                          {/* Tổng quan Tài chính (UBI) */}
                           <div style={{marginTop: '15px', padding:'10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #f3f4f6'}}>
                                <div style={{fontSize: '0.7rem', color:'#6b7280', textTransform:'uppercase', letterSpacing: '0.5px', marginBottom:'4px'}}>
-                                  Tổng thu nhập ước tính
+                                  Tổng UBI (Cố định)
                                </div>
                                <div style={{color: '#059669', fontWeight:'700', fontSize:'1.1rem'}}>
-                                  {calculateTotal(staff).toLocaleString()} <span style={{fontSize:'0.75rem', color:'#374151', fontWeight: '400'}}>VNĐ</span>
+                                  {calculateUBITotal(staff).toLocaleString()} <span style={{fontSize:'0.75rem', color:'#374151', fontWeight: '400'}}>VNĐ</span>
                                </div>
-                               <div style={{fontSize: '0.75rem', color: '#9ca3af', marginTop: '4px'}}>
-                                  UBI 1: {(staff.ubi1Base || 0).toLocaleString()} | UBI 2: {(staff.ubi2Base || 0).toLocaleString()}
+                               
+                               {/* Hiển thị tóm tắt Remuneration R1-R5 */}
+                               <div style={{marginTop: '10px', borderTop: '1px dashed #e5e7eb', paddingTop: '8px'}}>
+                                   <div style={{fontSize: '0.7rem', color:'#6b7280', marginBottom:'4px'}}>Remuneration (Theo việc):</div>
+                                   {staff.remunerations && staff.remunerations.some(r => r.amount > 0) ? (
+                                       staff.remunerations.map((r, idx) => (
+                                           r.amount > 0 && (
+                                               <div key={idx} style={{fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between', color: '#374151'}}>
+                                                   <span><b style={{color:'#003366'}}>R{idx+1}:</b> {Number(r.amount).toLocaleString()}</span>
+                                                   <span style={{color: '#6b7280', fontStyle: 'italic'}}>{r.position} / {r.keywords || 'All'}</span>
+                                               </div>
+                                           )
+                                       ))
+                                   ) : (
+                                       <div style={{fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic'}}>Chưa cấu hình mức thù lao</div>
+                                   )}
                                </div>
                           </div>
                       </div>
@@ -374,27 +432,20 @@ const StaffManager = () => {
 
 // --- STYLES OBJECT ---
 const styles = {
-    // Input cơ bản
     input: { padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: '6px', flex: 1, fontSize: '0.9rem', outline: 'none' },
     
-    // Input full width trong form edit
     inputFull: { padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: '5px', width: '100%', boxSizing: 'border-box', fontSize: '0.85rem', outline: 'none' },
     
-    // Khung bao quanh từng phần (Layout 3 phần)
     sectionBox: { background: '#f9fafb', padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb' },
     sectionTitle: { fontSize: '0.75rem', fontWeight: '700', color: '#003366', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' },
     
-    // Checkbox Label
     checkboxLabel: { fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', background: 'white', padding: '4px 8px', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer' },
     
-    // Tài chính Row
     financeRow: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' },
     financeLabel: { fontSize: '0.8rem', fontWeight: '600', color: '#4b5563', width: '90px' },
 
-    // Buttons
     btnAdd: { background: '#003366', color: 'white', border: 'none', borderRadius: '6px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500' },
     
-    // Nút Lưu (Xanh dương đậm theo yêu cầu)
     btnSave: { background: '#003366', color: 'white', border: 'none', borderRadius: '5px', padding: '8px', flex: 1, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', fontWeight: '500', fontSize: '0.85rem' },
     btnCancel: { background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '5px', padding: '8px 15px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500' },
     

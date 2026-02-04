@@ -29,12 +29,14 @@ const MyTasks = () => {
   const [inputs, setInputs] = useState({});
   const [reasons, setReasons] = useState({});
 
-  const myTasks = tasks.filter(t => t.assigneeId === user.id);
+  // --- ĐIỀU CHỈNH LOGIC LỌC: CHỈ LẤY TASK OP ADMIN (KHÔNG CÓ fromScheduleId) ---
+  const opAdminTasks = tasks.filter(t => t.assigneeId === user.id && !t.fromScheduleId);
+  
   const now = new Date();
   
   const categorizedTasks = { inProgress: [], upcoming: [], completed: [] };
 
-  myTasks.forEach(task => {
+  opAdminTasks.forEach(task => {
     const start = new Date(task.startTime);
     if (task.status === 'completed') {
       categorizedTasks.completed.push(task);
@@ -145,6 +147,7 @@ const MyTasks = () => {
   return (
     <div style={{paddingBottom: '20px'}}>
       <h2 style={{ color: '#003366', fontSize: '1.5rem', fontWeight: '700', marginBottom: '25px' }}>Nhiệm vụ của tôi</h2>
+      <p style={{fontSize:'0.9rem', color:'#6b7280', marginBottom:'20px'}}>Danh sách các nhiệm vụ được giao bởi Operational Admin.</p>
       
       {/* 1. ĐANG DIỄN RA */}
       <div style={{marginBottom: '35px'}}>
