@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
-import { useAuth } from '../../context/AuthContext'; // IMPORT MỚI
+import { useAuth } from '../../context/AuthContext';
 
-// --- HELPER FUNCTIONS (BỘ LỌC) ---
+// --- HELPER FUNCTIONS ---
 const isSameDay = (d1, d2) => d1.toDateString() === d2.toDateString();
 const isSameMonth = (d1, d2) => d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
 const isSameWeek = (d1, d2) => {
@@ -14,14 +14,13 @@ const isSameWeek = (d1, d2) => {
     return d1 >= start && d1 <= end;
 };
 
-// Hàm định dạng ngày giờ ngắn gọn
 const formatDateTime = (isoString) => {
     if (!isoString) return '---';
     const d = new Date(isoString);
     return `${d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} ${d.getDate()}/${d.getMonth()+1}`;
 };
 
-// --- ICONS (GIỮ NGUYÊN) ---
+// --- ICONS ---
 const Icons = {
   Finance: () => (
     <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5">
@@ -51,7 +50,7 @@ const Icons = {
 };
 
 const Reports = () => {
-  const { user } = useAuth(); // LẤY USER ĐỂ KIỂM TRA QUYỀN
+  const { user } = useAuth();
   const { tasks, staffList, facilityLogs } = useData();
   
   // --- STATES BỘ LỌC ---
@@ -61,7 +60,6 @@ const Reports = () => {
   const [facilityStaffFilter, setFacilityStaffFilter] = useState('all'); 
   const [facilityTimeFilter, setFacilityTimeFilter] = useState('month'); 
   
-  // States bộ lọc mới cho Task
   const [taskStaffFilter, setTaskStaffFilter] = useState('all');
   const [taskStatusFilter, setTaskStatusFilter] = useState('all');
 
@@ -70,13 +68,11 @@ const Reports = () => {
     window.print();
   };
 
-  // --- PHÂN TÁCH DỮ LIỆU TASK ---
+  // --- PHÂN TÁCH DỮ LIỆU ---
   const opAdminTasks = tasks.filter(t => !t.fromScheduleId);
   const scheduleTasks = tasks.filter(t => t.fromScheduleId);
 
-  // ============================================
-  // 1. TÍNH TOÁN TÀI CHÍNH (GIỮ NGUYÊN)
-  // ============================================
+  // 1. TÀI CHÍNH
   let totalEstimatedCost = 0;
   const financeRows = [];
 
@@ -111,9 +107,7 @@ const Reports = () => {
       }
   });
 
-  // ============================================
-  // 2. XỬ LÝ DỮ LIỆU CƠ SỞ VẬT CHẤT (GIỮ NGUYÊN)
-  // ============================================
+  // 2. CSVC
   const availableAreas = [...new Set(facilityLogs.map(l => l.area).filter(Boolean))];
   const availableReporters = [...new Set(facilityLogs.map(l => l.staffName).filter(Boolean))];
 
@@ -130,18 +124,13 @@ const Reports = () => {
       return true;
   });
 
-  // ============================================
-  // 3. TIẾN ĐỘ CÔNG VIỆC (GIỮ NGUYÊN)
-  // ============================================
+  // 3. TIẾN ĐỘ CÔNG VIỆC
   const filteredOpTasks = opAdminTasks.filter(t => {
-      // Lọc theo Nhân sự
       if (taskStaffFilter !== 'all' && t.assigneeId !== taskStaffFilter) return false;
       
-      // Xác định trạng thái
       const isCompleted = t.status === 'completed';
       const isOverdue = new Date() > new Date(t.endTime) && !isCompleted;
       
-      // Lọc theo Trạng thái
       if (taskStatusFilter === 'completed' && !isCompleted) return false;
       if (taskStatusFilter === 'overdue' && !isOverdue) return false;
       if (taskStatusFilter === 'inprogress' && (isCompleted || isOverdue)) return false; 
@@ -153,9 +142,7 @@ const Reports = () => {
   const completedTasks = filteredOpTasks.filter(t => t.status === 'completed').length;
   const taskProgress = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
-  // ============================================
-  // 4. LỌC CHẤM CÔNG (GIỮ NGUYÊN)
-  // ============================================
+  // 4. CHẤM CÔNG
   const filteredAttendance = scheduleTasks.filter(t => {
       const taskDate = new Date(t.startTime);
       const now = new Date();
@@ -181,8 +168,8 @@ const Reports = () => {
       `}</style>
 
       {/* HEADER + NÚT IN */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e5e7eb', paddingBottom: '15px', marginBottom: '20px' }}>
-         <h2 style={{ color: '#003366', margin: 0, fontWeight: '700' }}>Báo cáo Quản trị</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e5e7eb', paddingBottom: '15px', marginBottom: '20px' }}>
+         <h2 style={{ color: '#003366', margin: 0, fontWeight: 'bold', fontSize: '1.5rem' }}>Báo cáo Quản trị</h2>
          <button onClick={handlePrint} className="btn-print" style={styles.printBtn}>
             <Icons.Print /> Xuất Báo cáo
          </button>
@@ -190,7 +177,7 @@ const Reports = () => {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', marginTop: '20px' }}>
         
-        {/* --- CARD 1: TÀI CHÍNH & THU NHẬP (CHỈ HIỂN THỊ VỚI CHIEF ADMIN) --- */}
+        {/* --- CARD 1: TÀI CHÍNH --- */}
         {user?.role === 'chief' && (
             <div style={styles.card} className="card">
                <div style={styles.cardHeader}>
@@ -198,7 +185,6 @@ const Reports = () => {
                       <div style={styles.iconBox}><Icons.Finance /></div>
                       <h3 style={styles.cardTitle}>Tài chính & Thu nhập (Chief Admin)</h3>
                   </div>
-                  {/* FILTER NHÂN SỰ CHO TÀI CHÍNH */}
                   <select 
                       value={financeStaffFilter} 
                       onChange={(e) => setFinanceStaffFilter(e.target.value)}
@@ -317,16 +303,14 @@ const Reports = () => {
                </table>
            </div>
         </div>
-      </div>
 
-      {/* --- CARD 3: BÁO CÁO CHẤM CÔNG (SCHEDULER) --- */}
-      <div style={{ ...styles.card, marginTop: '30px' }} className="card">
+        {/* --- CARD 3: BÁO CÁO CHẤM CÔNG --- */}
+        <div style={styles.card} className="card">
           <div style={{ ...styles.cardHeader, justifyContent: 'space-between' }}>
              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={styles.iconBox}><Icons.Schedule /></div>
                 <h3 style={styles.cardTitle}>Báo cáo Chấm công (Theo Lịch Scheduler)</h3>
              </div>
-             
              <select 
                   value={attendanceFilter} 
                   onChange={(e) => setAttendanceFilter(e.target.value)}
@@ -377,18 +361,15 @@ const Reports = () => {
                 </tbody>
              </table>
           </div>
-      </div>
+        </div>
 
-      {/* --- CARD 4: TIẾN ĐỘ CÔNG VIỆC (OP ADMIN) --- */}
-      <div style={{ marginTop: '30px' }}>
+        {/* --- CARD 4: TIẾN ĐỘ CÔNG VIỆC --- */}
         <div style={styles.card} className="card">
           <div style={{...styles.cardHeader, flexDirection: 'column', alignItems: 'flex-start', gap: '15px'}}>
              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
                  <div style={styles.iconBox}><Icons.Task /></div>
                  <h3 style={styles.cardTitle}>Tiến độ Công việc (Operational Admin giao)</h3>
              </div>
-             
-             {/* BỘ LỌC CHO TIẾN ĐỘ CÔNG VIỆC */}
              <div className="filter-group" style={{width: '100%'}}>
                  <select 
                       value={taskStaffFilter} 
@@ -399,7 +380,6 @@ const Reports = () => {
                       <option value="all">Nhân sự: Tất cả</option>
                       {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
-
                   <select 
                       value={taskStatusFilter} 
                       onChange={(e) => setTaskStatusFilter(e.target.value)}
@@ -482,50 +462,25 @@ const Reports = () => {
   );
 };
 
-// --- STYLES OBJECT ---
 const styles = {
-  card: {
-    background: 'white', borderRadius: '12px',
-    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
-    border: '1px solid #f3f4f6', marginBottom: '30px', overflow: 'hidden'
-  },
-  cardHeader: {
-    padding: '16px 20px', borderBottom: '1px solid #f3f4f6',
-    display: 'flex', alignItems: 'center', gap: '12px', background: '#f9fafb'
-  },
-  iconBox: {
-    width: '36px', height: '36px', background: '#e0f2fe', borderRadius: '8px',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#003366'
-  },
+  card: { background: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #f3f4f6', marginBottom: '30px', overflow: 'hidden' },
+  cardHeader: { padding: '16px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '12px', background: '#f9fafb' },
+  iconBox: { width: '36px', height: '36px', background: '#e0f2fe', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#003366' },
   cardTitle: { margin: 0, fontSize: '1rem', fontWeight: '600', color: '#1f2937' },
   cardBody: { padding: '20px' },
-  statRow: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: '8px', fontSize: '0.9rem', color: '#4b5563'
-  },
-  filterSelect: {
-    padding: '6px 12px', borderRadius: '8px', border: '1px solid #e5e7eb',
-    outline: 'none', fontWeight: '600', color: '#4b5563', cursor: 'pointer',
-    fontSize: '0.85rem'
-  },
-  printBtn: {
-    display: 'flex', alignItems: 'center', gap: '8px',
-    background: 'white', color: '#003366', border: '1px solid #003366', borderRadius: '8px',
-    padding: '8px 16px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s'
-  },
-  // Table Styles
+  statRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '0.9rem', color: '#4b5563' },
+  filterSelect: { padding: '6px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', outline: 'none', fontWeight: '600', color: '#4b5563', cursor: 'pointer', fontSize: '0.85rem' },
+  printBtn: { display: 'flex', alignItems: 'center', gap: '8px', background: 'white', color: '#003366', border: '1px solid #003366', borderRadius: '8px', padding: '8px 16px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' },
   table: { width: '100%', borderCollapse: 'separate', borderSpacing: '0' },
   tableHeadRow: { background: '#f8fafc' },
   th: { padding: '12px 16px', textAlign: 'left', color: '#64748b', fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' },
   tr: { transition: 'background 0.2s' },
   td: { padding: '12px 16px', borderBottom: '1px solid #f1f5f9', fontSize: '0.9rem', color: '#334155' },
   emptyTd: { padding: '30px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: '0.9rem' },
-  // Badges
   badgeSuccess: { background: '#ecfdf5', color: '#059669', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700' },
   badgePending: { background: '#fff7ed', color: '#ea580c', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700' },
   badgeError: { background: '#fef2f2', color: '#b91c1c', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700' },
   badgeInfo: { background: '#eff6ff', color: '#1d4ed8', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700' },
-  // Stat Boxes
   statBoxBlue: { flex: 1, background: '#f0f9ff', padding: '15px', borderRadius: '12px', border: '1px solid #bae6fd', minWidth: '120px' },
   statBoxGreen: { flex: 1, background: '#f0fdf4', padding: '15px', borderRadius: '12px', border: '1px solid #bbf7d0', minWidth: '120px' },
   statBoxGray: { flex: 1, background: '#f9fafb', padding: '15px', borderRadius: '12px', border: '1px solid #e5e7eb', minWidth: '120px' }

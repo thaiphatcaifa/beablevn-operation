@@ -127,6 +127,11 @@ export const DataProvider = ({ children }) => {
       });
   };
 
+  // --- CẬP NHẬT: THÊM HÀM XÓA VĨNH VIỄN (HARD DELETE) ---
+  const deleteDisciplineType = (id) => {
+      remove(ref(db, 'disciplineTypes/' + id));
+  };
+
   const proposeDeleteDisciplineType = (id, info) => {
       update(ref(db, 'disciplineTypes/' + id), {
           isDeleteProposed: true,
@@ -160,9 +165,10 @@ export const DataProvider = ({ children }) => {
       tasks, addTask, updateTask, deleteTask, updateTaskProgress, finishTask,
       shifts, attendanceLogs, addAttendance, updateAttendanceLog,
       facilityLogs, addFacilityLog,
-      disciplineTypes, addDisciplineType, updateDisciplineTypeStatus, softDeleteDisciplineType, proposeDeleteDisciplineType,
+      // Đã bổ sung 'deleteDisciplineType' vào danh sách value
+      disciplineTypes, addDisciplineType, updateDisciplineTypeStatus, softDeleteDisciplineType, proposeDeleteDisciplineType, deleteDisciplineType,
       disciplineRecords, addDisciplineRecord, updateDisciplineRecordStatus, deleteDisciplineRecord,
-      schedules, addSchedule, updateSchedule, deleteSchedule // Export hàm mới
+      schedules, addSchedule, updateSchedule, deleteSchedule 
     }}>
       {children}
     </DataContext.Provider>

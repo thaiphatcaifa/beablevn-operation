@@ -150,27 +150,35 @@ const StaffManager = () => {
 
   return (
     <div style={{ paddingBottom: '40px' }}>
-      <h2 style={{ color: '#003366', borderBottom: '1px solid #e0e0e0', paddingBottom: '15px', fontWeight: '300' }}>
+      {/* TIÊU ĐỀ: ĐÃ CHỈNH BOLD VÀ BOTTOM LINE */}
+      <h2 style={{ 
+          color: '#003366', 
+          borderBottom: '2px solid #e5e7eb', 
+          paddingBottom: '15px', 
+          marginBottom: '20px', 
+          fontWeight: 'bold', 
+          fontSize: '1.5rem' 
+      }}>
         Quản lý Nhân sự (Chief Admin)
       </h2>
 
-      {/* 1. FORM TẠO MỚI */}
+      {/* 1. FORM TẠO MỚI (Responsive: flex-wrap) */}
       <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', border: '1px solid #f0f0f0' }}>
-        <h4 style={{ margin: '0 0 15px 0', color: '#003366', fontWeight: '600' }}>+ Tạo tài khoản mới</h4>
+        <h4 style={{ margin: '0 0 15px 0', color: '#003366', fontWeight: '600' }}>Tạo tài khoản mới</h4>
         <form onSubmit={handleAdd} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <input 
             placeholder="Họ và Tên" 
             value={formData.name} 
             onChange={e => setFormData({ ...formData, name: e.target.value })} 
             required 
-            style={styles.input} 
+            style={{...styles.input, minWidth: '150px'}} 
           />
           <input 
             placeholder="ID Đăng nhập" 
             value={formData.username} 
             onChange={e => setFormData({ ...formData, username: e.target.value })} 
             required 
-            style={styles.input} 
+            style={{...styles.input, minWidth: '120px'}}
           />
           <input 
             placeholder="Mật khẩu" 
@@ -178,7 +186,7 @@ const StaffManager = () => {
             value={formData.password} 
             onChange={e => setFormData({ ...formData, password: e.target.value })} 
             required 
-            style={styles.input} 
+            style={{...styles.input, minWidth: '120px'}}
           />
           <button type="submit" style={styles.btnAdd}>
             <Icons.Add /> Tạo mới
@@ -186,8 +194,8 @@ const StaffManager = () => {
         </form>
       </div>
 
-      {/* 2. DANH SÁCH NHÂN SỰ */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
+      {/* 2. DANH SÁCH NHÂN SỰ (Responsive Grid: minmax 280px) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
         {staffList.map(staff => (
           <div key={staff.id} style={{ 
               background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '20px', 
@@ -228,14 +236,14 @@ const StaffManager = () => {
                                 placeholder="Tên hiển thị" 
                                 style={styles.inputFull} 
                               />
-                              <div style={{display:'flex', gap: '8px'}}>
+                              <div style={{display:'flex', gap: '8px', flexWrap: 'wrap'}}>
                                   <input 
                                     value={editForm.username} 
                                     onChange={e => setEditForm({...editForm, username: e.target.value})} 
                                     placeholder="ID Account" 
-                                    style={styles.inputFull} 
+                                    style={{...styles.inputFull, flex: 1, minWidth: '120px'}} 
                                   />
-                                  <div style={{position:'relative', width: '100%'}}>
+                                  <div style={{position:'relative', width: '100%', flex: 1, minWidth: '150px'}}>
                                       <input 
                                         value={editForm.newPassword} 
                                         onChange={e => setEditForm({...editForm, newPassword: e.target.value})} 
@@ -285,45 +293,45 @@ const StaffManager = () => {
                           </select>
                       </div>
 
-                      {/* PHẦN 3: TÀI CHÍNH (CẬP NHẬT MỚI: 5 MỨC R) */}
+                      {/* PHẦN 3: TÀI CHÍNH (CẬP NHẬT: flexWrap cho các dòng) */}
                       <div style={styles.sectionBox}>
                           <div style={styles.sectionTitle}>3. Tài chính</div>
                           
                           {/* UBI 1 */}
-                          <div style={styles.financeRow}>
+                          <div style={{...styles.financeRow, flexWrap: 'wrap'}}>
                               <span style={styles.financeLabel}>UBI 1</span>
                               <input 
                                 type="number" 
                                 placeholder="Tiền (VNĐ)"
                                 value={editForm.ubi1Base} 
                                 onChange={e => setEditForm({...editForm, ubi1Base: Number(e.target.value)})} 
-                                style={{...styles.inputFull, flex: 2}}
+                                style={{...styles.inputFull, flex: 2, minWidth: '100px'}}
                               />
                               <input 
                                 type="number" 
                                 placeholder="%"
                                 value={editForm.ubi1Percent} 
                                 onChange={e => setEditForm({...editForm, ubi1Percent: Number(e.target.value)})} 
-                                style={{...styles.inputFull, flex: 1}}
+                                style={{...styles.inputFull, flex: 1, minWidth: '60px'}}
                               />
                           </div>
 
                           {/* UBI 2 */}
-                          <div style={styles.financeRow}>
+                          <div style={{...styles.financeRow, flexWrap: 'wrap'}}>
                               <span style={styles.financeLabel}>UBI 2</span>
                               <input 
                                 type="number" 
                                 placeholder="Tiền (VNĐ)"
                                 value={editForm.ubi2Base} 
                                 onChange={e => setEditForm({...editForm, ubi2Base: Number(e.target.value)})} 
-                                style={{...styles.inputFull, flex: 2}}
+                                style={{...styles.inputFull, flex: 2, minWidth: '100px'}}
                               />
                               <input 
                                 type="number" 
                                 placeholder="%"
                                 value={editForm.ubi2Percent} 
                                 onChange={e => setEditForm({...editForm, ubi2Percent: Number(e.target.value)})} 
-                                style={{...styles.inputFull, flex: 1}}
+                                style={{...styles.inputFull, flex: 1, minWidth: '60px'}}
                               />
                           </div>
 
@@ -336,19 +344,19 @@ const StaffManager = () => {
                                   <span>Vị trí - Keywords</span>
                               </div>
                               {editForm.remunerations.map((rem, idx) => (
-                                  <div key={idx} style={{display: 'flex', gap: '5px', alignItems: 'center'}}>
+                                  <div key={idx} style={{display: 'flex', gap: '5px', alignItems: 'center', flexWrap: 'wrap'}}>
                                       <span style={{fontSize: '0.75rem', color: '#6b7280', width: '20px'}}>R{idx+1}</span>
                                       <input 
                                           type="number" 
                                           placeholder="VNĐ"
                                           value={rem.amount}
                                           onChange={(e) => handleRemunerationChange(idx, 'amount', e.target.value)}
-                                          style={{...styles.inputFull, flex: 1.5}}
+                                          style={{...styles.inputFull, flex: 1.5, minWidth: '80px'}}
                                       />
                                       <select
                                           value={rem.position}
                                           onChange={(e) => handleRemunerationChange(idx, 'position', e.target.value)}
-                                          style={{...styles.inputFull, flex: 1, padding: '8px 2px'}}
+                                          style={{...styles.inputFull, flex: 1, padding: '8px 2px', minWidth: '60px'}}
                                       >
                                           <option value="">--</option>
                                           {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
@@ -357,7 +365,7 @@ const StaffManager = () => {
                                           placeholder="Keywords"
                                           value={rem.keywords}
                                           onChange={(e) => handleRemunerationChange(idx, 'keywords', e.target.value)}
-                                          style={{...styles.inputFull, flex: 1.5}}
+                                          style={{...styles.inputFull, flex: 1.5, minWidth: '80px'}}
                                       />
                                   </div>
                               ))}
@@ -433,22 +441,15 @@ const StaffManager = () => {
 // --- STYLES OBJECT ---
 const styles = {
     input: { padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: '6px', flex: 1, fontSize: '0.9rem', outline: 'none' },
-    
     inputFull: { padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: '5px', width: '100%', boxSizing: 'border-box', fontSize: '0.85rem', outline: 'none' },
-    
     sectionBox: { background: '#f9fafb', padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb' },
     sectionTitle: { fontSize: '0.75rem', fontWeight: '700', color: '#003366', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' },
-    
     checkboxLabel: { fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', background: 'white', padding: '4px 8px', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer' },
-    
     financeRow: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' },
     financeLabel: { fontSize: '0.8rem', fontWeight: '600', color: '#4b5563', width: '90px' },
-
     btnAdd: { background: '#003366', color: 'white', border: 'none', borderRadius: '6px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500' },
-    
     btnSave: { background: '#003366', color: 'white', border: 'none', borderRadius: '5px', padding: '8px', flex: 1, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', fontWeight: '500', fontSize: '0.85rem' },
     btnCancel: { background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '5px', padding: '8px 15px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500' },
-    
     btnEdit: { background: 'white', border: '1px solid #003366', color: '#003366', borderRadius: '6px', padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: '600' },
     btnDelete: { background: 'white', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '6px', padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: '600' }
 };
