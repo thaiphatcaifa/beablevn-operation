@@ -22,54 +22,21 @@ const Icons = {
   )
 };
 
-const MyTasks = () => {
-  const { user } = useAuth();
-  const { tasks, updateTaskProgress, finishTask } = useData();
-  
-  const [inputs, setInputs] = useState({});
-  const [reasons, setReasons] = useState({});
+// --- COMPONENT CON: TASK CARD (TÁCH RA ĐỂ GIỮ FOCUS) ---
+const TaskCard = ({ task, isCompletedMode, onUpdate, onFinish }) => {
+    // Local state để quản lý input nhập liệu
+    const [progressInput, setProgressInput] = useState(task.progress || 0);
+    const [reasonInput, setReasonInput] = useState(task.reason || '');
 
-  // --- ĐIỀU CHỈNH LOGIC LỌC: CHỈ LẤY TASK OP ADMIN (KHÔNG CÓ fromScheduleId) ---
-  const opAdminTasks = tasks.filter(t => t.assigneeId === user.id && !t.fromScheduleId);
-  
-  const now = new Date();
-  
-  const categorizedTasks = { inProgress: [], upcoming: [], completed: [] };
-
-  opAdminTasks.forEach(task => {
-    const start = new Date(task.startTime);
-    if (task.status === 'completed') {
-      categorizedTasks.completed.push(task);
-    } else if (now < start) {
-      categorizedTasks.upcoming.push(task);
-    } else {
-      categorizedTasks.inProgress.push(task);
-    }
-  });
-
-  categorizedTasks.inProgress.sort((a, b) => new Date(a.endTime) - new Date(b.endTime));
-
-  const handleUpdateClick = (task) => {
-      const newProg = inputs[task.id] !== undefined ? parseInt(inputs[task.id]) : task.progress;
-      const reason = reasons[task.id] || task.reason || '';
-      if (newProg < 90 && !reason.trim()) {
-          alert("CẢNH BÁO: Tiến độ dưới 90% bắt buộc phải nhập lý do giải trình!");
-          return;
-      }
-      updateTaskProgress(task.id, newProg, reason);
-      alert("Cập nhật tiến độ thành công!");
-  };
-
-  const handleFinishClick = (task) => {
-    if(window.confirm(`Xác nhận hoàn thành nhiệm vụ "${task.title}"?`)){
-      finishTask(task.id);
-    }
-  };
-
-  const TaskCard = ({ task, isCompletedMode = false }) => {
+    const now = new Date();
     const deadline = new Date(task.endTime);
     const isOverdue = now > deadline && !isCompletedMode;
     const isUrgent = !isOverdue && !isCompletedMode && (deadline - now) < 86400000; 
+
+    // Hàm xử lý cập nhật (gọi hàm từ cha)
+    const handleUpdate = () => {
+        onUpdate(task, progressInput, reasonInput);
+    };
 
     return (
         <div style={{ 
@@ -97,8 +64,14 @@ const MyTasks = () => {
 
             <hr style={{margin:'15px 0', border: 'none', borderTop:'1px solid #f3f4f6'}}/>
             
-            <label style={{fontSize: '0.9rem', fontWeight: '600', color: '#374151'}}>Tiến độ: {task.progress}%</label>
-            <input type="range" min="0" max="100" value={task.progress} disabled style={{width:'100%', opacity: 0.6, margin: '10px 0', accentColor: '#003366'}} />
+            <label style={{fontSize: '0.9rem', fontWeight: '600', color: '#374151'}}>Tiến độ: {progressInput}%</label>
+            <input 
+                type="range" min="0" max="100" 
+                value={progressInput} 
+                onChange={(e) => setProgressInput(Number(e.target.value))}
+                disabled={isCompletedMode}
+                style={{width:'100%', opacity: isCompletedMode ? 0.6 : 1, margin: '10px 0', accentColor: '#003366'}} 
+            />
             
             {!isCompletedMode && (
                 <>
@@ -106,29 +79,29 @@ const MyTasks = () => {
                         <span style={{fontSize:'0.85rem', color: '#374151'}}>Cập nhật %:</span>
                         <input 
                             type="number" min="0" max="100" 
-                            value={inputs[task.id] !== undefined ? inputs[task.id] : task.progress}
-                            onChange={e => setInputs({...inputs, [task.id]: e.target.value})}
+                            value={progressInput}
+                            onChange={(e) => setProgressInput(Number(e.target.value))}
                             style={{padding:'6px', width: '60px', fontWeight: '600', border:'1px solid #d1d5db', borderRadius:'6px', outline: 'none', textAlign: 'center'}}
                         />
                     </div>
 
-                    {((inputs[task.id] !== undefined ? inputs[task.id] : task.progress) < 90) && (
+                    {(progressInput < 90) && (
                         <div style={{marginTop:'10px'}}>
                             <div style={{color:'#f59e0b', fontSize:'0.8rem', marginBottom:'4px', fontWeight: '500'}}>* Yêu cầu lý do (Tiến độ &lt; 90%)</div>
                             <textarea 
                                 placeholder="Nhập lý do..."
-                                value={reasons[task.id] !== undefined ? reasons[task.id] : (task.reason || '')}
-                                onChange={e => setReasons({...reasons, [task.id]: e.target.value})}
+                                value={reasonInput}
+                                onChange={(e) => setReasonInput(e.target.value)}
                                 style={{width:'100%', height:'60px', borderColor: '#fcd34d', padding:'10px', boxSizing:'border-box', borderRadius:'6px', fontSize: '0.9rem', outline: 'none'}}
                             />
                         </div>
                     )}
 
                     <div style={{display:'flex', gap:'10px', marginTop:'15px'}}>
-                        <button onClick={() => handleUpdateClick(task)} style={{flex:1, background:'#003366', color:'white', padding:'10px', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:'600', fontSize: '0.9rem', transition: '0.2s'}}>
+                        <button onClick={handleUpdate} style={{flex:1, background:'#003366', color:'white', padding:'10px', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:'600', fontSize: '0.9rem', transition: '0.2s'}}>
                             Cập nhật
                         </button>
-                        <button onClick={() => handleFinishClick(task)} style={{flex:1, background:'#059669', color:'white', padding:'10px', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:'600', fontSize: '0.9rem', transition: '0.2s'}}>
+                        <button onClick={() => onFinish(task)} style={{flex:1, background:'#059669', color:'white', padding:'10px', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:'600', fontSize: '0.9rem', transition: '0.2s'}}>
                             Kết thúc
                         </button>
                     </div>
@@ -142,6 +115,46 @@ const MyTasks = () => {
             )}
         </div>
     );
+};
+
+// --- COMPONENT CHÍNH ---
+const MyTasks = () => {
+  const { user } = useAuth();
+  const { tasks, updateTaskProgress, finishTask } = useData();
+  
+  // --- LỌC TASK ---
+  const opAdminTasks = tasks.filter(t => t.assigneeId === user.id && !t.fromScheduleId);
+  const now = new Date();
+  
+  const categorizedTasks = { inProgress: [], upcoming: [], completed: [] };
+
+  opAdminTasks.forEach(task => {
+    const start = new Date(task.startTime);
+    if (task.status === 'completed') {
+      categorizedTasks.completed.push(task);
+    } else if (now < start) {
+      categorizedTasks.upcoming.push(task);
+    } else {
+      categorizedTasks.inProgress.push(task);
+    }
+  });
+
+  categorizedTasks.inProgress.sort((a, b) => new Date(a.endTime) - new Date(b.endTime));
+
+  // --- HANDLERS ---
+  const handleUpdateClick = (task, newProg, reason) => {
+      if (newProg < 90 && !reason.trim()) {
+          alert("CẢNH BÁO: Tiến độ dưới 90% bắt buộc phải nhập lý do giải trình!");
+          return;
+      }
+      updateTaskProgress(task.id, newProg, reason);
+      alert("Cập nhật tiến độ thành công!");
+  };
+
+  const handleFinishClick = (task) => {
+    if(window.confirm(`Xác nhận hoàn thành nhiệm vụ "${task.title}"?`)){
+      finishTask(task.id);
+    }
   };
 
   return (
@@ -157,7 +170,14 @@ const MyTasks = () => {
           </div>
           <div>
               {categorizedTasks.inProgress.length === 0 ? <p style={{color:'#9ca3af', fontStyle:'italic'}}>Không có nhiệm vụ.</p> : 
-                categorizedTasks.inProgress.map(task => <TaskCard key={task.id} task={task} />)
+                categorizedTasks.inProgress.map(task => (
+                    <TaskCard 
+                        key={task.id} 
+                        task={task} 
+                        onUpdate={handleUpdateClick}
+                        onFinish={handleFinishClick}
+                    />
+                ))
               }
           </div>
       </div>
@@ -170,7 +190,14 @@ const MyTasks = () => {
           </div>
           <div>
               {categorizedTasks.upcoming.length === 0 ? <p style={{color:'#9ca3af', fontStyle:'italic'}}>Không có nhiệm vụ.</p> : 
-                categorizedTasks.upcoming.map(task => <TaskCard key={task.id} task={task} />)
+                categorizedTasks.upcoming.map(task => (
+                    <TaskCard 
+                        key={task.id} 
+                        task={task} 
+                        onUpdate={handleUpdateClick}
+                        onFinish={handleFinishClick}
+                    />
+                ))
               }
           </div>
       </div>
@@ -183,7 +210,13 @@ const MyTasks = () => {
           </div>
           <div>
               {categorizedTasks.completed.length === 0 ? <p style={{color:'#9ca3af', fontStyle:'italic'}}>Chưa có dữ liệu.</p> : 
-                categorizedTasks.completed.map(task => <TaskCard key={task.id} task={task} isCompletedMode={true} />)
+                categorizedTasks.completed.map(task => (
+                    <TaskCard 
+                        key={task.id} 
+                        task={task} 
+                        isCompletedMode={true} 
+                    />
+                ))
               }
           </div>
       </div>

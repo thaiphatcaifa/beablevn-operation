@@ -180,15 +180,22 @@ const Reports = () => {
         {/* --- CARD 1: TÀI CHÍNH --- */}
         {user?.role === 'chief' && (
             <div style={styles.card} className="card">
-               <div style={styles.cardHeader}>
-                  <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+               {/* ĐIỀU CHỈNH TỐI ƯU MOBILE:
+                  - flexWrap: 'wrap' -> Để phần tử tự động xuống dòng.
+                  - gap: '15px' -> Tăng khoảng cách khi xuống dòng.
+               */}
+               <div style={{...styles.cardHeader, flexWrap: 'wrap', gap: '15px'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:'12px', flex: '1 1 auto', minWidth: '200px'}}>
                       <div style={styles.iconBox}><Icons.Finance /></div>
                       <h3 style={styles.cardTitle}>Tài chính & Thu nhập (Chief Admin)</h3>
                   </div>
+                  {/* - flex: '1 1 200px' -> Cho phép co giãn, nhưng nếu không gian < 200px thì sẽ xuống dòng.
+                     - Trên mobile, nó sẽ chiếm 100% chiều rộng dòng mới.
+                  */}
                   <select 
                       value={financeStaffFilter} 
                       onChange={(e) => setFinanceStaffFilter(e.target.value)}
-                      style={styles.filterSelect}
+                      style={{...styles.filterSelect, flex: '1 1 200px'}} 
                       className="filter-select"
                   >
                       <option value="all">Tất cả nhân sự</option>
@@ -283,14 +290,27 @@ const Reports = () => {
                      [...filteredFacilityLogs].reverse().map((log, index) => (
                        <tr key={index} style={styles.tr}>
                          <td style={{...styles.td, fontWeight: '600'}}>{log.area || '---'}</td>
+                         
                          <td style={styles.td}>
-                             <div>{log.prevStatus || '---'}</div>
-                             <div style={{fontSize:'0.75rem', color:'#9ca3af'}}>{formatDateTime(log.prevTime)}</div>
+                             <div style={{fontWeight:'700', fontSize:'0.9rem', marginBottom:'4px', color:'#1f2937'}}>
+                                 {log.itemName || log.item || log.category || 'Hạng mục'}
+                             </div>
+                             <div style={{color:'#4b5563'}}>
+                                 {log.prevStatus ? log.prevStatus : <span style={{fontStyle:'italic', color:'#9ca3af'}}>---</span>}
+                             </div>
+                             <div style={{fontSize:'0.75rem', color:'#9ca3af', marginTop:'2px'}}>{formatDateTime(log.prevTime)}</div>
                          </td>
+
                          <td style={styles.td}>
-                             <div style={{color: '#003366', fontWeight:'500'}}>{log.status || log.note || 'Đã kiểm tra'}</div>
-                             <div style={{fontSize:'0.75rem', color:'#6b7280'}}>{formatDateTime(log.timestamp)}</div>
+                             <div style={{fontWeight:'700', fontSize:'0.9rem', marginBottom:'4px', color:'#1f2937'}}>
+                                 {log.itemName || log.item || log.category || 'Hạng mục'}
+                             </div>
+                             <div style={{color: '#003366', fontWeight:'500'}}>
+                                 {log.status || log.note || 'Đã kiểm tra'}
+                             </div>
+                             <div style={{fontSize:'0.75rem', color:'#6b7280', marginTop:'2px'}}>{formatDateTime(log.timestamp)}</div>
                          </td>
+
                          <td style={styles.td}>{log.staffName || 'Unknown'}</td>
                        </tr>
                      ))
