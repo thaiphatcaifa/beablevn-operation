@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 
@@ -16,13 +16,11 @@ const isSameWeek = (d1, d2) => {
 
 // --- BỘ ICON MINIMALIST MỚI (#003366) ---
 const Icons = {
-  // Icon Lịch cho Chấm công Scheduler
   Schedule: () => (
     <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="2">
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
     </svg>
   ),
-  // Icon Check-in/out cho Ca làm việc cũ
   CheckIn: () => (
     <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="2">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
@@ -34,49 +32,120 @@ const Icons = {
     </svg>
   ),
   ButtonIconIn: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" /></svg>),
-  ButtonIconOut: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>)
+  ButtonIconOut: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>),
+  Exclamation: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#b45309" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>)
 };
 
 const Attendance = () => {
   const { user } = useAuth();
-  const { shifts, attendanceLogs, addAttendance, updateAttendanceLog, tasks, updateTaskProgress } = useData();
+  const { shifts, attendanceLogs, addAttendance, updateAttendanceLog, tasks, updateTaskProgress, updateTask } = useData(); // Bổ sung updateTask
 
   // --- STATE BỘ LỌC THỜI GIAN ---
   const [timeFilter, setTimeFilter] = useState('month'); 
+  
+  // --- STATE THỜI GIAN THỰC (ĐỂ CHECK GIỜ) ---
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // ==========================================
-  // PHẦN 1: LOGIC CHẤM CÔNG THEO LỊCH SCHEDULER
+  // PHẦN 1: LOGIC CHẤM CÔNG THEO LỊCH SCHEDULER (ĐÃ NÂNG CẤP)
   // ==========================================
   const myScheduleTasks = tasks.filter(t => t.assigneeId === user.id && t.fromScheduleId);
   const filteredScheduleTasks = myScheduleTasks.filter(t => {
       const taskDate = new Date(t.startTime);
-      const now = new Date();
-      if (timeFilter === 'day') return isSameDay(taskDate, now);
-      if (timeFilter === 'week') return isSameWeek(taskDate, now);
-      if (timeFilter === 'month') return isSameMonth(taskDate, now);
+      const currentTime = new Date(); // Dùng biến cục bộ để tránh lỗi closure nếu dùng 'now' state trong filter
+      if (timeFilter === 'day') return isSameDay(taskDate, currentTime);
+      if (timeFilter === 'week') return isSameWeek(taskDate, currentTime);
+      if (timeFilter === 'month') return isSameMonth(taskDate, currentTime);
       return true;
   });
   filteredScheduleTasks.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
-  const handleSchedulerCheck = (task) => {
+  // --- HÀM CHECK-IN MỚI ---
+  const handleSchedulerCheckIn = (task) => {
+      const startTime = new Date(task.startTime);
+      const diffMinutes = (now - startTime) / 60000;
+
+      // 1. Chặn sớm > 15p
+      if (diffMinutes < -15) {
+          alert(`Chưa đến giờ! Bạn chỉ có thể check-in từ ${new Date(startTime.getTime() - 15*60000).toLocaleTimeString()}.`);
+          return;
+      }
+
+      let updateData = { 
+          checkInTime: new Date().toISOString(),
+          status: 'in_progress' 
+      };
+      let msg = "Check-in thành công!";
+
+      // 2. Cảnh báo trễ > 3p
+      if (diffMinutes > 3) {
+          updateData.checkInStatus = 'Late';
+          updateData.lateReason = 'Trễ quá 3 phút';
+          msg = "CẢNH BÁO: Bạn đã check-in TRỄ quá 3 phút! Hệ thống đã ghi nhận.";
+      } else {
+          updateData.checkInStatus = 'OnTime';
+      }
+
+      updateTask(task.id, updateData);
+      alert(msg);
+  };
+
+  // --- HÀM CHECK-OUT MỚI ---
+  const handleSchedulerCheckOut = (task) => {
+      const endTime = new Date(task.endTime);
+      const diffMinutes = (endTime - now) / 60000; // Phút còn lại
+
+      // 1. Chặn về sớm > 10p
+      if (diffMinutes > 10) {
+          alert(`Chưa đến giờ tan ca! Bạn chỉ được về sớm tối đa 10 phút.`);
+          return;
+      }
+
+      // 2. Chặn quá hạn 15p (Chuyển sang giải trình)
+      if (diffMinutes < -15) {
+          alert("Đã quá thời gian check-out (15 phút). Vui lòng dùng nút 'Giải trình'.");
+          return;
+      }
+
       if(window.confirm("Xác nhận hoàn thành ca làm việc này?")) {
           updateTaskProgress(task.id, 100, "Check-out attendance");
+          updateTask(task.id, { 
+              checkOutTime: new Date().toISOString(),
+              status: 'completed'
+          });
+          alert("Check-out thành công!");
+      }
+  };
+
+  // --- HÀM GIẢI TRÌNH ---
+  const handleSchedulerExplain = (task) => {
+      const reason = window.prompt("Đã quá giờ check-out quy định. Vui lòng nhập lý do:");
+      if (reason && reason.trim() !== "") {
+          updateTask(task.id, {
+              checkOutTime: new Date().toISOString(),
+              status: 'completed',
+              progress: 100,
+              checkOutStatus: 'MissedWindow',
+              explanation: reason
+          });
+          alert("Đã gửi giải trình.");
       }
   };
 
   // ==========================================
-  // PHẦN 2: LOGIC CA LÀM VIỆC (GIỮ NGUYÊN ĐỂ TƯƠNG THÍCH)
+  // PHẦN 2: LOGIC CA LÀM VIỆC CŨ (GIỮ NGUYÊN)
   // ==========================================
   const myShifts = shifts.filter(s => s.staffId === user.id);
-  const handleCheckIn = (shiftId) => {
+  const handleCheckInOld = (shiftId) => {
     if (window.confirm('Xác nhận Check-in?')) {
-      addAttendance({
-        shiftId, staffId: user.id, date: new Date().toISOString(),
-        checkIn: new Date().toISOString(), status: 'Present'
-      });
+      addAttendance({ shiftId, staffId: user.id, date: new Date().toISOString(), checkIn: new Date().toISOString(), status: 'Present' });
     }
   };
-  const handleCheckOut = (logId) => {
+  const handleCheckOutOld = (logId) => {
     if (window.confirm('Xác nhận Check-out?')) {
       updateAttendanceLog(logId, { checkOut: new Date().toISOString() });
     }
@@ -93,11 +162,7 @@ const Attendance = () => {
                   <p style={{fontSize:'0.85rem', color:'#6b7280', margin:'4px 0 0 0'}}>Theo lịch công tác (Scheduler)</p>
               </div>
           </div>
-          <select 
-              value={timeFilter} 
-              onChange={(e) => setTimeFilter(e.target.value)}
-              style={styles.filterSelect}
-          >
+          <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)} style={styles.filterSelect}>
               <option value="day">Hôm nay</option>
               <option value="week">Tuần này</option>
               <option value="month">Tháng này</option>
@@ -110,46 +175,78 @@ const Attendance = () => {
                const start = new Date(task.startTime);
                const end = new Date(task.endTime);
                const isCompleted = task.status === 'completed' || task.progress === 100;
-               const isFuture = start > new Date();
+               const isCheckedIn = !!task.checkInTime; // Đã check-in hay chưa
+               
+               // Tính toán trạng thái thời gian cho nút bấm
+               const diffStart = (now - start) / 60000;
+               const diffEnd = (now - end) / 60000; // Dương = Quá giờ, Âm = Chưa tới giờ
 
                return (
                    <div key={task.id} style={{
                        ...styles.scheduleItem,
-                       borderLeft: `5px solid ${isCompleted ? '#10b981' : (isFuture ? '#cbd5e1' : '#003366')}`
+                       borderLeft: `5px solid ${isCompleted ? '#10b981' : (isCheckedIn ? '#3b82f6' : '#cbd5e1')}`
                    }}>
-                       <div>
+                       <div style={{flex: 1}}>
                            <div style={{fontWeight:'700', color:'#1e293b', fontSize:'1rem'}}>{task.title}</div>
                            <div style={{fontSize:'0.85rem', color:'#64748b', marginTop:'4px'}}>
                                📅 {start.toLocaleDateString('vi-VN')} &nbsp;|&nbsp; 
                                ⏰ {start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                            </div>
-                           <div style={{marginTop:'8px', display:'flex', gap:'8px'}}>
-                               <span style={styles.roleBadge}>Vai trò: {task.assignedRole}</span>
-                               {isCompleted && <span style={styles.doneBadge}>✓ Đã chấm công</span>}
+                           <div style={{marginTop:'8px', display:'flex', gap:'8px', flexWrap:'wrap'}}>
+                               <span style={styles.roleBadge}>{task.assignedRole}</span>
+                               {task.checkInStatus === 'Late' && <span style={styles.lateBadge}>⚠️ Trễ giờ</span>}
+                               {isCheckedIn && !isCompleted && <span style={styles.workingBadge}>Đang làm việc</span>}
                            </div>
                        </div>
 
-                       {!isCompleted && !isFuture && (
-                           <button onClick={() => handleSchedulerCheck(task)} style={styles.mainBtn}>
-                               Chấm công
-                           </button>
-                       )}
-                       {isFuture && <span style={styles.futureText}>Chưa diễn ra</span>}
-                       {isCompleted && (
-                           <div style={styles.checkCircle}>
-                               <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#10b981" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                           </div>
-                       )}
+                       {/* KHU VỰC NÚT BẤM ĐIỀU KHIỂN */}
+                       <div style={{display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'5px'}}>
+                           
+                           {/* 1. ĐÃ HOÀN THÀNH */}
+                           {isCompleted && (
+                               <div style={styles.checkCircle}>
+                                   <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#10b981" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                               </div>
+                           )}
+
+                           {/* 2. CHƯA CHECK-IN */}
+                           {!isCompleted && !isCheckedIn && (
+                               <button 
+                                   onClick={() => handleSchedulerCheckIn(task)} 
+                                   style={{
+                                       ...styles.mainBtn, 
+                                       background: diffStart < -15 ? '#e2e8f0' : (diffStart > 3 ? '#ef4444' : '#003366'),
+                                       color: diffStart < -15 ? '#94a3b8' : 'white',
+                                       cursor: diffStart < -15 ? 'not-allowed' : 'pointer'
+                                   }}
+                               >
+                                   {diffStart < -15 ? 'Chưa đến giờ' : (diffStart > 3 ? 'Vào ca (Trễ)' : 'Check-in')}
+                               </button>
+                           )}
+
+                           {/* 3. ĐÃ CHECK-IN, CHỜ CHECK-OUT */}
+                           {!isCompleted && isCheckedIn && (
+                               diffEnd > 15 ? (
+                                   // Quá 15 phút -> Nút Giải trình
+                                   <button onClick={() => handleSchedulerExplain(task)} style={styles.explainBtn}>
+                                       <Icons.Exclamation /> Giải trình
+                                   </button>
+                               ) : (
+                                   // Trong giờ -> Nút Check-out
+                                   <button onClick={() => handleSchedulerCheckOut(task)} style={styles.outBtn}>
+                                       Check-out
+                                   </button>
+                               )
+                           )}
+                       </div>
                    </div>
                )
            }) : (
-               <div style={styles.emptyState}>
-                   Không có lịch làm việc (Scheduler) trong khoảng thời gian này.
-               </div>
+               <div style={styles.emptyState}>Không có lịch làm việc trong khoảng thời gian này.</div>
            )}
       </div>
 
-      {/* --- SECTION: CA LÀM VIỆC CŨ (GIỮ NGUYÊN CODE CŨ) --- */}
+      {/* --- SECTION: CA LÀM VIỆC CŨ (GIỮ NGUYÊN) --- */}
       {myShifts.length > 0 && (
         <div style={{borderTop: '1px solid #e5e7eb', paddingTop: '25px'}}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
@@ -167,10 +264,8 @@ const Attendance = () => {
                   </div>
                   <div style={{ marginTop: '15px' }}>
                       {!todayLog ? (
-                          <button onClick={() => handleCheckIn(shift.id)} style={styles.mainBtn}>
-                              <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
-                                  <Icons.ButtonIconIn /> Check-in
-                              </div>
+                          <button onClick={() => handleCheckInOld(shift.id)} style={styles.mainBtn}>
+                              <div style={{display:'flex', alignItems:'center', gap:'6px'}}><Icons.ButtonIconIn /> Check-in</div>
                           </button>
                       ) : (
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -178,10 +273,8 @@ const Attendance = () => {
                                   {todayLog.checkOut ? 'Đã hoàn thành' : 'Đang làm việc'}
                               </span>
                               {!todayLog.checkOut && (
-                                  <button onClick={() => handleCheckOut(todayLog.id)} style={styles.outBtn}>
-                                      <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
-                                          <Icons.ButtonIconOut /> Check-out
-                                      </div>
+                                  <button onClick={() => handleCheckOutOld(todayLog.id)} style={styles.outBtn}>
+                                      <div style={{display:'flex', alignItems:'center', gap:'6px'}}><Icons.ButtonIconOut /> Check-out</div>
                                   </button>
                               )}
                           </div>
@@ -198,29 +291,15 @@ const Attendance = () => {
 };
 
 const styles = {
-    filterSelect: {
-        padding: '8px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', 
-        outline: 'none', fontWeight: '600', color: '#003366', cursor: 'pointer', background: 'white'
-    },
-    scheduleItem: {
-        background: 'white', padding: '18px', borderRadius: '12px', 
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.03)', transition: 'transform 0.2s'
-    },
-    shiftCard: {
-        background: 'white', padding: '20px', borderRadius: '12px', 
-        boxShadow: '0 4px 12px rgba(0,0,0,0.03)', borderLeft: '5px solid #003366'
-    },
-    mainBtn: {
-        background: '#003366', color: 'white', border: 'none', padding: '10px 18px', 
-        borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem',
-        boxShadow: '0 4px 6px rgba(0, 51, 102, 0.2)'
-    },
-    outBtn: {
-        background: 'white', border: '1px solid #ef4444', color: '#ef4444', 
-        padding: '8px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem'
-    },
+    filterSelect: { padding: '8px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', fontWeight: '600', color: '#003366', cursor: 'pointer', background: 'white' },
+    scheduleItem: { background: 'white', padding: '18px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', transition: 'transform 0.2s', gap: '10px' },
+    shiftCard: { background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', borderLeft: '5px solid #003366' },
+    mainBtn: { background: '#003366', color: 'white', border: 'none', padding: '10px 18px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', boxShadow: '0 4px 6px rgba(0, 51, 102, 0.2)', whiteSpace: 'nowrap' },
+    outBtn: { background: 'white', border: '1px solid #ef4444', color: '#ef4444', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', whiteSpace: 'nowrap' },
+    explainBtn: { background: '#fff7ed', border: '1px solid #f97316', color: '#c2410c', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', display:'flex', alignItems:'center', gap:'5px', whiteSpace: 'nowrap' },
     roleBadge: { fontSize: '0.75rem', background: '#f1f5f9', padding: '4px 10px', borderRadius: '6px', color: '#475569', fontWeight: '600' },
+    lateBadge: { fontSize: '0.75rem', background: '#fef2f2', padding: '4px 10px', borderRadius: '6px', color: '#dc2626', fontWeight: '700' },
+    workingBadge: { fontSize: '0.75rem', background: '#eff6ff', padding: '4px 10px', borderRadius: '6px', color: '#2563eb', fontWeight: '700' },
     doneBadge: { fontSize: '0.75rem', color: '#10b981', fontWeight: '700', marginLeft: '5px' },
     badgeSuccess: { background: '#ecfdf5', color: '#059669', padding: '5px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800' },
     badgeActive: { background: '#e0f2fe', color: '#003366', padding: '5px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800' },

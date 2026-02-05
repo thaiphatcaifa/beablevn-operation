@@ -20,6 +20,34 @@ const formatDateTime = (isoString) => {
     return `${d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} ${d.getDate()}/${d.getMonth()+1}`;
 };
 
+// --- CẬP NHẬT: LOGIC TÍNH GIỜ THEO YÊU CẦU ---
+// Công thức: EndTime (Scheduler) - Max(StartTime, ActualCheckIn)
+const calculateWorkHours = (schedStart, schedEnd, actualCheckIn) => {
+    if (!schedStart || !schedEnd) return '---';
+    
+    const start = new Date(schedStart);
+    const end = new Date(schedEnd);
+    let effectiveStart = start;
+
+    // Nếu có check-in thực tế và check-in trễ hơn giờ quy định
+    if (actualCheckIn) {
+        const checkIn = new Date(actualCheckIn);
+        if (checkIn > start) {
+            effectiveStart = checkIn; // Tính giờ bắt đầu từ lúc check-in thực tế
+        }
+    }
+
+    const diffMs = end - effectiveStart;
+    
+    if (diffMs < 0) return '0h 00p'; // Trường hợp check-in sau khi ca đã kết thúc (quá trễ)
+
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return `${hours}h ${minutes < 10 ? '0' + minutes : minutes}p`;
+};
+
 // --- ICONS ---
 const Icons = {
   Finance: () => (
@@ -180,18 +208,11 @@ const Reports = () => {
         {/* --- CARD 1: TÀI CHÍNH --- */}
         {user?.role === 'chief' && (
             <div style={styles.card} className="card">
-               {/* ĐIỀU CHỈNH TỐI ƯU MOBILE:
-                  - flexWrap: 'wrap' -> Để phần tử tự động xuống dòng.
-                  - gap: '15px' -> Tăng khoảng cách khi xuống dòng.
-               */}
                <div style={{...styles.cardHeader, flexWrap: 'wrap', gap: '15px'}}>
                   <div style={{display:'flex', alignItems:'center', gap:'12px', flex: '1 1 auto', minWidth: '200px'}}>
                       <div style={styles.iconBox}><Icons.Finance /></div>
                       <h3 style={styles.cardTitle}>Tài chính & Thu nhập (Chief Admin)</h3>
                   </div>
-                  {/* - flex: '1 1 200px' -> Cho phép co giãn, nhưng nếu không gian < 200px thì sẽ xuống dòng.
-                     - Trên mobile, nó sẽ chiếm 100% chiều rộng dòng mới.
-                  */}
                   <select 
                       value={financeStaffFilter} 
                       onChange={(e) => setFinanceStaffFilter(e.target.value)}
@@ -349,34 +370,42 @@ const Reports = () => {
                      <th style={{ ...styles.th, borderRadius: '8px 0 0 8px' }}>Nhân sự</th>
                      <th style={styles.th}>Ca làm việc</th>
                      <th style={styles.th}>Thời gian</th>
+                     <th style={styles.th}>Số giờ</th> {/* CỘT MỚI: SỐ GIỜ */}
                      <th style={styles.th}>Trạng thái</th>
                      <th style={{ ...styles.th, borderRadius: '0 8px 8px 0' }}>Kết quả</th>
                    </tr>
                 </thead>
                 <tbody>
-                   {filteredAttendance.length > 0 ? filteredAttendance.map(t => (
-                     <tr key={t.id} style={styles.tr}>
-                        <td style={{ ...styles.td, fontWeight: '600' }}>{t.assigneeName}</td>
-                        <td style={styles.td}>
-                            <div>{t.title}</div>
-                            <div style={{fontSize:'0.75rem', color:'#6b7280'}}>{t.assignedRole}</div>
-                        </td>
-                        <td style={styles.td}>
-                           {new Date(t.startTime).toLocaleDateString('vi-VN')} <br/>
-                           <span style={{fontSize:'0.75rem', color:'#64748b'}}>
-                             {new Date(t.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - {new Date(t.endTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-                           </span>
-                        </td>
-                        <td style={styles.td}>
-                           {t.status === 'completed' || t.progress === 100 ? 
-                             <span style={styles.badgeSuccess}>Đã chấm công</span> : 
-                             <span style={styles.badgePending}>Chưa hoàn thành</span>
-                           }
-                        </td>
-                        <td style={styles.td}>{t.progress}%</td>
-                     </tr>
-                   )) : (
-                     <tr><td colSpan="5" style={styles.emptyTd}>Không có dữ liệu chấm công.</td></tr>
+                   {filteredAttendance.length > 0 ? filteredAttendance.map(t => {
+                     const isLate = t.checkInStatus === 'Late';
+                     return (
+                         <tr key={t.id} style={styles.tr}>
+                            <td style={{ ...styles.td, fontWeight: '600' }}>{t.assigneeName}</td>
+                            <td style={styles.td}>
+                                <div>{t.title}</div>
+                                <div style={{fontSize:'0.75rem', color:'#6b7280'}}>{t.assignedRole}</div>
+                            </td>
+                            <td style={styles.td}>
+                               {new Date(t.startTime).toLocaleDateString('vi-VN')} <br/>
+                               <span style={{fontSize:'0.75rem', color:'#64748b'}}>
+                                 {new Date(t.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - {new Date(t.endTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                               </span>
+                            </td>
+                            {/* DỮ LIỆU CỘT SỐ GIỜ: TÍNH THEO START-END & XỬ LÝ TRỄ */}
+                            <td style={{...styles.td, fontWeight: 'bold', color: isLate ? '#b91c1c' : '#059669'}}>
+                                {calculateWorkHours(t.startTime, t.endTime, t.checkInTime)}
+                            </td>
+                            <td style={styles.td}>
+                               {t.status === 'completed' || t.progress === 100 ? 
+                                 <span style={styles.badgeSuccess}>Đã chấm công</span> : 
+                                 (isLate ? <span style={styles.badgeError}>Trễ</span> : <span style={styles.badgePending}>Chưa hoàn thành</span>)
+                               }
+                            </td>
+                            <td style={styles.td}>{t.progress}%</td>
+                         </tr>
+                     );
+                   }) : (
+                     <tr><td colSpan="6" style={styles.emptyTd}>Không có dữ liệu chấm công.</td></tr>
                    )}
                 </tbody>
              </table>
