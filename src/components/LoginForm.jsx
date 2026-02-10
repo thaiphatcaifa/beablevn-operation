@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useData } from '../context/DataContext'; // Import DataContext để lấy dữ liệu cũ
+import { useData } from '../context/DataContext'; 
+import bcrypt from 'bcryptjs'; // IMPORT THƯ VIỆN MÃ HÓA
 
 const LoginForm = () => {
   // State quản lý form
@@ -11,7 +12,7 @@ const LoginForm = () => {
   
   const navigate = useNavigate();
   const { login } = useAuth();
-  const { staffList } = useData(); // Lấy danh sách nhân sự từ Realtime DB (CÁCH CŨ)
+  const { staffList } = useData(); 
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -21,14 +22,28 @@ const LoginForm = () => {
     // Giả lập thời gian xử lý một chút để hiệu ứng loading hiển thị (UX)
     setTimeout(() => {
         try {
-            // --- LOGIC CŨ: KIỂM TRA TRONG DANH SÁCH NHÂN SỰ ---
             const safeStaffList = Array.isArray(staffList) ? staffList : [];
 
-            // Tìm tài khoản khớp username VÀ password
-            // formData.id ở đây đóng vai trò là username
-            const account = safeStaffList.find(s => s.username === formData.id && s.password === formData.password);
+            // --- BƯỚC 1: TÌM TÀI KHOẢN THEO USERNAME TRƯỚC ---
+            const account = safeStaffList.find(s => s.username === formData.id);
 
+            // --- BƯỚC 2: KIỂM TRA MẬT KHẨU ---
+            let isPasswordValid = false;
+            
             if (account) {
+                // Kiểm tra xem mật khẩu trong DB có phải là hash bcrypt không (thường bắt đầu bằng $2)
+                const storedPass = account.password || "";
+                
+                if (storedPass.startsWith('$2')) {
+                    // Nếu là hash -> dùng bcrypt để so sánh
+                    isPasswordValid = bcrypt.compareSync(formData.password, storedPass);
+                } else {
+                    // Nếu không phải hash (tài khoản cũ) -> so sánh chuỗi thông thường
+                    isPasswordValid = storedPass === formData.password;
+                }
+            }
+
+            if (account && isPasswordValid) {
                 // Kiểm tra trạng thái đình chỉ
                 if (account.status === 'suspended') {
                     setError('Tài khoản đã bị đình chỉ. Liên hệ Chief Administrator.');
@@ -39,9 +54,8 @@ const LoginForm = () => {
                 // Đăng nhập thành công: Lưu thông tin vào AuthContext
                 login(account);
 
-                // --- SỬA LỖI TẠI ĐÂY: Thêm 'scheduler' vào danh sách Admin ---
+                // Điều hướng dựa trên quyền
                 if (['chief', 'reg', 'op', 'scheduler'].includes(account.role)) {
-                    // Nếu là Scheduler, chuyển thẳng đến Task Manager (vì họ không có quyền vào Staff Manager)
                     if (account.role === 'scheduler') {
                         navigate('/admin/task-manager');
                     } else {
@@ -63,7 +77,7 @@ const LoginForm = () => {
     }, 600); // Delay 0.6s
   };
 
-  // --- STYLES OBJECT (GIAO DIỆN MỚI) ---
+  // --- STYLES OBJECT ---
   const s = {
     container: {
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',

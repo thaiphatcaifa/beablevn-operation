@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
+import bcrypt from 'bcryptjs'; // IMPORT THƯ VIỆN MÃ HÓA
 
 // --- BỘ ICON TINH TẾ (MINIMALIST SVG) ---
 const Icons = {
@@ -40,7 +41,6 @@ const Icons = {
 
 const StaffLayout = () => {
   const { user, logout } = useAuth();
-  // --- SỬA ĐỔI 1: Gọi hàm updateStaffInfo từ DataContext ---
   const { staffList, updateStaffInfo } = useData();
   const location = useLocation();
 
@@ -62,27 +62,35 @@ const StaffLayout = () => {
       return ubi1 + ubi2;
   };
 
-  // --- LOGIC ĐỔI MẬT KHẨU ĐÃ SỬA ---
+  // --- LOGIC ĐỔI MẬT KHẨU (CÓ HASH) ---
   const handleChangePassword = (e) => {
     e.preventDefault();
-    const currentPass = currentUserInfo.password || "";
+    const currentPassHash = currentUserInfo.password || "";
     
-    // Kiểm tra mật khẩu hiện tại
-    if (String(pwdForm.current) !== String(currentPass)) {
+    // 1. Kiểm tra mật khẩu cũ
+    let isMatch = false;
+    // Nếu mật khẩu trong DB bắt đầu bằng $2 (dấu hiệu của bcrypt)
+    if (currentPassHash.startsWith('$2')) {
+        isMatch = bcrypt.compareSync(pwdForm.current, currentPassHash);
+    } else {
+        // Fallback: So sánh chuỗi thường cho tài khoản cũ
+        isMatch = String(pwdForm.current) === String(currentPassHash);
+    }
+
+    if (!isMatch) {
         return alert("Mật khẩu hiện tại không đúng!");
     }
-    // Kiểm tra mật khẩu mới
-    if (pwdForm.new.length < 1) {
-        return alert("Vui lòng nhập mật khẩu mới.");
-    }
-    // Xác nhận mật khẩu
-    if (pwdForm.new !== pwdForm.confirm) {
-        return alert("Xác nhận mật khẩu mới không khớp!");
-    }
     
-    // --- SỬA ĐỔI 2: Thực thi hàm updateStaffInfo ---
+    // 2. Kiểm tra mật khẩu mới
+    if (pwdForm.new.length < 1) return alert("Vui lòng nhập mật khẩu mới.");
+    if (pwdForm.new !== pwdForm.confirm) return alert("Xác nhận mật khẩu mới không khớp!");
+    
+    // 3. Mã hóa mật khẩu mới
+    const salt = bcrypt.genSaltSync(10);
+    const newHashedPassword = bcrypt.hashSync(pwdForm.new, salt);
+
     if (typeof updateStaffInfo === 'function') {
-        updateStaffInfo(user.id, { password: pwdForm.new });
+        updateStaffInfo(user.id, { password: newHashedPassword });
         alert("Đổi mật khẩu thành công!");
         setShowPwdModal(false);
         setPwdForm({ current: '', new: '', confirm: '' });

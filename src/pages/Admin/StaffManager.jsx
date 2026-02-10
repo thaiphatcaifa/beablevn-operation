@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import bcrypt from 'bcryptjs'; // IMPORT THƯ VIỆN MÃ HÓA
 
 // --- BỘ ICON MINIMALIST ---
 const Icons = {
@@ -42,7 +43,6 @@ const Icons = {
 };
 
 // --- HELPER AN TOÀN SỐ ---
-// Hàm này đảm bảo giá trị trả về luôn là số hợp lệ, không bao giờ là NaN
 const safeNumber = (value) => {
     if (value === '' || value === null || value === undefined) return 0;
     const num = Number(value);
@@ -89,14 +89,21 @@ const StaffManager = () => {
   const handleAdd = (e) => {
     e.preventDefault();
     if (!formData.name || !formData.username || !formData.password) return;
+    
+    // --- MÃ HÓA MẬT KHẨU TẠO MỚI ---
+    const salt = bcrypt.genSaltSync(10);
+    const hashedPassword = bcrypt.hashSync(formData.password, salt);
+
     addStaff({ 
         ...formData, 
+        password: hashedPassword, // Lưu hash thay vì password thô
         role: 'staff', positions: [], 
         ubi1Base: 0, ubi1Percent: 100, ubi2Base: 0, ubi2Percent: 100,
         remunerations: [], 
         status: 'active' 
     });
     setFormData({ name: '', username: '', password: '' });
+    alert("Tạo tài khoản thành công (Mật khẩu đã được mã hóa)!");
   };
 
   const startEdit = (staff) => {
@@ -126,24 +133,25 @@ const StaffManager = () => {
       setEditForm({ ...editForm, remunerations: newRems });
   };
 
-  // --- HÀM LƯU THAY ĐỔI (ĐÃ SỬA LỖI NaN) ---
+  // --- HÀM LƯU THAY ĐỔI ---
   const saveEdit = async (id) => {
     try {
         const { newPassword, ...rest } = editForm;
         const updates = { ...rest };
         
-        // 1. Cập nhật mật khẩu nếu có
+        // --- XỬ LÝ RESET MẬT KHẨU (NẾU CÓ) ---
         if (newPassword && newPassword.trim() !== '') {
-            updates.password = newPassword;
+            const salt = bcrypt.genSaltSync(10);
+            updates.password = bcrypt.hashSync(newPassword, salt);
         }
         
-        // 2. Ép kiểu số an toàn (Sử dụng hàm safeNumber để tránh NaN)
+        // Xử lý số liệu
         updates.ubi1Base = safeNumber(updates.ubi1Base);
         updates.ubi1Percent = safeNumber(updates.ubi1Percent);
         updates.ubi2Base = safeNumber(updates.ubi2Base);
         updates.ubi2Percent = safeNumber(updates.ubi2Percent);
         
-        // 3. Xử lý mảng Remuneration an toàn
+        // Xử lý Remuneration
         if (Array.isArray(updates.remunerations)) {
             updates.remunerations = updates.remunerations.map(r => ({ 
                 ...r, 
@@ -153,10 +161,8 @@ const StaffManager = () => {
             updates.remunerations = [];
         }
 
-        // 4. Gọi cập nhật
         await updateStaffInfo(id, updates);
         
-        // 5. Reset form sau khi thành công
         setEditMode(null);
         setEditForm({});
         alert("Cập nhật thông tin thành công!");
@@ -199,7 +205,7 @@ const StaffManager = () => {
 
       {/* FORM TẠO MỚI */}
       <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', border: '1px solid #f0f0f0' }}>
-        <h4 style={{ margin: '0 0 15px 0', color: '#003366', fontWeight: '600' }}>Tạo tài khoản mới</h4>
+        <h4 style={{ margin: '0 0 15px 0', color: '#003366', fontWeight: '600' }}>+ Tạo tài khoản mới</h4>
         <form onSubmit={handleAdd} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <input placeholder="Họ và Tên" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required style={{...styles.input, flex: '1 1 200px'}} />
           <input placeholder="ID Đăng nhập" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} required style={{...styles.input, flex: '1 1 150px'}}/>
@@ -284,14 +290,13 @@ const StaffManager = () => {
                           </select>
                       </div>
 
-                      {/* --- PHẦN 3: TÀI CHÍNH (SỬA LỖI INPUT) --- */}
+                      {/* --- PHẦN 3: TÀI CHÍNH --- */}
                       <div style={styles.sectionBox}>
                           <div style={styles.sectionTitle}>3. Tài chính</div>
                           {/* UBI 1 */}
                           <div style={{...styles.financeRow, flexWrap: 'wrap'}}>
                               <span style={styles.financeLabel}>UBI 1</span>
                               <div style={{display:'flex', gap:'5px', flex: 1, minWidth: '150px'}}>
-                                  {/* BỎ Number() trong onChange để cho phép nhập liệu thoải mái */}
                                   <input type="number" placeholder="VNĐ" value={editForm.ubi1Base} onChange={e => setEditForm({...editForm, ubi1Base: e.target.value})} style={{...styles.inputFull, flex: 2}} />
                                   <input type="number" placeholder="%" value={editForm.ubi1Percent} onChange={e => setEditForm({...editForm, ubi1Percent: e.target.value})} style={{...styles.inputFull, flex: 1}} />
                               </div>
@@ -316,7 +321,7 @@ const StaffManager = () => {
                                       onClick={handleAddRemuneration} 
                                       style={{fontSize:'0.75rem', color:'#003366', background:'white', border:'1px solid #003366', borderRadius:'4px', padding:'4px 8px', cursor:'pointer', fontWeight:'bold'}}
                                   >
-                                      THÊM R
+                                      + THÊM R
                                   </button>
                               </div>
                               
