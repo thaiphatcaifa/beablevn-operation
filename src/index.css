@@ -1,0 +1,17 @@
+body {
+  margin: 0;
+  /* Cập nhật font chính thành Josefin Sans */
+  font-family: 'Josefin Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Bổ sung: Đảm bảo các form control cũng nhận font Josefin Sans */
+button, input, optgroup, select, textarea {
+  font-family: 'Josefin Sans', sans-serif;
+}
