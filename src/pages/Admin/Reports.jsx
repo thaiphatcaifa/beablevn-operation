@@ -2,7 +2,22 @@ import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
-// --- HELPER FUNCTIONS ---
+// --- HELPER LÀM SẠCH VÀ ÉP KIỂU SỐ ---
+const parseAmount = (val) => {
+    if (val === undefined || val === null || val === '') return 0;
+    const clean = String(val).replace(/,/g, '').replace(/\s/g, '');
+    const num = Number(clean);
+    return isNaN(num) ? 0 : num;
+};
+
+const getPercent = (val) => {
+    if (val === undefined || val === null || val === '') return 100;
+    const clean = String(val).replace(/,/g, '').replace(/\s/g, '');
+    const num = Number(clean);
+    return isNaN(num) ? 100 : num;
+};
+
+// --- HELPER THỜI GIAN ---
 const isSameDay = (d1, d2) => d1.toDateString() === d2.toDateString();
 const isSameMonth = (d1, d2) => d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
 const isSameWeek = (d1, d2) => {
@@ -20,7 +35,7 @@ const formatDateTime = (isoString) => {
     return `${d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} ${d.getDate()}/${d.getMonth()+1}`;
 };
 
-// --- LOGIC TÍNH GIỜ (CÓ ÂN HẠN 10 PHÚT) ---
+// --- LOGIC TÍNH GIỜ HIỂN THỊ TRONG BẢNG (String) ---
 const calculateWorkHours = (schedStart, schedEnd, actualCheckIn, actualCheckOut) => {
     if (!schedStart || !schedEnd || !actualCheckIn || !actualCheckOut) return '---';
     
@@ -29,10 +44,7 @@ const calculateWorkHours = (schedStart, schedEnd, actualCheckIn, actualCheckOut)
     const aIn = new Date(actualCheckIn);
     const aOut = new Date(actualCheckOut);
 
-    // 1. MỐC BẮT ĐẦU
     let calcStart = aIn > sStart ? aIn : sStart;
-
-    // 2. MỐC KẾT THÚC
     let calcEnd;
     if (aOut > sEnd) {
         calcEnd = sEnd;
@@ -55,6 +67,36 @@ const calculateWorkHours = (schedStart, schedEnd, actualCheckIn, actualCheckOut)
     return `${hours}h ${minutes < 10 ? '0' + minutes : minutes}p`;
 };
 
+// --- LOGIC TÍNH SỐ GIỜ THỰC TẾ (SỐ THẬP PHÂN) ĐỂ NHÂN LƯƠNG ---
+const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCheckOut) => {
+    if (!schedStart || !schedEnd || !actualCheckIn || !actualCheckOut) return 0;
+    
+    const sStart = new Date(schedStart);
+    const sEnd = new Date(schedEnd);
+    const aIn = new Date(actualCheckIn);
+    const aOut = new Date(actualCheckOut);
+
+    let calcStart = aIn > sStart ? aIn : sStart;
+    let calcEnd;
+    
+    if (aOut > sEnd) {
+        calcEnd = sEnd;
+    } else {
+        const diffMinutesEarly = (sEnd - aOut) / 60000;
+        if (diffMinutesEarly <= 10) {
+            calcEnd = sEnd; 
+        } else {
+            calcEnd = aOut;
+        }
+    }
+
+    const diffMs = calcEnd - calcStart;
+    if (diffMs < 0) return 0;
+
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    return totalMinutes / 60; // Trả về dạng thập phân
+};
+
 // --- ICONS ---
 const Icons = {
   Finance: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>),
@@ -70,10 +112,8 @@ const Reports = () => {
   const { user } = useAuth();
   const { tasks, staffList, facilityLogs } = useData();
   
-  // --- NAVIGATION STATE ---
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'finance', 'facility', 'attendance', 'tasks'
+  const [activeTab, setActiveTab] = useState('overview'); 
 
-  // --- STATES BỘ LỌC ---
   const [attendanceFilter, setAttendanceFilter] = useState('month'); 
   const [attendanceStaffFilter, setAttendanceStaffFilter] = useState('all'); 
   const [attendanceDayFilter, setAttendanceDayFilter] = useState('all'); 
@@ -92,47 +132,104 @@ const Reports = () => {
       { key: 'Sun', label: 'Chủ Nhật', val: 0 }
   ];
 
-  // --- HÀM XỬ LÝ IN ---
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => { window.print(); };
 
   // --- PHÂN TÁCH DỮ LIỆU ---
-  const opAdminTasks = tasks.filter(t => !t.fromScheduleId);
-  const scheduleTasks = tasks.filter(t => t.fromScheduleId);
+  const opAdminTasks = Array.isArray(tasks) ? tasks.filter(t => !t.fromScheduleId) : [];
+  const scheduleTasks = Array.isArray(tasks) ? tasks.filter(t => t.fromScheduleId) : [];
 
-  // 1. TÀI CHÍNH
+  // --- 1. TÀI CHÍNH ---
   let totalEstimatedCost = 0;
   const financeRows = [];
 
-  staffList.forEach(staff => {
-      if (financeStaffFilter !== 'all' && staff.id !== financeStaffFilter) return;
+  const currentMonth = new Date();
+  const currentMonthScheduleTasks = scheduleTasks.filter(t => {
+      if (!t.startTime) return false;
+      const d = new Date(t.startTime);
+      return !isNaN(d.getTime()) && isSameMonth(d, currentMonth);
+  });
 
-      const ubi1 = (staff.ubi1Base || 0) * (staff.ubi1Percent || 100) / 100;
-      const ubi2 = (staff.ubi2Base || 0) * (staff.ubi2Percent || 100) / 100;
+  const safeStaffList = Array.isArray(staffList) ? staffList : [];
+
+  safeStaffList.forEach(staff => {
+      if (financeStaffFilter !== 'all' && String(staff.id) !== String(financeStaffFilter)) return;
+
+      const ubi1 = parseAmount(staff.ubi1Base) * getPercent(staff.ubi1Percent) / 100;
+      const ubi2 = parseAmount(staff.ubi2Base) * getPercent(staff.ubi2Percent) / 100;
       const totalUBI = ubi1 + ubi2;
 
-      const opTasksCount = opAdminTasks.filter(t => t.assigneeId === staff.id).length;
-      const taskRemuneration = (staff.remuneration || 0) * opTasksCount;
+      const staffTasks = currentMonthScheduleTasks.filter(t => String(t.assigneeId) === String(staff.id));
+      let taskRemuneration = 0;
+      let totalMatchedHours = 0;
+      let matchedTasksList = [];
 
-      if (totalUBI > 0) {
-          financeRows.push({
-              item: `UBI - ${staff.name}`,
-              type: 'Cố định (Tháng)',
-              amount: totalUBI,
-              date: new Date().toLocaleDateString('vi-VN')
+      staffTasks.forEach(task => {
+          if (!staff.remunerations || !Array.isArray(staff.remunerations)) return;
+          if (!task.checkInTime || !task.checkOutTime) return; 
+          
+          const matchedRule = staff.remunerations.find(rem => {
+              if (!rem) return false; 
+              
+              if (rem.position && String(rem.position).trim() !== '') {
+                  const rulePos = String(rem.position).trim().toLowerCase();
+                  const taskPos = String(task.assignedRole || '').trim().toLowerCase();
+                  if (rulePos !== taskPos) return false;
+              }
+              
+              if (rem.keywords && String(rem.keywords).trim() !== '') {
+                  const keywords = String(rem.keywords).split(',').map(k => k.trim().toLowerCase()).filter(k => k);
+                  const titleLower = String(task.title || '').toLowerCase();
+                  const isMatch = keywords.some(k => titleLower.includes(k));
+                  if (!isMatch) return false;
+              }
+              return true;
           });
-          totalEstimatedCost += totalUBI;
+
+          if (matchedRule) {
+              const workedHours = calculateWorkHoursDecimal(task.startTime, task.endTime, task.checkInTime, task.checkOutTime);
+              totalMatchedHours += workedHours;
+              matchedTasksList.push({
+                  hours: workedHours,
+                  rate: parseAmount(matchedRule.amount)
+              });
+          }
+      });
+
+      // ÁP DỤNG THUẬT TOÁN GIỜ TỐI THIỂU
+      const minHours = parseAmount(staff.minWorkHours);
+      
+      if (totalMatchedHours >= minHours) {
+          matchedTasksList.sort((a, b) => a.rate - b.rate);
+          let hoursToOffset = minHours;
+
+          matchedTasksList.forEach(t => {
+              if (hoursToOffset > 0) {
+                  if (t.hours <= hoursToOffset) {
+                      hoursToOffset -= t.hours;
+                      t.hours = 0;
+                  } else {
+                      t.hours -= hoursToOffset;
+                      hoursToOffset = 0;
+                  }
+              }
+              if (t.hours > 0) {
+                  taskRemuneration += t.hours * t.rate;
+              }
+          });
+      } else {
+          taskRemuneration = 0;
       }
 
-      if (taskRemuneration > 0) {
+      const totalSalary = totalUBI + taskRemuneration;
+
+      if (totalSalary > 0 || minHours > 0) {
           financeRows.push({
-              item: `Thù lao - ${staff.name}`,
-              type: `Theo việc (${opTasksCount} task)`,
-              amount: taskRemuneration,
+              item: staff.name,
+              type: `UBI: ${Math.round(totalUBI).toLocaleString()}đ + Thù lao vượt mức: ${Math.round(taskRemuneration).toLocaleString()}đ (Làm ${totalMatchedHours.toFixed(1)}/${minHours}h)`,
+              amount: totalSalary,
               date: new Date().toLocaleDateString('vi-VN')
           });
-          totalEstimatedCost += taskRemuneration;
+          totalEstimatedCost += totalSalary;
       }
   });
 
@@ -155,7 +252,7 @@ const Reports = () => {
 
   // 3. TIẾN ĐỘ CÔNG VIỆC
   const filteredOpTasks = opAdminTasks.filter(t => {
-      if (taskStaffFilter !== 'all' && t.assigneeId !== taskStaffFilter) return false;
+      if (taskStaffFilter !== 'all' && String(t.assigneeId) !== String(taskStaffFilter)) return false;
       
       const isCompleted = t.status === 'completed';
       const isOverdue = new Date() > new Date(t.endTime) && !isCompleted;
@@ -178,7 +275,7 @@ const Reports = () => {
       if (attendanceFilter === 'day' && !isSameDay(taskDate, now)) return false;
       if (attendanceFilter === 'week' && !isSameWeek(taskDate, now)) return false;
       if (attendanceFilter === 'month' && !isSameMonth(taskDate, now)) return false;
-      if (attendanceStaffFilter !== 'all' && t.assigneeId !== attendanceStaffFilter) return false;
+      if (attendanceStaffFilter !== 'all' && String(t.assigneeId) !== String(attendanceStaffFilter)) return false;
       if (attendanceDayFilter !== 'all') {
           const dayVal = daysOfWeek.find(d => d.key === attendanceDayFilter)?.val;
           if (taskDate.getDay() !== dayVal) return false;
@@ -187,10 +284,8 @@ const Reports = () => {
   });
 
   // --- RENDER FUNCTIONS ---
-
   const renderDashboard = () => (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-          {/* CARD 1: TÀI CHÍNH */}
           {user?.role === 'chief' && (
               <div style={styles.menuCard}>
                   <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'15px'}}>
@@ -198,7 +293,7 @@ const Reports = () => {
                       <h3 style={styles.cardTitle}>Tài chính & Thu nhập</h3>
                   </div>
                   <div style={{color:'#6b7280', fontSize:'0.9rem', marginBottom:'20px'}}>
-                      Tổng chi dự kiến: <strong style={{color:'#059669'}}>{totalEstimatedCost.toLocaleString()} VNĐ</strong>
+                      Tổng chi dự kiến (Tháng): <strong style={{color:'#059669'}}>{Math.round(totalEstimatedCost).toLocaleString()} VNĐ</strong>
                   </div>
                   <button onClick={() => setActiveTab('finance')} style={styles.accessBtn}>
                       Truy cập <Icons.ArrowRight />
@@ -206,7 +301,6 @@ const Reports = () => {
               </div>
           )}
 
-          {/* CARD 2: CSVC */}
           <div style={styles.menuCard}>
               <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'15px'}}>
                   <div style={styles.iconBox}><Icons.Facility /></div>
@@ -220,7 +314,6 @@ const Reports = () => {
               </button>
           </div>
 
-          {/* CARD 3: CHẤM CÔNG */}
           <div style={styles.menuCard}>
               <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'15px'}}>
                   <div style={styles.iconBox}><Icons.Schedule /></div>
@@ -234,7 +327,6 @@ const Reports = () => {
               </button>
           </div>
 
-          {/* CARD 4: TIẾN ĐỘ CÔNG VIỆC */}
           <div style={styles.menuCard}>
               <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'15px'}}>
                   <div style={styles.iconBox}><Icons.Task /></div>
@@ -264,13 +356,12 @@ const Reports = () => {
 
       {/* HEADER + NÚT IN */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e5e7eb', paddingBottom: '15px', marginBottom: '20px' }}>
-         <h2 style={{ color: '#003366', margin: 0, fontWeight: 'bold', fontSize: '1.5rem' }}>Báo cáo Quản trị</h2>
+         <h2 style={{ color: '#003366', margin: 0, fontWeight: 'bold', fontSize: '1.5rem' }}>BÁO CÁO QUẢN TRỊ</h2>
          <button onClick={handlePrint} className="btn-print" style={styles.printBtn}>
             <Icons.Print /> Xuất Báo cáo
          </button>
       </div>
 
-      {/* VIEW: DASHBOARD (MENU) */}
       {activeTab === 'overview' && renderDashboard()}
 
       {/* VIEW: CHI TIẾT TÀI CHÍNH */}
@@ -279,7 +370,7 @@ const Reports = () => {
                <div style={{...styles.cardHeader, justifyContent: 'space-between'}}>
                   <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                       <div style={styles.iconBox}><Icons.Finance /></div>
-                      <h3 style={styles.cardTitle}>Tài chính & Thu nhập</h3>
+                      <h3 style={styles.cardTitle}>Tài chính & Thu nhập (Tháng {new Date().getMonth() + 1})</h3>
                   </div>
                   <div style={{display:'flex', gap:'10px', alignItems:'center'}}>
                       <select value={financeStaffFilter} onChange={(e) => setFinanceStaffFilter(e.target.value)} style={styles.filterSelect}>
@@ -294,19 +385,19 @@ const Reports = () => {
                     <thead>
                       <tr style={styles.tableHeadRow}>
                         <th style={{...styles.th, width: '50px'}}>STT</th>
-                        <th style={styles.th}>Khoản mục</th>
-                        <th style={styles.th}>Loại</th>
-                        <th style={styles.th}>Số tiền</th>
-                        <th style={styles.th}>Ngày</th>
+                        <th style={styles.th}>Nhân sự</th>
+                        <th style={styles.th}>Chi tiết Phân bổ</th>
+                        <th style={styles.th}>Tổng Số Tiền (VNĐ)</th>
+                        <th style={styles.th}>Ngày chốt BC</th>
                       </tr>
                     </thead>
                     <tbody>
                       {financeRows.length > 0 ? financeRows.map((row, idx) => (
                         <tr key={idx} style={styles.tr}>
                             <td style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{idx + 1}</td>
-                            <td style={styles.td}>{row.item}</td>
-                            <td style={styles.td}>{row.type}</td>
-                            <td style={{...styles.td, fontWeight: 'bold'}}>{row.amount.toLocaleString()}</td>
+                            <td style={{...styles.td, fontWeight:'600', color:'#111827'}}>{row.item}</td>
+                            <td style={{...styles.td, fontSize:'0.8rem', color:'#4b5563'}}>{row.type}</td>
+                            <td style={{...styles.td, fontWeight: 'bold', color: '#059669'}}>{Math.round(row.amount).toLocaleString()}</td>
                             <td style={styles.td}>{row.date}</td>
                         </tr>
                       )) : (

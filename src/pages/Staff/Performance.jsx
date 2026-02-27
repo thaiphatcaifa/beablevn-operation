@@ -2,7 +2,64 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 
-// --- ICON MINIMALIST (#003366) ---
+// --- HELPER QUẢN LÝ THỜI GIAN ---
+const isSameDay = (d1, d2) => d1.toDateString() === d2.toDateString();
+const isSameMonth = (d1, d2) => d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
+const isSameYear = (d1, d2) => d1.getFullYear() === d2.getFullYear();
+const isSameWeek = (d1, d2) => {
+    const start = new Date(d2);
+    start.setHours(0,0,0,0);
+    start.setDate(start.getDate() - start.getDay() + 1); 
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    return d1 >= start && d1 <= end;
+};
+
+// --- HELPER LÀM SẠCH VÀ ÉP KIỂU SỐ ---
+const parseAmount = (val) => {
+    if (val === undefined || val === null || val === '') return 0;
+    const clean = String(val).replace(/,/g, '').replace(/\s/g, '');
+    const num = Number(clean);
+    return isNaN(num) ? 0 : num;
+};
+
+const getPercent = (val) => {
+    if (val === undefined || val === null || val === '') return 100;
+    const clean = String(val).replace(/,/g, '').replace(/\s/g, '');
+    const num = Number(clean);
+    return isNaN(num) ? 100 : num;
+};
+
+const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCheckOut) => {
+    if (!schedStart || !schedEnd || !actualCheckIn || !actualCheckOut) return 0;
+    
+    const sStart = new Date(schedStart);
+    const sEnd = new Date(schedEnd);
+    const aIn = new Date(actualCheckIn);
+    const aOut = new Date(actualCheckOut);
+
+    let calcStart = aIn > sStart ? aIn : sStart;
+    let calcEnd;
+    
+    if (aOut > sEnd) {
+        calcEnd = sEnd;
+    } else {
+        const diffMinutesEarly = (sEnd - aOut) / 60000;
+        if (diffMinutesEarly <= 10) {
+            calcEnd = sEnd; 
+        } else {
+            calcEnd = aOut;
+        }
+    }
+
+    const diffMs = calcEnd - calcStart;
+    if (diffMs < 0) return 0;
+
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    return totalMinutes / 60; 
+};
+
+// --- ICON MINIMALIST ---
 const Icons = {
   History: () => (
     <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5">
@@ -14,10 +71,15 @@ const Icons = {
 const Performance = () => {
   const { user } = useAuth();
   const { staffList, tasks } = useData();
-  const currentUser = staffList.find(s => s.id === user.id) || user;
+  
+  const safeStaffList = Array.isArray(staffList) ? staffList : [];
+  const currentUser = safeStaffList.find(s => String(s.id) === String(user.id)) || user;
+  
   const [incomeFilter, setIncomeFilter] = useState('Month'); 
+  const now = new Date();
 
-  const myTasks = tasks.filter(t => t.assigneeId === user.id);
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const myTasks = safeTasks.filter(t => String(t.assigneeId) === String(user.id));
   const completedTasks = myTasks.filter(t => t.status === 'completed' && t.finishedAt);
 
   const evaluateTask = (task) => {
@@ -35,16 +97,104 @@ const Performance = () => {
       return { grade: "Kỷ luật / Không đạt", color: "#343a40", icon: "🔨", desc: "Không đạt yêu cầu" };
   };
 
-  const ubi1 = (currentUser.ubi1Base || 0) * (currentUser.ubi1Percent || 0) / 100;
-  const ubi2 = (currentUser.ubi2Base || 0) * (currentUser.ubi2Percent || 0) / 100;
-  const remuneration = currentUser.remuneration || 0;
-  const totalBaseMonth = ubi1 + ubi2 + remuneration;
+  // --- LOGIC TÍNH LƯƠNG NHÂN VỚI GIỜ LÀM VIỆC ---
+  let ubiMultiplier = 1;
+  const myScheduleTasks = myTasks.filter(t => t.fromScheduleId);
+
+  const filteredScheduleTasks = myScheduleTasks.filter(t => {
+      if (!t.startTime) return false;
+      const d = new Date(t.startTime);
+      if (isNaN(d.getTime())) return false;
+      
+      if (incomeFilter === 'Day') return isSameDay(d, now);
+      if (incomeFilter === 'Week') return isSameWeek(d, now);
+      if (incomeFilter === 'Month') return isSameMonth(d, now);
+      if (incomeFilter === 'Year') return isSameYear(d, now);
+      return true;
+  });
+
+  if (incomeFilter === 'Day') ubiMultiplier = 1 / 30;
+  if (incomeFilter === 'Week') ubiMultiplier = 1 / 4;
+  if (incomeFilter === 'Month') ubiMultiplier = 1;
+  if (incomeFilter === 'Year') ubiMultiplier = 12;
+
+  // 1. Tính UBI
+  const ubi1Month = parseAmount(currentUser.ubi1Base) * getPercent(currentUser.ubi1Percent) / 100;
+  const ubi2Month = parseAmount(currentUser.ubi2Base) * getPercent(currentUser.ubi2Percent) / 100;
   
-  let divider = 1;
-  if (incomeFilter === 'Week') divider = 4;
-  if (incomeFilter === 'Day') divider = 30;
-  if (incomeFilter === 'Year') divider = 1/12;
-  const estimatedIncome = totalBaseMonth / divider;
+  const activeUbi1 = ubi1Month * ubiMultiplier;
+  const activeUbi2 = ubi2Month * ubiMultiplier;
+  const totalUBI = activeUbi1 + activeUbi2;
+
+  // 2. Tính Tổng giờ & Lưu danh sách mức lương
+  let totalMatchedHours = 0;
+  let matchedTasksList = [];
+
+  filteredScheduleTasks.forEach(task => {
+      if (!currentUser.remunerations || !Array.isArray(currentUser.remunerations)) return;
+      if (!task.checkInTime || !task.checkOutTime) return;
+
+      const matchedRule = currentUser.remunerations.find(rem => {
+          if (!rem) return false; 
+          
+          if (rem.position && String(rem.position).trim() !== '') {
+              const rulePos = String(rem.position).trim().toLowerCase();
+              const taskPos = String(task.assignedRole || '').trim().toLowerCase();
+              if (rulePos !== taskPos) return false; 
+          }
+          
+          if (rem.keywords && String(rem.keywords).trim() !== '') {
+              const keywords = String(rem.keywords).split(',').map(k => k.trim().toLowerCase()).filter(k => k);
+              const titleLower = String(task.title || '').toLowerCase();
+              const isMatch = keywords.some(k => titleLower.includes(k));
+              if (!isMatch) return false;
+          }
+
+          return true;
+      });
+
+      if (matchedRule) {
+          const workedHours = calculateWorkHoursDecimal(task.startTime, task.endTime, task.checkInTime, task.checkOutTime);
+          totalMatchedHours += workedHours;
+          matchedTasksList.push({
+              hours: workedHours,
+              rate: parseAmount(matchedRule.amount)
+          });
+      }
+  });
+
+  // 3. ÁP DỤNG THUẬT TOÁN GIỜ TỐI THIỂU
+  let activeRemuneration = 0;
+  const minHoursThreshold = parseAmount(currentUser.minWorkHours) * ubiMultiplier;
+
+  if (totalMatchedHours >= minHoursThreshold) {
+      // Đạt tối thiểu: Sắp xếp theo Rate TĂNG DẦN (thấp bù trước)
+      matchedTasksList.sort((a, b) => a.rate - b.rate);
+      
+      let hoursToOffset = minHoursThreshold;
+
+      matchedTasksList.forEach(t => {
+          if (hoursToOffset > 0) {
+              if (t.hours <= hoursToOffset) {
+                  hoursToOffset -= t.hours;
+                  t.hours = 0; // Đã dùng để bù UBI
+              } else {
+                  t.hours -= hoursToOffset;
+                  hoursToOffset = 0; // Đã bù đủ
+              }
+          }
+          // Giờ vượt mức được nhân với rate
+          if (t.hours > 0) {
+              activeRemuneration += t.hours * t.rate;
+          }
+      });
+  } else {
+      // Dưới tối thiểu: Không được tính Remuneration
+      activeRemuneration = 0;
+  }
+
+  const estimatedIncome = totalUBI + activeRemuneration;
+  const excessHours = Math.max(0, totalMatchedHours - minHoursThreshold);
 
   return (
     <div style={{ padding: '20px' }}>
@@ -55,30 +205,34 @@ const Performance = () => {
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid #eee', paddingBottom:'15px', marginBottom:'15px'}}>
             <h4 style={{margin:0, color:'#374151', fontSize:'1rem'}}>Tổng thu nhập ước tính</h4>
             <select value={incomeFilter} onChange={e => setIncomeFilter(e.target.value)} style={{padding:'8px', borderRadius:'6px', border:'1px solid #d1d5db', outline:'none', fontSize:'0.9rem'}}>
-                <option value="Day">Theo Ngày</option>
-                <option value="Week">Theo Tuần</option>
-                <option value="Month">Theo Tháng</option>
-                <option value="Year">Theo Năm</option>
+                <option value="Day">Hôm nay</option>
+                <option value="Week">Tuần này</option>
+                <option value="Month">Tháng này</option>
+                <option value="Year">Năm nay</option>
             </select>
           </div>
           
           <div style={{textAlign:'center', marginBottom:'20px'}}>
-             <h1 style={{color: '#059669', fontSize:'2.2rem', margin:0, fontWeight:'700'}}>{estimatedIncome.toLocaleString('vi-VN')} VNĐ</h1>
-             <span style={{color:'#6b7280', fontSize:'0.9rem'}}>Thu nhập ({incomeFilter})</span>
+             <h1 style={{color: '#059669', fontSize:'2.2rem', margin:0, fontWeight:'700'}}>{Math.round(estimatedIncome).toLocaleString('vi-VN')} VNĐ</h1>
+             <span style={{color:'#6b7280', fontSize:'0.9rem'}}>Thu nhập dự kiến ({incomeFilter})</span>
           </div>
 
           <div style={{background:'#f9fafb', padding:'15px', borderRadius:'8px', display:'grid', gap:'12px', border:'1px solid #f3f4f6'}}>
               <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.9rem'}}>
                   <span style={{color:'#4b5563'}}>UBI 1 (Cơ bản):</span>
-                  <strong style={{color:'#111827'}}>{(ubi1/divider).toLocaleString()} đ</strong>
+                  <strong style={{color:'#111827'}}>{Math.round(activeUbi1).toLocaleString()} đ</strong>
               </div>
               <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.9rem'}}>
                   <span style={{color:'#4b5563'}}>UBI 2 (Hiệu suất):</span>
-                  <strong style={{color:'#111827'}}>{(ubi2/divider).toLocaleString()} đ</strong>
+                  <strong style={{color:'#111827'}}>{Math.round(activeUbi2).toLocaleString()} đ</strong>
               </div>
               <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.9rem'}}>
-                  <span style={{color:'#4b5563'}}>Thù lao (Role):</span>
-                  <strong style={{color:'#003366'}}>{(remuneration/divider).toLocaleString()} đ</strong>
+                  <span style={{color:'#4b5563'}}>Giờ làm thực tế (Tối thiểu {minHoursThreshold.toFixed(1)}h):</span>
+                  <strong style={{color: totalMatchedHours >= minHoursThreshold ? '#059669' : '#dc2626'}}>{totalMatchedHours.toFixed(1)} giờ</strong>
+              </div>
+              <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.9rem'}}>
+                  <span style={{color:'#4b5563'}}>Thù lao vượt mức ({excessHours.toFixed(1)} giờ):</span>
+                  <strong style={{color:'#003366'}}>{Math.round(activeRemuneration).toLocaleString()} đ</strong>
               </div>
           </div>
       </div>

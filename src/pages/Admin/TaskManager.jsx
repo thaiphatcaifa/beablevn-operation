@@ -298,7 +298,7 @@ const TaskManager = () => {
           fontWeight: 'bold', 
           fontSize: '1.5rem' 
       }}>
-          {isScheduler ? 'Lên lịch công tác (Scheduler)' : 'Quản lý Nhiệm vụ (Op Admin)'}
+          {isScheduler ? 'LÊN LỊCH CÔNG TÁC (SCHEDULER)' : 'QUẢN LÝ NHIỆM VỤ - OPERATIONS'}
       </h2>
 
       {/* --- PHẦN 1: DUYỆT YÊU CẦU --- */}
@@ -344,8 +344,8 @@ const TaskManager = () => {
       )}
 
       {/* --- PHẦN 2: FORM NHẬP LIỆU --- */}
-      <div style={{ background: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '24px' }}>
-        <h4 style={{ margin: '0 0 20px 0' }}>
+      <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', border: '1px solid #f0f0f0' }}>
+        <h4 style={{ margin: '0 0 15px 0', color: '#003366', fontWeight: '600' }}>
             {isScheduler ? (editingScheduleId ? 'Đang soạn yêu cầu điều chỉnh' : 'Lên lịch công tác mới') : 'Giao nhiệm vụ & Thiết lập Kỷ luật'}
         </h4>
         

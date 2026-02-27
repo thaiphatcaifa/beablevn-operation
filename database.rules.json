@@ -1,6 +1,47 @@
 {
   "rules": {
-    ".read": "now < 1771520400000",  // 2026-2-20
-    ".write": "now < 1771520400000",  // 2026-2-20
+    // 1. KHÓA CỬA CHÍNH (ROOT)
+    // - Không ai được phép đọc toàn bộ Database cùng lúc (chống dump data).
+    // - Không ai được phép ghi/xóa ở thư mục gốc (chống xóa trắng Database hoặc tạo node rác).
+    ".read": false,
+    ".write": false,
+
+    // 2. MỞ CỬA TỪNG PHÒNG (NODE) CỤ THỂ
+    // Cho phép đọc/ghi vào đúng các thư mục mà code ReactJS đang sử dụng.
+    
+    "staff": {
+      ".read": true,
+      ".write": true
+    },
+    
+    "tasks": {
+      ".read": true,
+      ".write": true
+    },
+    
+    "schedules": {
+      ".read": true,
+      ".write": true
+    },
+    
+    "shifts": {
+      ".read": true,
+      ".write": true
+    },
+    
+    "attendanceLogs": {
+      ".read": true,
+      ".write": true
+    },
+    
+    "facilityLogs": {
+      ".read": true,
+      ".write": true
+    },
+    
+    "disciplines": {
+      ".read": true,
+      ".write": true
+    }
   }
 }

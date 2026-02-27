@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import bcrypt from 'bcryptjs'; // IMPORT THƯ VIỆN MÃ HÓA
+import bcrypt from 'bcryptjs';
 
 // --- BỘ ICON MINIMALIST ---
 const Icons = {
@@ -64,7 +64,6 @@ const StaffManager = () => {
   const isChief = user?.role === 'chief';
   if (!isChief) return <div style={{padding:'20px', color:'#d32f2f'}}>Bạn không có quyền truy cập quản lý nhân sự cấp cao.</div>;
 
-  // --- LOGIC LỌC DỮ LIỆU ---
   const getLastName = (fullName) => {
       if (!fullName) return '';
       const parts = fullName.trim().split(' ');
@@ -84,20 +83,18 @@ const StaffManager = () => {
       return true;
   });
 
-  // --- HÀM XỬ LÝ ---
-
   const handleAdd = (e) => {
     e.preventDefault();
     if (!formData.name || !formData.username || !formData.password) return;
     
-    // --- MÃ HÓA MẬT KHẨU TẠO MỚI ---
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(formData.password, salt);
 
     addStaff({ 
         ...formData, 
-        password: hashedPassword, // Lưu hash thay vì password thô
+        password: hashedPassword,
         role: 'staff', positions: [], 
+        minWorkHours: 0, // Giá trị mặc định
         ubi1Base: 0, ubi1Percent: 100, ubi2Base: 0, ubi2Percent: 100,
         remunerations: [], 
         status: 'active' 
@@ -133,25 +130,23 @@ const StaffManager = () => {
       setEditForm({ ...editForm, remunerations: newRems });
   };
 
-  // --- HÀM LƯU THAY ĐỔI ---
   const saveEdit = async (id) => {
     try {
         const { newPassword, ...rest } = editForm;
         const updates = { ...rest };
         
-        // --- XỬ LÝ RESET MẬT KHẨU (NẾU CÓ) ---
         if (newPassword && newPassword.trim() !== '') {
             const salt = bcrypt.genSaltSync(10);
             updates.password = bcrypt.hashSync(newPassword, salt);
         }
         
         // Xử lý số liệu
+        updates.minWorkHours = safeNumber(updates.minWorkHours);
         updates.ubi1Base = safeNumber(updates.ubi1Base);
         updates.ubi1Percent = safeNumber(updates.ubi1Percent);
         updates.ubi2Base = safeNumber(updates.ubi2Base);
         updates.ubi2Percent = safeNumber(updates.ubi2Percent);
         
-        // Xử lý Remuneration
         if (Array.isArray(updates.remunerations)) {
             updates.remunerations = updates.remunerations.map(r => ({ 
                 ...r, 
@@ -200,12 +195,12 @@ const StaffManager = () => {
   return (
     <div style={{ paddingBottom: '40px' }}>
       <h2 style={{ color: '#003366', borderBottom: '2px solid #e5e7eb', paddingBottom: '15px', marginBottom: '20px', fontWeight: 'bold', fontSize: '1.5rem' }}>
-        Quản lý Nhân sự (Chief Admin)
+        QUẢN LÝ NHÂN SỰ - CHIEF
       </h2>
 
       {/* FORM TẠO MỚI */}
       <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', border: '1px solid #f0f0f0' }}>
-        <h4 style={{ margin: '0 0 15px 0', color: '#003366', fontWeight: '600' }}>+ Tạo tài khoản mới</h4>
+        <h4 style={{ margin: '0 0 15px 0', color: '#003366', fontWeight: '600' }}>Khởi tạo tài khoản mới</h4>
         <form onSubmit={handleAdd} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <input placeholder="Họ và Tên" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required style={{...styles.input, flex: '1 1 200px'}} />
           <input placeholder="ID Đăng nhập" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} required style={{...styles.input, flex: '1 1 150px'}}/>
@@ -284,7 +279,20 @@ const StaffManager = () => {
                                   </label>
                               ))}
                           </div>
-                          <select value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})} style={{marginTop: '8px', ...styles.inputFull, borderColor: editForm.status==='suspended'?'red':'#d1d5db', color: editForm.status==='suspended'?'red':'inherit'}}>
+                          
+                          {/* SỐ GIỜ LÀM TỐI THIỂU */}
+                          <div style={{marginTop: '12px', display:'flex', alignItems:'center', justifyContent:'space-between', borderTop:'1px dashed #e5e7eb', paddingTop:'10px'}}>
+                              <span style={{fontSize:'0.8rem', fontWeight:'600', color:'#4b5563'}}>Số giờ làm tối thiểu/tháng:</span>
+                              <input 
+                                  type="number" 
+                                  placeholder="0" 
+                                  value={editForm.minWorkHours || 0} 
+                                  onChange={e => setEditForm({...editForm, minWorkHours: e.target.value})} 
+                                  style={{...styles.inputFull, width: '80px', textAlign:'center'}} 
+                              />
+                          </div>
+
+                          <select value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})} style={{marginTop: '12px', ...styles.inputFull, borderColor: editForm.status==='suspended'?'red':'#d1d5db', color: editForm.status==='suspended'?'red':'inherit'}}>
                               <option value="active">Active (Hoạt động)</option>
                               <option value="suspended">Suspended (Đình chỉ)</option>
                           </select>
@@ -293,7 +301,6 @@ const StaffManager = () => {
                       {/* --- PHẦN 3: TÀI CHÍNH --- */}
                       <div style={styles.sectionBox}>
                           <div style={styles.sectionTitle}>3. Tài chính</div>
-                          {/* UBI 1 */}
                           <div style={{...styles.financeRow, flexWrap: 'wrap'}}>
                               <span style={styles.financeLabel}>UBI 1</span>
                               <div style={{display:'flex', gap:'5px', flex: 1, minWidth: '150px'}}>
@@ -301,7 +308,6 @@ const StaffManager = () => {
                                   <input type="number" placeholder="%" value={editForm.ubi1Percent} onChange={e => setEditForm({...editForm, ubi1Percent: e.target.value})} style={{...styles.inputFull, flex: 1}} />
                               </div>
                           </div>
-                          {/* UBI 2 */}
                           <div style={{...styles.financeRow, flexWrap: 'wrap'}}>
                               <span style={styles.financeLabel}>UBI 2</span>
                               <div style={{display:'flex', gap:'5px', flex: 1, minWidth: '150px'}}>
@@ -335,7 +341,7 @@ const StaffManager = () => {
                                       <div style={{display:'flex', gap:'5px', flex: '1 1 140px'}}>
                                           <input 
                                               type="number" 
-                                              placeholder="VNĐ" 
+                                              placeholder="VNĐ/Giờ" 
                                               value={rem.amount} 
                                               onChange={(e) => handleRemunerationChange(idx, 'amount', e.target.value)} 
                                               style={{...styles.inputFull, flex: 1.5}} 
@@ -383,10 +389,15 @@ const StaffManager = () => {
                   // --- MODE VIEW ---
                   <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
                       <div style={{fontSize: '0.9rem', color: '#4b5563'}}>
-                          <div style={{marginTop:'0px', display:'flex', flexWrap:'wrap', gap:'5px', minHeight: '24px'}}>
-                              {staff.positions && staff.positions.length > 0 ? staff.positions.map(p => (
-                                  <span key={p} style={{fontSize:'0.75rem', background:'#f3f4f6', color:'#1f2937', padding:'3px 8px', borderRadius:'4px', border:'1px solid #e5e7eb'}}>{p}</span>
-                              )) : <span style={{fontSize:'0.75rem', color:'#9ca3af', fontStyle:'italic'}}>Chưa xét vị trí</span>}
+                          <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
+                              <div style={{display:'flex', flexWrap:'wrap', gap:'5px', minHeight: '24px'}}>
+                                  {staff.positions && staff.positions.length > 0 ? staff.positions.map(p => (
+                                      <span key={p} style={{fontSize:'0.75rem', background:'#f3f4f6', color:'#1f2937', padding:'3px 8px', borderRadius:'4px', border:'1px solid #e5e7eb'}}>{p}</span>
+                                  )) : <span style={{fontSize:'0.75rem', color:'#9ca3af', fontStyle:'italic'}}>Chưa xét vị trí</span>}
+                              </div>
+                              <div style={{fontSize:'0.75rem', background:'#fffbeb', color:'#d97706', padding:'3px 8px', borderRadius:'4px', border:'1px solid #fde68a', fontWeight:'600'}}>
+                                  Min: {staff.minWorkHours || 0}h
+                              </div>
                           </div>
                           
                           <div style={{marginTop: '15px', padding:'10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #f3f4f6'}}>
@@ -400,7 +411,7 @@ const StaffManager = () => {
                                        staff.remunerations.map((r, idx) => (
                                            r.amount > 0 && (
                                                <div key={idx} style={{fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between', color: '#374151', marginBottom:'2px'}}>
-                                                   <span><b style={{color:'#003366'}}>R{idx+1}:</b> {Number(r.amount).toLocaleString()}</span>
+                                                   <span><b style={{color:'#003366'}}>R{idx+1}:</b> {Number(r.amount).toLocaleString()}/h</span>
                                                    <span style={{color: '#6b7280', fontStyle: 'italic'}}>{r.position} / {r.keywords || 'All'}</span>
                                                </div>
                                            )
