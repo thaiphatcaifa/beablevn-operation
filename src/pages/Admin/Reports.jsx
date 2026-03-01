@@ -119,6 +119,12 @@ const Reports = () => {
   const [attendanceDayFilter, setAttendanceDayFilter] = useState('all'); 
 
   const [financeStaffFilter, setFinanceStaffFilter] = useState('all'); 
+  // --- BỔ SUNG STATE ĐỂ LỌC THÁNG/NĂM CHO TÀI CHÍNH ---
+  const [financeMonthFilter, setFinanceMonthFilter] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+
   const [facilityAreaFilter, setFacilityAreaFilter] = useState('all'); 
   const [facilityStaffFilter, setFacilityStaffFilter] = useState('all'); 
   const [facilityTimeFilter, setFacilityTimeFilter] = useState('month'); 
@@ -142,11 +148,15 @@ const Reports = () => {
   let totalEstimatedCost = 0;
   const financeRows = [];
 
-  const currentMonth = new Date();
+  // Lấy thông tin tháng/năm từ bộ lọc
+  const [selYear, selMonth] = financeMonthFilter.split('-');
+  const selectedFinanceMonth = new Date(selYear, selMonth - 1, 1);
+
   const currentMonthScheduleTasks = scheduleTasks.filter(t => {
       if (!t.startTime) return false;
       const d = new Date(t.startTime);
-      return !isNaN(d.getTime()) && isSameMonth(d, currentMonth);
+      // Thay đổi: sử dụng selectedFinanceMonth thay vì currentMonth hiện tại
+      return !isNaN(d.getTime()) && isSameMonth(d, selectedFinanceMonth);
   });
 
   const safeStaffList = Array.isArray(staffList) ? staffList : [];
@@ -293,7 +303,7 @@ const Reports = () => {
                       <h3 style={styles.cardTitle}>Tài chính & Thu nhập</h3>
                   </div>
                   <div style={{color:'#6b7280', fontSize:'0.9rem', marginBottom:'20px'}}>
-                      Tổng chi dự kiến (Tháng): <strong style={{color:'#059669'}}>{Math.round(totalEstimatedCost).toLocaleString()} VNĐ</strong>
+                      Tổng chi dự kiến (Tháng {Number(selMonth)}/{selYear}): <strong style={{color:'#059669'}}>{Math.round(totalEstimatedCost).toLocaleString()} VNĐ</strong>
                   </div>
                   <button onClick={() => setActiveTab('finance')} style={styles.accessBtn}>
                       Truy cập <Icons.ArrowRight />
@@ -367,12 +377,19 @@ const Reports = () => {
       {/* VIEW: CHI TIẾT TÀI CHÍNH */}
       {activeTab === 'finance' && user?.role === 'chief' && (
           <div style={styles.card} className="card">
-               <div style={{...styles.cardHeader, justifyContent: 'space-between'}}>
+               <div style={{...styles.cardHeader, justifyContent: 'space-between', flexWrap: 'wrap'}}>
                   <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                       <div style={styles.iconBox}><Icons.Finance /></div>
-                      <h3 style={styles.cardTitle}>Tài chính & Thu nhập (Tháng {new Date().getMonth() + 1})</h3>
+                      <h3 style={styles.cardTitle}>Tài chính & Thu nhập (Tháng {Number(selMonth)}/{selYear})</h3>
                   </div>
-                  <div style={{display:'flex', gap:'10px', alignItems:'center'}}>
+                  <div style={{display:'flex', gap:'10px', alignItems:'center', flexWrap: 'wrap'}}>
+                      <input 
+                          type="month" 
+                          value={financeMonthFilter} 
+                          onChange={(e) => setFinanceMonthFilter(e.target.value)} 
+                          style={styles.filterSelect}
+                          title="Chọn tháng để lọc"
+                      />
                       <select value={financeStaffFilter} onChange={(e) => setFinanceStaffFilter(e.target.value)} style={styles.filterSelect}>
                           <option value="all">Tất cả nhân sự</option>
                           {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
