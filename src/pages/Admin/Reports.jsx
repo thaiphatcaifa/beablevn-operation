@@ -35,6 +35,12 @@ const formatDateTime = (isoString) => {
     return `${d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} ${d.getDate()}/${d.getMonth()+1}`;
 };
 
+const toDateTimeLocal = (isoString) => {
+    if (!isoString) return '';
+    const d = new Date(isoString);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+
 // --- LOGIC TÍNH GIỜ HIỂN THỊ TRONG BẢNG (String) ---
 const calculateWorkHours = (schedStart, schedEnd, actualCheckIn, actualCheckOut) => {
     if (!schedStart || !schedEnd || !actualCheckIn || !actualCheckOut) return '---';
@@ -94,7 +100,7 @@ const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCh
     if (diffMs < 0) return 0;
 
     const totalMinutes = Math.floor(diffMs / (1000 * 60));
-    return totalMinutes / 60; // Trả về dạng thập phân
+    return totalMinutes / 60; 
 };
 
 // --- ICONS ---
@@ -110,16 +116,22 @@ const Icons = {
 
 const Reports = () => {
   const { user } = useAuth();
-  const { tasks, staffList, facilityLogs } = useData();
+  const { tasks, staffList, facilityLogs, updateTask } = useData(); // Bổ sung updateTask
   
   const [activeTab, setActiveTab] = useState('overview'); 
 
-  const [attendanceFilter, setAttendanceFilter] = useState('month'); 
+  // --- STATE CHẤM CÔNG CẬP NHẬT ---
+  const [attendanceFilter, setAttendanceFilter] = useState('all'); 
   const [attendanceStaffFilter, setAttendanceStaffFilter] = useState('all'); 
   const [attendanceDayFilter, setAttendanceDayFilter] = useState('all'); 
+  const [attendanceMonthFilter, setAttendanceMonthFilter] = useState('all'); 
+  const [attendanceYearFilter, setAttendanceYearFilter] = useState('all');
+
+  // --- STATE BỔ SUNG CHO CHỨC NĂNG EDIT CỦA ADMIN ---
+  const [editingAttendanceId, setEditingAttendanceId] = useState(null);
+  const [editAttForm, setEditAttForm] = useState({ checkIn: '', checkOut: '', reason: '' });
 
   const [financeStaffFilter, setFinanceStaffFilter] = useState('all'); 
-  // --- BỔ SUNG STATE ĐỂ LỌC THÁNG/NĂM CHO TÀI CHÍNH ---
   const [financeMonthFilter, setFinanceMonthFilter] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -132,6 +144,10 @@ const Reports = () => {
   const [taskStaffFilter, setTaskStaffFilter] = useState('all');
   const [taskStatusFilter, setTaskStatusFilter] = useState('all');
 
+  // --- DỮ LIỆU THỜI GIAN CHUNG ---
+  const currentYear = new Date().getFullYear();
+  const availableYears = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
+
   const daysOfWeek = [
       { key: 'Mon', label: 'Thứ 2', val: 1 }, { key: 'Tue', label: 'Thứ 3', val: 2 }, { key: 'Wed', label: 'Thứ 4', val: 3 },
       { key: 'Thu', label: 'Thứ 5', val: 4 }, { key: 'Fri', label: 'Thứ 6', val: 5 }, { key: 'Sat', label: 'Thứ 7', val: 6 },
@@ -139,6 +155,26 @@ const Reports = () => {
   ];
 
   const handlePrint = () => { window.print(); };
+
+  // --- HÀM XỬ LÝ LƯU EDIT CHẤM CÔNG ---
+  const handleSaveAttendanceEdit = (taskId) => {
+      if (!editAttForm.checkIn || !editAttForm.checkOut || !editAttForm.reason.trim()) {
+          return alert("Vui lòng nhập đầy đủ Giờ vào, Giờ ra và Lý do chỉnh sửa!");
+      }
+
+      updateTask(taskId, {
+          checkInTime: new Date(editAttForm.checkIn).toISOString(),
+          checkOutTime: new Date(editAttForm.checkOut).toISOString(),
+          status: 'completed',
+          progress: 100,
+          adminEdited: true, // Cờ báo hiệu cho thẻ Thông báo bên Staff
+          adminEditReason: editAttForm.reason,
+          adminEditTime: new Date().toISOString()
+      });
+
+      setEditingAttendanceId(null);
+      alert("Đã cập nhật dữ liệu chấm công thành công. Hệ thống đã gửi thông báo đến nhân sự!");
+  };
 
   // --- PHÂN TÁCH DỮ LIỆU ---
   const opAdminTasks = Array.isArray(tasks) ? tasks.filter(t => !t.fromScheduleId) : [];
@@ -148,14 +184,12 @@ const Reports = () => {
   let totalEstimatedCost = 0;
   const financeRows = [];
 
-  // Lấy thông tin tháng/năm từ bộ lọc
   const [selYear, selMonth] = financeMonthFilter.split('-');
   const selectedFinanceMonth = new Date(selYear, selMonth - 1, 1);
 
   const currentMonthScheduleTasks = scheduleTasks.filter(t => {
       if (!t.startTime) return false;
       const d = new Date(t.startTime);
-      // Thay đổi: sử dụng selectedFinanceMonth thay vì currentMonth hiện tại
       return !isNaN(d.getTime()) && isSameMonth(d, selectedFinanceMonth);
   });
 
@@ -205,7 +239,6 @@ const Reports = () => {
           }
       });
 
-      // ÁP DỤNG THUẬT TOÁN GIỜ TỐI THIỂU
       const minHours = parseAmount(staff.minWorkHours);
       
       if (totalMatchedHours >= minHours) {
@@ -282,14 +315,22 @@ const Reports = () => {
   const filteredAttendance = scheduleTasks.filter(t => {
       const taskDate = new Date(t.startTime);
       const now = new Date();
+      const taskMonth = taskDate.getMonth() + 1;
+      const taskYear = taskDate.getFullYear();
+
       if (attendanceFilter === 'day' && !isSameDay(taskDate, now)) return false;
       if (attendanceFilter === 'week' && !isSameWeek(taskDate, now)) return false;
       if (attendanceFilter === 'month' && !isSameMonth(taskDate, now)) return false;
+      
       if (attendanceStaffFilter !== 'all' && String(t.assigneeId) !== String(attendanceStaffFilter)) return false;
       if (attendanceDayFilter !== 'all') {
           const dayVal = daysOfWeek.find(d => d.key === attendanceDayFilter)?.val;
           if (taskDate.getDay() !== dayVal) return false;
       }
+
+      if (attendanceMonthFilter !== 'all' && String(taskMonth) !== String(attendanceMonthFilter)) return false;
+      if (attendanceYearFilter !== 'all' && String(taskYear) !== String(attendanceYearFilter)) return false;
+
       return true;
   });
 
@@ -356,7 +397,7 @@ const Reports = () => {
     <div style={{ paddingBottom: '40px' }} className="reports-page">
       <style>{`
         @media print {
-          .admin-sidebar, .admin-header-mobile, .admin-bottom-nav, .btn-print, .filter-select, .nav-back-btn { display: none !important; }
+          .admin-sidebar, .admin-header-mobile, .admin-bottom-nav, .btn-print, .filter-select, .nav-back-btn, .action-col { display: none !important; }
           .admin-content { margin: 0 !important; padding: 20px !important; width: 100% !important; }
           body { background: white; -webkit-print-color-adjust: exact; }
           .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
@@ -503,6 +544,7 @@ const Reports = () => {
                   </div>
                   <button onClick={() => setActiveTab('overview')} style={styles.backBtn} className="nav-back-btn"><Icons.Back /> Ẩn</button>
                </div>
+               
                <div className="filter-group" style={{width: '100%'}}>
                    <select value={attendanceStaffFilter} onChange={(e) => setAttendanceStaffFilter(e.target.value)} style={{...styles.filterSelect, flex: 1}}>
                         <option value="all">Nhân sự: Tất cả</option>
@@ -513,9 +555,18 @@ const Reports = () => {
                         {daysOfWeek.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
                     </select>
                     <select value={attendanceFilter} onChange={(e) => setAttendanceFilter(e.target.value)} style={{...styles.filterSelect, flex: 1}}>
+                        <option value="all">Thời gian tương đối: Tất cả</option>
                         <option value="day">Hôm nay</option>
                         <option value="week">Tuần này</option>
                         <option value="month">Tháng này</option>
+                    </select>
+                    <select value={attendanceMonthFilter} onChange={(e) => setAttendanceMonthFilter(e.target.value)} style={{...styles.filterSelect, flex: 1}}>
+                        <option value="all">Tháng: Tất cả</option>
+                        {[...Array(12).keys()].map(i => <option key={i+1} value={i+1}>Tháng {i+1}</option>)}
+                    </select>
+                    <select value={attendanceYearFilter} onChange={(e) => setAttendanceYearFilter(e.target.value)} style={{...styles.filterSelect, flex: 1}}>
+                        <option value="all">Năm: Tất cả</option>
+                        {availableYears.map(y => <option key={y} value={y}>Năm {y}</option>)}
                     </select>
                </div>
             </div>
@@ -529,12 +580,19 @@ const Reports = () => {
                        <th style={styles.th}>Thời gian</th>
                        <th style={styles.th}>Số giờ</th>
                        <th style={styles.th}>Trạng thái</th>
-                       <th style={{ ...styles.th, borderRadius: '0 8px 8px 0' }}>Kết quả</th>
+                       <th style={styles.th}>Kết quả</th>
+                       {/* THÊM CỘT HÀNH ĐỘNG DÀNH CHO ADMIN */}
+                       <th style={{ ...styles.th, borderRadius: '0 8px 8px 0' }} className="action-col">Hành động</th>
                      </tr>
                   </thead>
                   <tbody>
                      {filteredAttendance.length > 0 ? filteredAttendance.map((t, index) => {
                        const isCompleted = t.status === 'completed' || t.progress === 100;
+                       const isOverdue = new Date() > new Date(t.endTime);
+                       
+                       // CHỈ CHIEF MỚI ĐƯỢC THẤY NÚT SỬA, VÀ CA LÀM PHẢI QUÁ HẠN MÀ CHƯA XONG
+                       const canEdit = user?.role === 'chief' && isOverdue && !isCompleted;
+
                        const statusDetails = [];
 
                        if (!t.checkInTime) {
@@ -560,40 +618,117 @@ const Reports = () => {
                        }
 
                        return (
-                           <tr key={t.id} style={styles.tr}>
+                           <tr key={t.id} style={{...styles.tr, background: editingAttendanceId === t.id ? '#f0fdf4' : 'transparent'}}>
                               <td style={{ ...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af' }}>{index + 1}</td>
-                              <td style={{ ...styles.td, fontWeight: '600' }}>{t.assigneeName}</td>
-                              <td style={styles.td}>
-                                  <div>{t.title}</div>
-                                  <div style={{fontSize:'0.75rem', color:'#6b7280'}}>{t.assignedRole}</div>
-                              </td>
-                              <td style={styles.td}>
-                                 {new Date(t.startTime).toLocaleDateString('vi-VN')} <br/>
-                                 <span style={{fontSize:'0.75rem', color:'#64748b'}}>
-                                   {new Date(t.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - {new Date(t.endTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-                                 </span>
-                              </td>
-                              <td style={{...styles.td, fontWeight: 'bold', color: '#059669'}}>
-                                  {calculateWorkHours(t.startTime, t.endTime, t.checkInTime, t.checkOutTime)}
-                              </td>
-                              <td style={styles.td}>
-                                 {isCompleted ? 
-                                   <span style={styles.badgeSuccess}>Đã chấm công</span> : 
-                                   <span style={styles.badgePending}>Chưa hoàn thành</span>
-                                 }
-                                 {statusDetails.length > 0 && (
-                                     <div style={{fontSize: '0.75rem', color: '#6b7280', marginTop: '4px', fontStyle:'italic'}}>
-                                         {statusDetails.map((detail, idx) => (
-                                             <div key={idx}>- {detail}</div>
-                                         ))}
-                                     </div>
-                                 )}
-                              </td>
-                              <td style={styles.td}>{t.progress}%</td>
+                              
+                              {/* NẾU ĐANG CHỈNH SỬA DÒNG NÀY */}
+                              {editingAttendanceId === t.id ? (
+                                  <>
+                                      <td style={{ ...styles.td, fontWeight: '600' }}>{t.assigneeName}</td>
+                                      <td style={styles.td}>
+                                          <div>{t.title}</div>
+                                          <div style={{fontSize:'0.75rem', color:'#6b7280'}}>{t.assignedRole}</div>
+                                      </td>
+                                      <td colSpan="4" style={{padding: '8px'}}>
+                                          <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
+                                              <div style={{display:'flex', gap:'10px'}}>
+                                                  <div style={{flex:1}}>
+                                                      <label style={{fontSize:'0.75rem', fontWeight:'bold', color:'#374151'}}>Giờ vào (Check-in)</label>
+                                                      <input 
+                                                          type="datetime-local" 
+                                                          value={editAttForm.checkIn} 
+                                                          onChange={e => setEditAttForm({...editAttForm, checkIn: e.target.value})} 
+                                                          style={{...styles.input, padding:'6px', marginTop:'4px'}} 
+                                                      />
+                                                  </div>
+                                                  <div style={{flex:1}}>
+                                                      <label style={{fontSize:'0.75rem', fontWeight:'bold', color:'#374151'}}>Giờ ra (Check-out)</label>
+                                                      <input 
+                                                          type="datetime-local" 
+                                                          value={editAttForm.checkOut} 
+                                                          onChange={e => setEditAttForm({...editAttForm, checkOut: e.target.value})} 
+                                                          style={{...styles.input, padding:'6px', marginTop:'4px'}} 
+                                                      />
+                                                  </div>
+                                              </div>
+                                              <div>
+                                                  <label style={{fontSize:'0.75rem', fontWeight:'bold', color:'#374151'}}>Lý do chỉnh sửa (Bắt buộc)</label>
+                                                  <input 
+                                                      type="text" 
+                                                      placeholder="Nhập lý do bù giờ..." 
+                                                      value={editAttForm.reason} 
+                                                      onChange={e => setEditAttForm({...editAttForm, reason: e.target.value})} 
+                                                      style={{...styles.input, padding:'6px', marginTop:'4px'}} 
+                                                  />
+                                              </div>
+                                          </div>
+                                      </td>
+                                      <td style={styles.td}>
+                                          <button onClick={() => handleSaveAttendanceEdit(t.id)} style={{color:'white', background:'#059669', border:'none', padding:'6px 12px', borderRadius:'6px', cursor:'pointer', fontWeight:'bold', width:'100%', marginBottom:'4px'}}>Lưu</button>
+                                          <button onClick={()=>setEditingAttendanceId(null)} style={{color:'#4b5563', background:'#e5e7eb', border:'none', padding:'6px 12px', borderRadius:'6px', cursor:'pointer', fontWeight:'bold', width:'100%'}}>Hủy</button>
+                                      </td>
+                                  </>
+                              ) : (
+                                  // HIỂN THỊ BÌNH THƯỜNG KHI KHÔNG SỬA
+                                  <>
+                                      <td style={{ ...styles.td, fontWeight: '600' }}>{t.assigneeName}</td>
+                                      <td style={styles.td}>
+                                          <div>{t.title}</div>
+                                          <div style={{fontSize:'0.75rem', color:'#6b7280'}}>{t.assignedRole}</div>
+                                      </td>
+                                      <td style={styles.td}>
+                                         {new Date(t.startTime).toLocaleDateString('vi-VN')} <br/>
+                                         <span style={{fontSize:'0.75rem', color:'#64748b'}}>
+                                           {new Date(t.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - {new Date(t.endTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                         </span>
+                                      </td>
+                                      <td style={{...styles.td, fontWeight: 'bold', color: '#059669'}}>
+                                          {calculateWorkHours(t.startTime, t.endTime, t.checkInTime, t.checkOutTime)}
+                                      </td>
+                                      <td style={styles.td}>
+                                         {isCompleted ? 
+                                           <span style={styles.badgeSuccess}>Đã chấm công</span> : 
+                                           <span style={styles.badgePending}>Chưa hoàn thành</span>
+                                         }
+                                         {statusDetails.length > 0 && (
+                                             <div style={{fontSize: '0.75rem', color: '#6b7280', marginTop: '4px', fontStyle:'italic'}}>
+                                                 {statusDetails.map((detail, idx) => (
+                                                     <div key={idx}>- {detail}</div>
+                                                 ))}
+                                             </div>
+                                         )}
+                                         {t.adminEdited && (
+                                             <div style={{fontSize: '0.75rem', color: '#c2410c', marginTop: '4px', fontWeight: 'bold'}}>
+                                                 *Được sửa bởi Admin
+                                             </div>
+                                         )}
+                                      </td>
+                                      <td style={styles.td}>{t.progress}%</td>
+                                      <td style={styles.td} className="action-col">
+                                          {canEdit ? (
+                                              <button 
+                                                  onClick={() => {
+                                                      setEditingAttendanceId(t.id);
+                                                      setEditAttForm({
+                                                          checkIn: t.checkInTime ? toDateTimeLocal(t.checkInTime) : toDateTimeLocal(t.startTime),
+                                                          checkOut: t.checkOutTime ? toDateTimeLocal(t.checkOutTime) : toDateTimeLocal(t.endTime),
+                                                          reason: ''
+                                                      });
+                                                  }} 
+                                                  style={{color:'#003366', border:'1px solid #003366', background:'white', padding:'4px 10px', borderRadius:'6px', cursor:'pointer', fontWeight:'600'}}
+                                              >
+                                                  Sửa
+                                              </button>
+                                          ) : (
+                                              <span style={{fontSize:'0.8rem', color:'#9ca3af'}}>---</span>
+                                          )}
+                                      </td>
+                                  </>
+                              )}
                            </tr>
                        );
                      }) : (
-                       <tr><td colSpan="7" style={styles.emptyTd}>Không có dữ liệu chấm công phù hợp.</td></tr>
+                       <tr><td colSpan="8" style={styles.emptyTd}>Không có dữ liệu chấm công phù hợp.</td></tr>
                      )}
                   </tbody>
                </table>
@@ -705,6 +840,7 @@ const Reports = () => {
 };
 
 const styles = {
+  input: { width: '100%', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', outline: 'none' },
   card: { background: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #f3f4f6', marginBottom: '30px', overflow: 'hidden' },
   cardHeader: { padding: '16px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '12px', background: '#f9fafb' },
   iconBox: { width: '36px', height: '36px', background: '#e0f2fe', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#003366' },

@@ -1,14 +1,10 @@
 {
   "rules": {
     // 1. KHÓA CỬA CHÍNH (ROOT)
-    // - Không ai được phép đọc toàn bộ Database cùng lúc (chống dump data).
-    // - Không ai được phép ghi/xóa ở thư mục gốc (chống xóa trắng Database hoặc tạo node rác).
     ".read": false,
     ".write": false,
 
     // 2. MỞ CỬA TỪNG PHÒNG (NODE) CỤ THỂ
-    // Cho phép đọc/ghi vào đúng các thư mục mà code ReactJS đang sử dụng.
-    
     "staff": {
       ".read": true,
       ".write": true
@@ -29,7 +25,7 @@
       ".write": true
     },
     
-    "attendanceLogs": {
+    "attendance": {  // Lưu ý: Trong DataContext bạn dùng ref(db, 'attendance') chứ không phải attendanceLogs
       ".read": true,
       ".write": true
     },
@@ -39,7 +35,13 @@
       ".write": true
     },
     
-    "disciplines": {
+    // Đã sửa lại đúng tên 2 bảng kỷ luật theo DataContext.js
+    "disciplineTypes": {
+      ".read": true,
+      ".write": true
+    },
+
+    "disciplineRecords": {
       ".read": true,
       ".write": true
     }

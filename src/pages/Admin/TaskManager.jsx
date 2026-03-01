@@ -31,7 +31,6 @@ const Icons = {
 
 const TaskManager = () => {
   const { user } = useAuth();
-  // THÊM updateTask ĐỂ ADMIN CÓ THỂ CHỈNH SỬA CA LÀM VIỆC TỪ SCHEDULER
   const { tasks, addTask, deleteTask, updateTask, staffList, disciplineTypes, schedules, addSchedule, deleteSchedule, updateSchedule } = useData();
   
   const activeDisciplines = disciplineTypes.filter(d => d.status === 'Active');
@@ -42,13 +41,16 @@ const TaskManager = () => {
 
   // --- THẺ CON (SUB-TABS CHO ADMIN) ---
   const [activeView, setActiveView] = useState('overview'); // 'overview', 'create_task', 'create_schedule', 'manage_tasks', 'manage_schedules'
+  
+  // STATE MỚI: Dùng để chuyển đổi giữa Lịch Gốc và Ca Làm Việc trong Mục 4
+  const [scheduleTab, setScheduleTab] = useState('instances'); // 'instances' (Ca làm việc) hoặc 'templates' (Lịch gốc)
 
   // --- STATE FORM ---
   const [newTask, setNewTask] = useState({ 
       title: '', assigneeId: '', description: '',
       startTime: '', endTime: '', 
       assignedRole: 'ST',
-      paymentType: '', // Đã chuyển thành ô nhập mức tiền chi trả
+      paymentType: '', 
       disciplineId: ''
   });
 
@@ -63,6 +65,10 @@ const TaskManager = () => {
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editTaskForm, setEditTaskForm] = useState({});
 
+  // --- GET CURRENT YEAR ---
+  const currentYear = new Date().getFullYear();
+  const availableYears = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
+
   // --- STATE BỘ LỌC (SCHEDULER VIEW) ---
   const [filterStaff, setFilterStaff] = useState('all');
   const [filterDay, setFilterDay] = useState('all');
@@ -72,11 +78,15 @@ const TaskManager = () => {
   const [filterAdhocStaff, setFilterAdhocStaff] = useState('all');
   const [filterAdhocDay, setFilterAdhocDay] = useState('all');
   const [filterAdhocTime, setFilterAdhocTime] = useState('all'); 
+  const [filterAdhocMonth, setFilterAdhocMonth] = useState('all');
+  const [filterAdhocYear, setFilterAdhocYear] = useState('all');  
 
   // Lọc cho Mục 4 (Scheduler Tasks)
   const [filterSchedTaskStaff, setFilterSchedTaskStaff] = useState('all');
   const [filterSchedTaskDay, setFilterSchedTaskDay] = useState('all');
   const [filterSchedTaskTime, setFilterSchedTaskTime] = useState('all'); 
+  const [filterSchedTaskMonth, setFilterSchedTaskMonth] = useState('all'); 
+  const [filterSchedTaskYear, setFilterSchedTaskYear] = useState('all');   
   const [scheduleSearchTerm, setScheduleSearchTerm] = useState('');
 
   const daysOfWeek = [
@@ -310,7 +320,6 @@ const TaskManager = () => {
       }
       const staff = staffList.find(s => s.id === editTaskForm.assigneeId);
       
-      // Update task đảm bảo không chạm vào các trường checkInTime, progress,...
       updateTask(editingTaskId, {
           title: editTaskForm.title,
           assigneeId: editTaskForm.assigneeId,
@@ -337,6 +346,8 @@ const TaskManager = () => {
   const filteredAdhocTasks = opAdminTasks.filter(t => {
       const taskDate = new Date(t.startTime);
       const now = new Date();
+      const taskMonth = taskDate.getMonth() + 1;
+      const taskYear = taskDate.getFullYear();
 
       const matchStaff = filterAdhocStaff === 'all' || t.assigneeId === filterAdhocStaff;
       let matchDay = true;
@@ -349,7 +360,10 @@ const TaskManager = () => {
       else if (filterAdhocTime === 'week') matchTime = isSameWeek(taskDate, now);
       else if (filterAdhocTime === 'month') matchTime = isSameMonth(taskDate, now);
 
-      return matchStaff && matchDay && matchTime;
+      const matchMonth = filterAdhocMonth === 'all' || taskMonth.toString() === filterAdhocMonth;
+      const matchYear = filterAdhocYear === 'all' || taskYear.toString() === filterAdhocYear;
+
+      return matchStaff && matchDay && matchTime && matchMonth && matchYear;
   });
 
   // Lọc Mục 4: Lịch gốc
@@ -361,11 +375,13 @@ const TaskManager = () => {
       return matchTitle || matchName;
   });
 
-  // Lọc Mục 4: Task từ Scheduler
+  // Lọc Mục 4: Task từ Scheduler 
   const generatedTasks = tasks.filter(t => t.fromScheduleId);
   const filteredGeneratedTasks = generatedTasks.filter(t => {
       const taskDate = new Date(t.startTime);
       const now = new Date();
+      const taskMonth = taskDate.getMonth() + 1;
+      const taskYear = taskDate.getFullYear();
 
       const matchStaff = filterSchedTaskStaff === 'all' || t.assigneeId === filterSchedTaskStaff;
       let matchDay = true;
@@ -378,7 +394,10 @@ const TaskManager = () => {
       else if (filterSchedTaskTime === 'week') matchTime = isSameWeek(taskDate, now);
       else if (filterSchedTaskTime === 'month') matchTime = isSameMonth(taskDate, now);
 
-      return matchStaff && matchDay && matchTime;
+      const matchMonth = filterSchedTaskMonth === 'all' || taskMonth.toString() === filterSchedTaskMonth;
+      const matchYear = filterSchedTaskYear === 'all' || taskYear.toString() === filterSchedTaskYear;
+
+      return matchStaff && matchDay && matchTime && matchMonth && matchYear;
   });
 
   return (
@@ -437,7 +456,6 @@ const TaskManager = () => {
              {/* MENU TỔNG QUAN */}
              {activeView === 'overview' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-                    {/* Mục 1 */}
                     <div style={styles.menuCard}>
                         <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'15px'}}>
                             <div style={styles.iconBox}><Icons.Task /></div>
@@ -449,7 +467,6 @@ const TaskManager = () => {
                         </button>
                     </div>
 
-                    {/* Mục 2 */}
                     <div style={styles.menuCard}>
                         <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'15px'}}>
                             <div style={styles.iconBox}><Icons.Schedule /></div>
@@ -461,7 +478,6 @@ const TaskManager = () => {
                         </button>
                     </div>
 
-                    {/* Mục 3 */}
                     <div style={styles.menuCard}>
                         <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'15px'}}>
                             <div style={styles.iconBox}><Icons.Task /></div>
@@ -473,7 +489,6 @@ const TaskManager = () => {
                         </button>
                     </div>
 
-                    {/* Mục 4 */}
                     <div style={styles.menuCard}>
                         <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'15px'}}>
                             <div style={styles.iconBox}><Icons.Schedule /></div>
@@ -620,7 +635,7 @@ const TaskManager = () => {
                              {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                          </select>
                          <select value={filterAdhocDay} onChange={e => setFilterAdhocDay(e.target.value)} style={styles.filterSelect}>
-                             <option value="all">Tất cả các ngày</option>
+                             <option value="all">Tất cả các thứ</option>
                              {daysOfWeek.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
                          </select>
                          <select value={filterAdhocTime} onChange={e => setFilterAdhocTime(e.target.value)} style={styles.filterSelect}>
@@ -628,6 +643,14 @@ const TaskManager = () => {
                              <option value="day">Hôm nay</option>
                              <option value="week">Tuần này</option>
                              <option value="month">Tháng này</option>
+                         </select>
+                         <select value={filterAdhocMonth} onChange={e => setFilterAdhocMonth(e.target.value)} style={styles.filterSelect}>
+                             <option value="all">Tất cả các tháng</option>
+                             {[...Array(12).keys()].map(i => <option key={i+1} value={i+1}>Tháng {i+1}</option>)}
+                         </select>
+                         <select value={filterAdhocYear} onChange={e => setFilterAdhocYear(e.target.value)} style={styles.filterSelect}>
+                             <option value="all">Tất cả các năm</option>
+                             {availableYears.map(y => <option key={y} value={y}>Năm {y}</option>)}
                          </select>
                      </div>
 
@@ -670,10 +693,10 @@ const TaskManager = () => {
                  </div>
              )}
 
-             {/* MỤC 4: QUẢN LÝ CÔNG TÁC ĐỊNH KỲ (SCHEDULES & GENERATED TASKS) */}
+             {/* MỤC 4: QUẢN LÝ CÔNG TÁC ĐỊNH KỲ (ĐÃ ĐƯỢC TỐI ƯU HÓA BẰNG TABS) */}
              {activeView === 'manage_schedules' && (
                  <div style={{ background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
-                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'10px', marginBottom:'20px'}}>
+                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'10px', marginBottom:'15px'}}>
                         <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                             <div style={styles.iconBox}><Icons.Schedule /></div>
                             <h4 style={{margin:0, fontSize: '1.2rem', color:'#003366'}}>Quản lý Công tác định kỳ</h4>
@@ -681,135 +704,160 @@ const TaskManager = () => {
                         <button onClick={() => setActiveView('overview')} style={styles.backBtn}><Icons.Back /> Ẩn</button>
                     </div>
 
-                    {/* BẢNG 1: LỊCH GỐC */}
-                    <div style={{marginBottom:'40px', padding:'15px', border:'1px solid #e5e7eb', borderRadius:'12px', background:'#f9fafb'}}>
-                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'10px', marginBottom:'15px'}}>
-                            <h5 style={{margin:0, color:'#1f2937'}}>A. Lịch gốc định kỳ (Templates)</h5>
-                            <input type="text" placeholder="Tìm tiêu đề, nhân sự..." value={scheduleSearchTerm} onChange={(e) => setScheduleSearchTerm(e.target.value)} style={{...styles.input, width: '250px', marginTop: 0, padding:'6px 10px'}} />
-                        </div>
-                        <div style={{overflowX: 'auto', background:'white', borderRadius:'8px', border:'1px solid #e5e7eb'}}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', minWidth: '500px' }}>
-                              <thead>
-                                 <tr style={{textAlign:'left', borderBottom: '1px solid #eee', background:'#f3f4f6', color:'#6b7280'}}>
-                                   <th style={{padding:'10px', width: '50px'}}>STT</th>
-                                   <th style={{padding:'10px'}}>Thông tin lịch trình</th>
-                                   <th style={{padding:'10px'}}>Hành động</th>
-                                 </tr>
-                              </thead>
-                              <tbody>
-                                 {searchedAdminSchedules.map((s, index) => (
-                                   <tr key={s.id} style={{ borderBottom: '1px solid #f9f9f9' }}>
-                                      <td style={{padding:'10px', textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{index + 1}</td>
-                                      <td style={{padding:'10px'}}>
-                                          <strong>{s.title}</strong>
-                                          {s.assigneeName && <div style={{fontSize:'0.8rem', color:'#6b7280'}}>Phụ trách: {s.assigneeName} {s.assignedRole ? `(${s.assignedRole})` : ''}</div>}
-                                      </td>
-                                      <td style={{padding:'10px'}}>
-                                          <button onClick={()=>handleEditSchedule(s)} style={{color:'#003366', border:'none', background:'none', cursor:'pointer', marginRight:'10px', fontWeight:'600'}}>Sửa</button>
-                                          <button onClick={()=>handleDeleteSchedule(s.id)} style={{color:'#dc2626', border:'none', background:'none', cursor:'pointer', fontWeight:'600'}}>Xóa</button>
-                                      </td>
-                                   </tr>
-                                 ))}
-                                 {searchedAdminSchedules.length === 0 && (
-                                     <tr><td colSpan="3" style={{padding:'20px', textAlign:'center', color:'#9ca3af', fontStyle:'italic'}}>Trống.</td></tr>
-                                 )}
-                              </tbody>
-                            </table>
-                        </div>
+                    {/* MENU TABS CHUYỂN ĐỔI GÓC NHÌN */}
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #f3f4f6', paddingBottom: '10px', overflowX: 'auto' }}>
+                        <button 
+                            onClick={() => setScheduleTab('instances')} 
+                            style={{ ...styles.tabBtn, background: scheduleTab === 'instances' ? '#003366' : '#f3f4f6', color: scheduleTab === 'instances' ? 'white' : '#4b5563' }}
+                        >
+                            Danh sách Ca làm việc thực tế
+                        </button>
+                        <button 
+                            onClick={() => setScheduleTab('templates')} 
+                            style={{ ...styles.tabBtn, background: scheduleTab === 'templates' ? '#003366' : '#f3f4f6', color: scheduleTab === 'templates' ? 'white' : '#4b5563' }}
+                        >
+                            Cấu hình Lịch gốc (Templates)
+                        </button>
                     </div>
 
-                    {/* BẢNG 2: CÁC CA LÀM VIỆC TỪ SCHEDULER (CÓ INLINE EDIT) */}
-                    <div>
-                        <h5 style={{margin:'0 0 15px 0', color:'#1f2937'}}>B. Danh sách ca làm việc thực tế (Generated Tasks)</h5>
-                        <div style={{display:'flex', gap:'10px', flexWrap:'wrap', marginBottom:'15px'}}>
-                            <select value={filterSchedTaskStaff} onChange={e => setFilterSchedTaskStaff(e.target.value)} style={styles.filterSelect}>
-                                <option value="all">Tất cả nhân sự</option>
-                                {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                            <select value={filterSchedTaskDay} onChange={e => setFilterSchedTaskDay(e.target.value)} style={styles.filterSelect}>
-                                <option value="all">Tất cả các ngày</option>
-                                {daysOfWeek.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
-                            </select>
-                            <select value={filterSchedTaskTime} onChange={e => setFilterSchedTaskTime(e.target.value)} style={styles.filterSelect}>
-                                <option value="all">Tất cả thời gian</option>
-                                <option value="day">Hôm nay</option>
-                                <option value="week">Tuần này</option>
-                                <option value="month">Tháng này</option>
-                            </select>
+                    {/* TAB A: CÁC CA LÀM VIỆC TỪ SCHEDULER (CÓ INLINE EDIT) */}
+                    {scheduleTab === 'instances' && (
+                        <div>
+                            <div style={{display:'flex', gap:'10px', flexWrap:'wrap', marginBottom:'15px'}}>
+                                <select value={filterSchedTaskStaff} onChange={e => setFilterSchedTaskStaff(e.target.value)} style={styles.filterSelect}>
+                                    <option value="all">Tất cả nhân sự</option>
+                                    {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                                <select value={filterSchedTaskDay} onChange={e => setFilterSchedTaskDay(e.target.value)} style={styles.filterSelect}>
+                                    <option value="all">Tất cả các thứ</option>
+                                    {daysOfWeek.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
+                                </select>
+                                <select value={filterSchedTaskTime} onChange={e => setFilterSchedTaskTime(e.target.value)} style={styles.filterSelect}>
+                                    <option value="all">Tất cả thời gian</option>
+                                    <option value="day">Hôm nay</option>
+                                    <option value="week">Tuần này</option>
+                                    <option value="month">Tháng này</option>
+                                </select>
+                                <select value={filterSchedTaskMonth} onChange={e => setFilterSchedTaskMonth(e.target.value)} style={styles.filterSelect}>
+                                    <option value="all">Tất cả các tháng</option>
+                                    {[...Array(12).keys()].map(i => <option key={i+1} value={i+1}>Tháng {i+1}</option>)}
+                                </select>
+                                <select value={filterSchedTaskYear} onChange={e => setFilterSchedTaskYear(e.target.value)} style={styles.filterSelect}>
+                                    <option value="all">Tất cả các năm</option>
+                                    {availableYears.map(y => <option key={y} value={y}>Năm {y}</option>)}
+                                </select>
+                            </div>
+                            <div style={{overflowX: 'auto', border:'1px solid #e5e7eb', borderRadius:'8px'}}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', minWidth: '800px' }}>
+                                   <thead>
+                                      <tr style={{textAlign:'left', borderBottom: '1px solid #eee', background:'#f9fafb', color:'#6b7280'}}>
+                                        <th style={{padding:'12px', width: '50px'}}>STT</th>
+                                        <th style={{padding:'12px'}}>Nhiệm vụ</th>
+                                        <th style={{padding:'12px'}}>Người làm</th>
+                                        <th style={{padding:'12px'}}>Vai trò</th>
+                                        <th style={{padding:'12px'}}>Thời gian (Checkin-Checkout)</th>
+                                        <th style={{padding:'12px'}}>Tiến độ</th>
+                                        <th style={{padding:'12px'}}>Hành động</th>
+                                      </tr>
+                                   </thead>
+                                   <tbody>
+                                      {filteredGeneratedTasks.map((t, index) => (
+                                        <tr key={t.id} style={{ borderBottom: '1px solid #f9f9f9', background: editingTaskId === t.id ? '#f0fdf4' : 'transparent' }}>
+                                           <td style={{padding:'12px', textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{index + 1}</td>
+                                           
+                                           {editingTaskId === t.id ? (
+                                               <>
+                                                  <td style={{padding:'8px'}}>
+                                                      <input value={editTaskForm.title} onChange={e => setEditTaskForm({...editTaskForm, title: e.target.value})} style={{...styles.input, padding:'6px', marginTop:0}} />
+                                                  </td>
+                                                  <td style={{padding:'8px'}}>
+                                                      <select value={editTaskForm.assigneeId} onChange={e => setEditTaskForm({...editTaskForm, assigneeId: e.target.value})} style={{...styles.select, padding:'6px', marginTop:0}}>
+                                                          {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                      </select>
+                                                  </td>
+                                                  <td style={{padding:'8px'}}>
+                                                      <select value={editTaskForm.assignedRole} onChange={e => setEditTaskForm({...editTaskForm, assignedRole: e.target.value})} style={{...styles.select, padding:'6px', marginTop:0}}>
+                                                          {['ST','TT','CCS','CCO','CCA','FFM','FFS','FFA'].map(r => <option key={r} value={r}>{r}</option>)}
+                                                      </select>
+                                                  </td>
+                                                  <td style={{padding:'8px', display:'flex', flexDirection:'column', gap:'4px'}}>
+                                                      <input type="datetime-local" value={toDateTimeLocal(editTaskForm.startTime)} onChange={e => setEditTaskForm({...editTaskForm, startTime: e.target.value})} style={{...styles.input, padding:'6px', marginTop:0}} />
+                                                      <input type="datetime-local" value={toDateTimeLocal(editTaskForm.endTime)} onChange={e => setEditTaskForm({...editTaskForm, endTime: e.target.value})} style={{...styles.input, padding:'6px', marginTop:0}} />
+                                                  </td>
+                                                  <td style={{padding:'12px'}}>{t.progress}%</td>
+                                                  <td style={{padding:'8px'}}>
+                                                      <button onClick={saveTaskEdit} style={{color:'white', background:'#059669', border:'none', padding:'6px 12px', borderRadius:'6px', cursor:'pointer', fontWeight:'bold', width:'100%', marginBottom:'4px'}}>Lưu</button>
+                                                      <button onClick={()=>setEditingTaskId(null)} style={{color:'#4b5563', background:'#e5e7eb', border:'none', padding:'6px 12px', borderRadius:'6px', cursor:'pointer', fontWeight:'bold', width:'100%'}}>Hủy</button>
+                                                  </td>
+                                               </>
+                                           ) : (
+                                               <>
+                                                  <td style={{padding:'12px'}}><strong>{t.title}</strong></td>
+                                                  <td style={{padding:'12px'}}>{t.assigneeName}</td>
+                                                  <td style={{padding:'12px'}}>{t.assignedRole}</td>
+                                                  <td style={{padding:'12px'}}>{formatTaskTime(t.startTime, t.endTime)}</td>
+                                                  <td style={{padding:'12px'}}>{t.progress}%</td>
+                                                  <td style={{padding:'12px'}}>
+                                                      <button onClick={()=>startEditTask(t)} style={{color:'#003366', border:'none', background:'none', cursor:'pointer', marginRight:'10px', fontWeight:'bold'}}>Sửa</button>
+                                                      <button onClick={()=>handleDeleteTask(t.id)} style={{color:'red', border:'none', background:'none', cursor:'pointer', fontWeight:'bold'}}>Xóa</button>
+                                                  </td>
+                                               </>
+                                           )}
+                                        </tr>
+                                      ))}
+                                      {filteredGeneratedTasks.length === 0 && (
+                                          <tr><td colSpan="7" style={{padding:'30px', textAlign:'center', color:'#9ca3af', fontStyle:'italic'}}>Không tìm thấy ca làm việc phù hợp.</td></tr>
+                                      )}
+                                   </tbody>
+                                </table>
+                            </div>
                         </div>
-                        <div style={{overflowX: 'auto', border:'1px solid #e5e7eb', borderRadius:'8px'}}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', minWidth: '800px' }}>
-                               <thead>
-                                  <tr style={{textAlign:'left', borderBottom: '1px solid #eee', background:'#f9fafb', color:'#6b7280'}}>
-                                    <th style={{padding:'12px', width: '50px'}}>STT</th>
-                                    <th style={{padding:'12px'}}>Nhiệm vụ</th>
-                                    <th style={{padding:'12px'}}>Người làm</th>
-                                    <th style={{padding:'12px'}}>Vai trò</th>
-                                    <th style={{padding:'12px'}}>Thời gian (Checkin-Checkout)</th>
-                                    <th style={{padding:'12px'}}>Tiến độ</th>
-                                    <th style={{padding:'12px'}}>Hành động</th>
-                                  </tr>
-                               </thead>
-                               <tbody>
-                                  {filteredGeneratedTasks.map((t, index) => (
-                                    <tr key={t.id} style={{ borderBottom: '1px solid #f9f9f9', background: editingTaskId === t.id ? '#f0fdf4' : 'transparent' }}>
-                                       <td style={{padding:'12px', textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{index + 1}</td>
-                                       
-                                       {/* NEU DANG EDIT ROW NAY */}
-                                       {editingTaskId === t.id ? (
-                                           <>
-                                              <td style={{padding:'8px'}}>
-                                                  <input value={editTaskForm.title} onChange={e => setEditTaskForm({...editTaskForm, title: e.target.value})} style={{...styles.input, padding:'6px', marginTop:0}} />
-                                              </td>
-                                              <td style={{padding:'8px'}}>
-                                                  <select value={editTaskForm.assigneeId} onChange={e => setEditTaskForm({...editTaskForm, assigneeId: e.target.value})} style={{...styles.select, padding:'6px', marginTop:0}}>
-                                                      {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                  </select>
-                                              </td>
-                                              <td style={{padding:'8px'}}>
-                                                  <select value={editTaskForm.assignedRole} onChange={e => setEditTaskForm({...editTaskForm, assignedRole: e.target.value})} style={{...styles.select, padding:'6px', marginTop:0}}>
-                                                      {['ST','TT','CCS','CCO','CCA','FFM','FFS','FFA'].map(r => <option key={r} value={r}>{r}</option>)}
-                                                  </select>
-                                              </td>
-                                              <td style={{padding:'8px', display:'flex', flexDirection:'column', gap:'4px'}}>
-                                                  <input type="datetime-local" value={toDateTimeLocal(editTaskForm.startTime)} onChange={e => setEditTaskForm({...editTaskForm, startTime: e.target.value})} style={{...styles.input, padding:'6px', marginTop:0}} />
-                                                  <input type="datetime-local" value={toDateTimeLocal(editTaskForm.endTime)} onChange={e => setEditTaskForm({...editTaskForm, endTime: e.target.value})} style={{...styles.input, padding:'6px', marginTop:0}} />
-                                              </td>
-                                              <td style={{padding:'12px'}}>{t.progress}%</td>
-                                              <td style={{padding:'8px'}}>
-                                                  <button onClick={saveTaskEdit} style={{color:'white', background:'#059669', border:'none', padding:'6px 12px', borderRadius:'6px', cursor:'pointer', fontWeight:'bold', width:'100%', marginBottom:'4px'}}>Lưu</button>
-                                                  <button onClick={()=>setEditingTaskId(null)} style={{color:'#4b5563', background:'#e5e7eb', border:'none', padding:'6px 12px', borderRadius:'6px', cursor:'pointer', fontWeight:'bold', width:'100%'}}>Hủy</button>
-                                              </td>
-                                           </>
-                                       ) : (
-                                           // NEU NORMAL ROW
-                                           <>
-                                              <td style={{padding:'12px'}}><strong>{t.title}</strong></td>
-                                              <td style={{padding:'12px'}}>{t.assigneeName}</td>
-                                              <td style={{padding:'12px'}}>{t.assignedRole}</td>
-                                              <td style={{padding:'12px'}}>{formatTaskTime(t.startTime, t.endTime)}</td>
-                                              <td style={{padding:'12px'}}>{t.progress}%</td>
-                                              <td style={{padding:'12px'}}>
-                                                  <button onClick={()=>startEditTask(t)} style={{color:'#003366', border:'none', background:'none', cursor:'pointer', marginRight:'10px', fontWeight:'bold'}}>Sửa</button>
-                                                  <button onClick={()=>handleDeleteTask(t.id)} style={{color:'red', border:'none', background:'none', cursor:'pointer', fontWeight:'bold'}}>Xóa</button>
-                                              </td>
-                                           </>
-                                       )}
-                                    </tr>
-                                  ))}
-                                  {filteredGeneratedTasks.length === 0 && (
-                                      <tr><td colSpan="7" style={{padding:'30px', textAlign:'center', color:'#9ca3af', fontStyle:'italic'}}>Không tìm thấy ca làm việc phù hợp.</td></tr>
-                                  )}
-                               </tbody>
-                            </table>
+                    )}
+
+                    {/* TAB B: LỊCH GỐC (TEMPLATES) */}
+                    {scheduleTab === 'templates' && (
+                        <div style={{padding:'15px', border:'1px solid #e5e7eb', borderRadius:'12px', background:'#f9fafb'}}>
+                            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'10px', marginBottom:'15px'}}>
+                                <h5 style={{margin:0, color:'#1f2937'}}>Lịch gốc định kỳ (Templates)</h5>
+                                <input type="text" placeholder="Tìm tiêu đề, nhân sự..." value={scheduleSearchTerm} onChange={(e) => setScheduleSearchTerm(e.target.value)} style={{...styles.input, width: '250px', marginTop: 0, padding:'6px 10px'}} />
+                            </div>
+                            <div style={{overflowX: 'auto', background:'white', borderRadius:'8px', border:'1px solid #e5e7eb'}}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', minWidth: '500px' }}>
+                                  <thead>
+                                     <tr style={{textAlign:'left', borderBottom: '1px solid #eee', background:'#f3f4f6', color:'#6b7280'}}>
+                                       <th style={{padding:'10px', width: '50px'}}>STT</th>
+                                       <th style={{padding:'10px'}}>Thông tin lịch trình</th>
+                                       <th style={{padding:'10px'}}>Hành động</th>
+                                     </tr>
+                                  </thead>
+                                  <tbody>
+                                     {searchedAdminSchedules.map((s, index) => (
+                                       <tr key={s.id} style={{ borderBottom: '1px solid #f9f9f9' }}>
+                                          <td style={{padding:'10px', textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{index + 1}</td>
+                                          <td style={{padding:'10px'}}>
+                                              <strong>{s.title}</strong>
+                                              {s.assigneeName && <div style={{fontSize:'0.8rem', color:'#6b7280'}}>Phụ trách: {s.assigneeName} {s.assignedRole ? `(${s.assignedRole})` : ''}</div>}
+                                          </td>
+                                          <td style={{padding:'10px'}}>
+                                              <button onClick={()=>handleEditSchedule(s)} style={{color:'#003366', border:'none', background:'none', cursor:'pointer', marginRight:'10px', fontWeight:'600'}}>Sửa</button>
+                                              <button onClick={()=>handleDeleteSchedule(s.id)} style={{color:'#dc2626', border:'none', background:'none', cursor:'pointer', fontWeight:'600'}}>Xóa</button>
+                                          </td>
+                                       </tr>
+                                     ))}
+                                     {searchedAdminSchedules.length === 0 && (
+                                         <tr><td colSpan="3" style={{padding:'20px', textAlign:'center', color:'#9ca3af', fontStyle:'italic'}}>Trống.</td></tr>
+                                     )}
+                                  </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
+                    )}
                  </div>
              )}
           </>
       ) : (
           // ==============================================================
-          // GIAO DIỆN SCHEDULER (GIỮ NGUYÊN NHƯ CŨ)
+          // GIAO DIỆN SCHEDULER (GIỮ NGUYÊN)
           // ==============================================================
           <>
               <div style={styles.formContainer}>
@@ -963,7 +1011,8 @@ const styles = {
     iconBox: { width: '36px', height: '36px', background: '#e0f2fe', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#003366' },
     cardTitle: { margin: 0, fontSize: '1rem', fontWeight: '600', color: '#1f2937' },
     accessBtn: { marginTop: 'auto', background: '#003366', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background 0.2s' },
-    backBtn: { background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }
+    backBtn: { background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' },
+    tabBtn: { padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s', whiteSpace: 'nowrap' }
 };
 
 export default TaskManager;

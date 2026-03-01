@@ -14,6 +14,21 @@ const isSameWeek = (d1, d2) => {
     return d1 >= start && d1 <= end;
 };
 
+// Hàm tạo danh sách tháng năm từ 2026 đến 2030
+const generateMonthYearOptions = () => {
+    const options = [];
+    for (let y = 2026; y <= 2030; y++) {
+        for (let m = 1; m <= 12; m++) {
+            options.push({
+                value: `${y}-${String(m).padStart(2, '0')}`,
+                label: `Tháng ${m}/${y}`
+            });
+        }
+    }
+    return options;
+};
+const monthYearOptions = generateMonthYearOptions();
+
 // --- BỘ ICON MINIMALIST (#003366) ---
 const Icons = {
   Schedule: () => (
@@ -53,6 +68,7 @@ const Attendance = () => {
   const { shifts, attendanceLogs, addAttendance, updateAttendanceLog, tasks, updateTaskProgress, updateTask } = useData();
 
   const [timeFilter, setTimeFilter] = useState('month'); 
+  const [selectedMonthYear, setSelectedMonthYear] = useState('all'); // State mới cho dropbox tháng/năm
   const [now, setNow] = useState(new Date());
 
   // Cập nhật thời gian thực mỗi giây
@@ -67,9 +83,20 @@ const Attendance = () => {
   const filteredScheduleTasks = myScheduleTasks.filter(t => {
       const taskDate = new Date(t.startTime);
       const currentTime = new Date();
-      if (timeFilter === 'day') return isSameDay(taskDate, currentTime);
-      if (timeFilter === 'week') return isSameWeek(taskDate, currentTime);
-      if (timeFilter === 'month') return isSameMonth(taskDate, currentTime);
+
+      // Lọc theo Dropbox Tháng/Năm cụ thể (nếu có chọn)
+      if (selectedMonthYear !== 'all') {
+          const [selYear, selMonth] = selectedMonthYear.split('-');
+          if (taskDate.getFullYear() !== parseInt(selYear) || (taskDate.getMonth() + 1) !== parseInt(selMonth)) {
+              return false;
+          }
+      }
+
+      // Lọc theo khoảng thời gian tương đối
+      if (timeFilter === 'day' && !isSameDay(taskDate, currentTime)) return false;
+      if (timeFilter === 'week' && !isSameWeek(taskDate, currentTime)) return false;
+      if (timeFilter === 'month' && !isSameMonth(taskDate, currentTime)) return false;
+
       return true;
   });
   
@@ -79,9 +106,8 @@ const Attendance = () => {
   // --- 1. XỬ LÝ CHECK-IN (SCHEDULER) ---
   const handleSchedulerCheckIn = (task) => {
       const startTime = new Date(task.startTime);
-      const diffMinutes = (now - startTime) / 60000; // > 0 là trễ, < 0 là sớm
+      const diffMinutes = (now - startTime) / 60000; 
 
-      // Chặn nếu sớm hơn 15 phút
       if (diffMinutes < -15) {
           alert(`Chưa đến giờ! Bạn chỉ có thể check-in từ ${new Date(startTime.getTime() - 15*60000).toLocaleTimeString()}.`);
           return;
@@ -93,7 +119,6 @@ const Attendance = () => {
       };
       let msg = "Check-in thành công!";
 
-      // Nếu trễ quá 3 phút -> Ghi nhận Late
       if (diffMinutes > 3) {
           updateData.checkInStatus = 'Late';
           updateData.lateReason = 'Trễ quá 3 phút';
@@ -110,17 +135,12 @@ const Attendance = () => {
   const handleSchedulerCheckOut = (task) => {
       const endTime = new Date(task.endTime);
       const diffMinutes = (endTime - now) / 60000; 
-      // diffMinutes > 0: Còn sớm (chưa đến giờ về)
-      // diffMinutes < 0: Đã trễ (quá giờ về)
 
-      // Chặn nếu về sớm hơn 10 phút
       if (diffMinutes > 10) {
           alert(`Chưa đến giờ tan ca! Bạn chỉ được về sớm tối đa 10 phút.`);
           return;
       }
 
-      // Chặn nếu quá hạn check-out 15 phút -> Bắt buộc dùng nút Giải trình
-      // (diffMinutes < -15 nghĩa là now > endTime + 15p)
       if (diffMinutes < -15) {
           alert("Đã quá thời gian check-out (15 phút). Vui lòng dùng nút 'Giải trình'.");
           return;
@@ -151,7 +171,6 @@ const Attendance = () => {
       }
   };
 
-  // --- LOGIC CA LÀM VIỆC CŨ (GIỮ NGUYÊN) ---
   const myShifts = shifts.filter(s => s.staffId === user.id);
   const handleCheckInOld = (shiftId) => { 
       if (window.confirm('Xác nhận Check-in?')) {
@@ -166,7 +185,6 @@ const Attendance = () => {
 
   // --- RENDER NÚT BẤM (QUAN TRỌNG) ---
   const renderActionButton = (task, diffStart, diffEnd, isCheckedIn, isCompleted) => {
-      // 1. Đã hoàn thành
       if (isCompleted) {
           return (
               <div style={styles.checkCircle}>
@@ -177,9 +195,7 @@ const Attendance = () => {
           );
       }
 
-      // 2. Chưa Check-in
       if (!isCheckedIn) {
-          // Chưa đến giờ (Sớm hơn 15p)
           if (diffStart < -15) {
               return (
                   <button style={{...styles.mainBtn, background: '#e2e8f0', color: '#94a3b8', cursor: 'not-allowed'}}>
@@ -187,7 +203,6 @@ const Attendance = () => {
                   </button>
               );
           }
-          // Trễ giờ (Quá 3p so với giờ bắt đầu) -> Nút đỏ
           if (diffStart > 3) {
               return (
                   <button onClick={() => handleSchedulerCheckIn(task)} style={{...styles.mainBtn, background: '#ef4444'}}>
@@ -195,7 +210,6 @@ const Attendance = () => {
                   </button>
               );
           }
-          // Đúng giờ (Trong khoảng -15p đến +3p) -> Nút xanh
           return (
               <button onClick={() => handleSchedulerCheckIn(task)} style={styles.mainBtn}>
                   Check-in
@@ -203,10 +217,7 @@ const Attendance = () => {
           );
       }
 
-      // 3. Đã Check-in (Đang làm việc)
       if (isCheckedIn) {
-          // Quá giờ check-out 15 phút -> Nút Giải trình
-          // diffEnd = endTime - now. Nếu diffEnd < -15 tức là now > endTime + 15p
           if (diffEnd < -15) {
               return (
                   <button onClick={() => handleSchedulerExplain(task)} style={styles.explainBtn}>
@@ -214,7 +225,6 @@ const Attendance = () => {
                   </button>
               );
           }
-          // Trong giờ làm việc hoặc trễ nhẹ (<15p) -> Nút Check-out
           return (
               <button onClick={() => handleSchedulerCheckOut(task)} style={styles.outBtn}>
                   Check-out
@@ -225,7 +235,7 @@ const Attendance = () => {
 
   return (
     <div style={{ paddingBottom: '40px' }}>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px', borderBottom: '1px solid #e5e7eb', paddingBottom:'15px'}}>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap: 'wrap', gap: '15px', marginBottom:'20px', borderBottom: '1px solid #e5e7eb', paddingBottom:'15px'}}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Icons.Schedule />
               <div>
@@ -233,11 +243,39 @@ const Attendance = () => {
                   <p style={{fontSize:'0.85rem', color:'#6b7280', margin:'4px 0 0 0'}}>Theo lịch công tác (Scheduler)</p>
               </div>
           </div>
-          <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)} style={styles.filterSelect}>
-              <option value="day">Hôm nay</option>
-              <option value="week">Tuần này</option>
-              <option value="month">Tháng này</option>
-          </select>
+          
+          {/* BỘ LỌC */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {/* DROPBOX MỚI: LỌC THEO THÁNG CỤ THỂ (2026-2030) */}
+              <select 
+                  value={selectedMonthYear} 
+                  onChange={(e) => {
+                      setSelectedMonthYear(e.target.value);
+                      if (e.target.value !== 'all') setTimeFilter('all'); // Tự động tắt lọc thời gian hiện tại
+                  }} 
+                  style={styles.filterSelect}
+              >
+                  <option value="all">Tháng cụ thể: Tất cả</option>
+                  {monthYearOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+              </select>
+
+              {/* DROPBOX CŨ: LỌC THỜI GIAN HIỆN TẠI (Đã bổ sung mục Tất cả) */}
+              <select 
+                  value={timeFilter} 
+                  onChange={(e) => {
+                      setTimeFilter(e.target.value);
+                      if (e.target.value !== 'all') setSelectedMonthYear('all'); // Tự động tắt lọc tháng cụ thể
+                  }} 
+                  style={styles.filterSelect}
+              >
+                  <option value="all">Thời gian: Tất cả</option>
+                  <option value="day">Hôm nay</option>
+                  <option value="week">Tuần này</option>
+                  <option value="month">Tháng này</option>
+              </select>
+          </div>
       </div>
 
       <div style={{display: 'grid', gap: '15px', marginBottom: '40px'}}>
@@ -258,10 +296,17 @@ const Attendance = () => {
                                📅 {start.toLocaleDateString('vi-VN')} &nbsp;|&nbsp; 
                                ⏰ {start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                            </div>
-                           <div style={{marginTop:'8px', display:'flex', gap:'8px', flexWrap:'wrap'}}>
+                           <div style={{marginTop:'8px', display:'flex', gap:'8px', flexWrap:'wrap', alignItems: 'center'}}>
                                <span style={styles.roleBadge}>{task.assignedRole}</span>
                                {task.checkInStatus === 'Late' && <span style={styles.lateBadge}>⚠️ Trễ giờ</span>}
                                {isCheckedIn && !isCompleted && <span style={styles.workingBadge}>Đang làm việc</span>}
+                               
+                               {/* NẾU ADMIN CHỈNH SỬA, HIỂN THỊ DÒNG THÔNG BÁO Ở ĐÂY */}
+                               {task.adminEdited && (
+                                   <span style={{fontSize:'0.75rem', fontStyle:'italic', color:'#c2410c', fontWeight:'bold'}}>
+                                       (Được sửa bởi Admin: {task.adminEditReason})
+                                   </span>
+                               )}
                            </div>
                        </div>
                        <div style={{display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'5px'}}>
@@ -270,7 +315,7 @@ const Attendance = () => {
                    </div>
                )
            }) : (
-               <div style={styles.emptyState}>Không có lịch làm việc trong khoảng thời gian này.</div>
+               <div style={styles.emptyState}>Không có lịch làm việc phù hợp với bộ lọc.</div>
            )}
       </div>
 
