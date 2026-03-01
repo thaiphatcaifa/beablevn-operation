@@ -168,7 +168,7 @@ const DisciplineManager = () => {
       {/* 1. FORM TẠO MỚI / ĐỀ XUẤT */}
       <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', border: '1px solid #f0f0f0' }}>
           <h4 style={{ margin: '0 0 15px 0', color: '#003366', fontWeight: '600' }}>
-              {isOp ? '+ Đề xuất hình thức kỷ luật mới' : 'Ban hành hình thức kỷ luật mới'}
+              {isOp ? 'Đề xuất hình thức kỷ luật mới' : 'Ban hành hình thức kỷ luật mới'}
           </h4>
           {/* Responsive Grid */}
           <form onSubmit={handleAdd} style={{ display: 'grid', gap: '15px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
