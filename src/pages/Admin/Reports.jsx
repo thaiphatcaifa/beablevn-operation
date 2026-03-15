@@ -42,7 +42,7 @@ const toDateTimeLocal = (isoString) => {
 };
 
 // --- LOGIC TÍNH GIỜ HIỂN THỊ TRONG BẢNG (String) ---
-const calculateWorkHours = (schedStart, schedEnd, actualCheckIn, actualCheckOut) => {
+const calculateWorkHours = (schedStart, schedEnd, actualCheckIn, actualCheckOut, isAdminEdited = false) => {
     if (!schedStart || !schedEnd || !actualCheckIn || !actualCheckOut) return '---';
     
     const sStart = new Date(schedStart);
@@ -50,20 +50,28 @@ const calculateWorkHours = (schedStart, schedEnd, actualCheckIn, actualCheckOut)
     const aIn = new Date(actualCheckIn);
     const aOut = new Date(actualCheckOut);
 
-    let calcStart = aIn > sStart ? aIn : sStart;
-    let calcEnd;
-    if (aOut > sEnd) {
-        calcEnd = sEnd;
+    let diffMs = 0;
+
+    if (isAdminEdited) {
+        const scheduledMs = sEnd - sStart;
+        const actualMs = aOut - aIn;
+        diffMs = actualMs > scheduledMs ? scheduledMs : actualMs;
     } else {
-        const diffMinutesEarly = (sEnd - aOut) / 60000;
-        if (diffMinutesEarly <= 10) {
-            calcEnd = sEnd; 
+        let calcStart = aIn > sStart ? aIn : sStart;
+        let calcEnd;
+        if (aOut > sEnd) {
+            calcEnd = sEnd;
         } else {
-            calcEnd = aOut;
+            const diffMinutesEarly = (sEnd - aOut) / 60000;
+            if (diffMinutesEarly <= 10) {
+                calcEnd = sEnd; 
+            } else {
+                calcEnd = aOut;
+            }
         }
+        diffMs = calcEnd - calcStart;
     }
 
-    const diffMs = calcEnd - calcStart;
     if (diffMs < 0) return '0h 00p';
 
     const totalMinutes = Math.floor(diffMs / (1000 * 60));
@@ -74,7 +82,7 @@ const calculateWorkHours = (schedStart, schedEnd, actualCheckIn, actualCheckOut)
 };
 
 // --- LOGIC TÍNH SỐ GIỜ THỰC TẾ (SỐ THẬP PHÂN) ĐỂ NHÂN LƯƠNG ---
-const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCheckOut) => {
+const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCheckOut, isAdminEdited = false) => {
     if (!schedStart || !schedEnd || !actualCheckIn || !actualCheckOut) return 0;
     
     const sStart = new Date(schedStart);
@@ -82,21 +90,29 @@ const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCh
     const aIn = new Date(actualCheckIn);
     const aOut = new Date(actualCheckOut);
 
-    let calcStart = aIn > sStart ? aIn : sStart;
-    let calcEnd;
-    
-    if (aOut > sEnd) {
-        calcEnd = sEnd;
+    let diffMs = 0;
+
+    if (isAdminEdited) {
+        const scheduledMs = sEnd - sStart;
+        const actualMs = aOut - aIn;
+        diffMs = actualMs > scheduledMs ? scheduledMs : actualMs;
     } else {
-        const diffMinutesEarly = (sEnd - aOut) / 60000;
-        if (diffMinutesEarly <= 10) {
-            calcEnd = sEnd; 
+        let calcStart = aIn > sStart ? aIn : sStart;
+        let calcEnd;
+        
+        if (aOut > sEnd) {
+            calcEnd = sEnd;
         } else {
-            calcEnd = aOut;
+            const diffMinutesEarly = (sEnd - aOut) / 60000;
+            if (diffMinutesEarly <= 10) {
+                calcEnd = sEnd; 
+            } else {
+                calcEnd = aOut;
+            }
         }
+        diffMs = calcEnd - calcStart;
     }
 
-    const diffMs = calcEnd - calcStart;
     if (diffMs < 0) return 0;
 
     const totalMinutes = Math.floor(diffMs / (1000 * 60));
@@ -116,7 +132,7 @@ const Icons = {
 
 const Reports = () => {
   const { user } = useAuth();
-  const { tasks, staffList, facilityLogs, updateTask } = useData(); // Bổ sung updateTask
+  const { tasks, staffList, facilityLogs, updateTask } = useData(); 
   
   const [activeTab, setActiveTab] = useState('overview'); 
 
@@ -131,16 +147,20 @@ const Reports = () => {
   const [editingAttendanceId, setEditingAttendanceId] = useState(null);
   const [editAttForm, setEditAttForm] = useState({ checkIn: '', checkOut: '', reason: '' });
 
+  // --- STATE TÀI CHÍNH ---
   const [financeStaffFilter, setFinanceStaffFilter] = useState('all'); 
   const [financeMonthFilter, setFinanceMonthFilter] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
 
+  // --- STATE CSVC CẬP NHẬT (THÊM BỘ LỌC THÁNG 2026) ---
   const [facilityAreaFilter, setFacilityAreaFilter] = useState('all'); 
   const [facilityStaffFilter, setFacilityStaffFilter] = useState('all'); 
   const [facilityTimeFilter, setFacilityTimeFilter] = useState('month'); 
+  const [facilityMonthFilter, setFacilityMonthFilter] = useState('all'); // State mới
   
+  // --- STATE TIẾN ĐỘ CÔNG VIỆC ---
   const [taskStaffFilter, setTaskStaffFilter] = useState('all');
   const [taskStatusFilter, setTaskStatusFilter] = useState('all');
 
@@ -167,7 +187,7 @@ const Reports = () => {
           checkOutTime: new Date(editAttForm.checkOut).toISOString(),
           status: 'completed',
           progress: 100,
-          adminEdited: true, // Cờ báo hiệu cho thẻ Thông báo bên Staff
+          adminEdited: true, 
           adminEditReason: editAttForm.reason,
           adminEditTime: new Date().toISOString()
       });
@@ -230,7 +250,7 @@ const Reports = () => {
           });
 
           if (matchedRule) {
-              const workedHours = calculateWorkHoursDecimal(task.startTime, task.endTime, task.checkInTime, task.checkOutTime);
+              const workedHours = calculateWorkHoursDecimal(task.startTime, task.endTime, task.checkInTime, task.checkOutTime, task.adminEdited);
               totalMatchedHours += workedHours;
               matchedTasksList.push({
                   hours: workedHours,
@@ -276,7 +296,7 @@ const Reports = () => {
       }
   });
 
-  // 2. CSVC
+  // --- 2. CƠ SỞ VẬT CHẤT (ĐÃ CẬP NHẬT LOGIC LỌC THÁNG 2026) ---
   const availableAreas = [...new Set(facilityLogs.map(l => l.area).filter(Boolean))];
   const availableReporters = [...new Set(facilityLogs.map(l => l.staffName).filter(Boolean))];
 
@@ -286,10 +306,20 @@ const Reports = () => {
       
       const logDate = new Date(log.timestamp);
       const now = new Date();
+
+      // Lọc theo thời gian tương đối
       if (facilityTimeFilter === 'day' && !isSameDay(logDate, now)) return false;
       if (facilityTimeFilter === 'week' && !isSameWeek(logDate, now)) return false;
       if (facilityTimeFilter === 'month' && !isSameMonth(logDate, now)) return false;
       
+      // Lọc theo tháng cụ thể năm 2026
+      if (facilityMonthFilter !== 'all') {
+          const selectedMonth = parseInt(facilityMonthFilter, 10);
+          if (logDate.getFullYear() !== 2026 || (logDate.getMonth() + 1) !== selectedMonth) {
+              return false;
+          }
+      }
+
       return true;
   });
 
@@ -487,10 +517,35 @@ const Reports = () => {
                         <option value="all">Nhân sự: Tất cả</option>
                         {availableReporters.map(name => <option key={name} value={name}>{name}</option>)}
                     </select>
-                    <select value={facilityTimeFilter} onChange={(e) => setFacilityTimeFilter(e.target.value)} style={{...styles.filterSelect, flex: 1}}>
+
+                    {/* Bộ lọc thời gian hiện tại */}
+                    <select 
+                        value={facilityTimeFilter} 
+                        onChange={(e) => {
+                            setFacilityTimeFilter(e.target.value);
+                            if(e.target.value !== 'all') setFacilityMonthFilter('all');
+                        }} 
+                        style={{...styles.filterSelect, flex: 1}}
+                    >
+                        <option value="all">Thời gian: Tất cả</option>
                         <option value="day">Hôm nay</option>
                         <option value="week">Tuần này</option>
                         <option value="month">Tháng này</option>
+                    </select>
+
+                    {/* Bộ lọc Tháng/Năm 2026 */}
+                    <select 
+                        value={facilityMonthFilter} 
+                        onChange={(e) => {
+                            setFacilityMonthFilter(e.target.value);
+                            if(e.target.value !== 'all') setFacilityTimeFilter('all');
+                        }} 
+                        style={{...styles.filterSelect, flex: 1}}
+                    >
+                        <option value="all">Tháng (Năm 2026): Tất cả</option>
+                        {[...Array(12).keys()].map(i => (
+                            <option key={i+1} value={i+1}>Tháng {i+1}</option>
+                        ))}
                     </select>
                 </div>
              </div>
@@ -581,7 +636,6 @@ const Reports = () => {
                        <th style={styles.th}>Số giờ</th>
                        <th style={styles.th}>Trạng thái</th>
                        <th style={styles.th}>Kết quả</th>
-                       {/* THÊM CỘT HÀNH ĐỘNG DÀNH CHO ADMIN */}
                        <th style={{ ...styles.th, borderRadius: '0 8px 8px 0' }} className="action-col">Hành động</th>
                      </tr>
                   </thead>
@@ -590,8 +644,10 @@ const Reports = () => {
                        const isCompleted = t.status === 'completed' || t.progress === 100;
                        const isOverdue = new Date() > new Date(t.endTime);
                        
-                       // CHỈ CHIEF MỚI ĐƯỢC THẤY NÚT SỬA, VÀ CA LÀM PHẢI QUÁ HẠN MÀ CHƯA XONG
-                       const canEdit = user?.role === 'chief' && isOverdue && !isCompleted;
+                       const workedHoursDecimal = calculateWorkHoursDecimal(t.startTime, t.endTime, t.checkInTime, t.checkOutTime, t.adminEdited);
+                       
+                       // CHỈ CHIEF MỚI ĐƯỢC THẤY NÚT SỬA, VÀ CA LÀM PHẢI QUÁ HẠN MÀ (CHƯA XONG HOẶC THỜI GIAN = 0)
+                       const canEdit = user?.role === 'chief' && isOverdue && (!isCompleted || workedHoursDecimal === 0);
 
                        const statusDetails = [];
 
@@ -616,6 +672,10 @@ const Reports = () => {
                        if (t.explanation) {
                            statusDetails.push(`Giải trình: ${t.explanation}`);
                        }
+
+                       // Cập nhật thông tin ngày/giờ hiển thị (nếu admin sửa thì lấy giờ admin)
+                       const displayStart = t.adminEdited && t.checkInTime ? t.checkInTime : t.startTime;
+                       const displayEnd = t.adminEdited && t.checkOutTime ? t.checkOutTime : t.endTime;
 
                        return (
                            <tr key={t.id} style={{...styles.tr, background: editingAttendanceId === t.id ? '#f0fdf4' : 'transparent'}}>
@@ -677,13 +737,13 @@ const Reports = () => {
                                           <div style={{fontSize:'0.75rem', color:'#6b7280'}}>{t.assignedRole}</div>
                                       </td>
                                       <td style={styles.td}>
-                                         {new Date(t.startTime).toLocaleDateString('vi-VN')} <br/>
+                                         {new Date(displayStart).toLocaleDateString('vi-VN')} <br/>
                                          <span style={{fontSize:'0.75rem', color:'#64748b'}}>
-                                           {new Date(t.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - {new Date(t.endTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                           {new Date(displayStart).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - {new Date(displayEnd).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                                          </span>
                                       </td>
                                       <td style={{...styles.td, fontWeight: 'bold', color: '#059669'}}>
-                                          {calculateWorkHours(t.startTime, t.endTime, t.checkInTime, t.checkOutTime)}
+                                          {calculateWorkHours(t.startTime, t.endTime, t.checkInTime, t.checkOutTime, t.adminEdited)}
                                       </td>
                                       <td style={styles.td}>
                                          {isCompleted ? 
@@ -699,7 +759,7 @@ const Reports = () => {
                                          )}
                                          {t.adminEdited && (
                                              <div style={{fontSize: '0.75rem', color: '#c2410c', marginTop: '4px', fontWeight: 'bold'}}>
-                                                 *Được sửa bởi Admin
+                                                 *Sửa bởi Admin: {t.adminEditReason}
                                              </div>
                                          )}
                                       </td>
@@ -712,7 +772,7 @@ const Reports = () => {
                                                       setEditAttForm({
                                                           checkIn: t.checkInTime ? toDateTimeLocal(t.checkInTime) : toDateTimeLocal(t.startTime),
                                                           checkOut: t.checkOutTime ? toDateTimeLocal(t.checkOutTime) : toDateTimeLocal(t.endTime),
-                                                          reason: ''
+                                                          reason: t.adminEditReason || ''
                                                       });
                                                   }} 
                                                   style={{color:'#003366', border:'1px solid #003366', background:'white', padding:'4px 10px', borderRadius:'6px', cursor:'pointer', fontWeight:'600'}}

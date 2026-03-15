@@ -15,6 +15,21 @@ const isSameWeek = (d1, d2) => {
     return d1 >= start && d1 <= end;
 };
 
+// Hàm tạo danh sách tháng năm từ 2026 đến 2030
+const generateMonthYearOptions = () => {
+    const options = [];
+    for (let y = 2026; y <= 2030; y++) {
+        for (let m = 1; m <= 12; m++) {
+            options.push({
+                value: `${y}-${String(m).padStart(2, '0')}`,
+                label: `Tháng ${m}/${y}`
+            });
+        }
+    }
+    return options;
+};
+const monthYearOptions = generateMonthYearOptions();
+
 // --- HELPER LÀM SẠCH VÀ ÉP KIỂU SỐ ---
 const parseAmount = (val) => {
     if (val === undefined || val === null || val === '') return 0;
@@ -30,6 +45,7 @@ const getPercent = (val) => {
     return isNaN(num) ? 100 : num;
 };
 
+// --- HELPER TÍNH GIỜ LÀM VIỆC (THẬP PHÂN) ---
 const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCheckOut) => {
     if (!schedStart || !schedEnd || !actualCheckIn || !actualCheckOut) return 0;
     
@@ -59,88 +75,62 @@ const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCh
     return totalMinutes / 60; 
 };
 
-// --- ICON MINIMALIST ---
+// --- ICONS ---
 const Icons = {
-  History: () => (
-    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-    </svg>
-  )
+  Money: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#059669" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>),
+  Trend: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#2563eb" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>),
+  Check: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#10b981" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>),
+  Alert: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>)
 };
 
 const Performance = () => {
   const { user } = useAuth();
-  const { staffList, tasks } = useData();
+  const { tasks, staffList } = useData();
+
+  const [activeTab, setActiveTab] = useState('income');
+  const [timeFilter, setTimeFilter] = useState('month');
   
-  const safeStaffList = Array.isArray(staffList) ? staffList : [];
-  const currentUser = safeStaffList.find(s => String(s.id) === String(user.id)) || user;
-  
-  const [incomeFilter, setIncomeFilter] = useState('Month'); 
-  const now = new Date();
-
-  const safeTasks = Array.isArray(tasks) ? tasks : [];
-  const myTasks = safeTasks.filter(t => String(t.assigneeId) === String(user.id));
-  const completedTasks = myTasks.filter(t => t.status === 'completed' && t.finishedAt);
-
-  const evaluateTask = (task) => {
-      const deadline = new Date(task.endTime);
-      const finished = new Date(task.finishedAt);
-      const progress = task.progress || 0;
-      const diffTime = deadline - finished; 
-      const diffDaysEarly = diffTime / (1000 * 3600 * 24); 
-      const diffDaysLate = -diffDaysEarly;
-
-      if (progress === 100 && diffDaysEarly >= 1) return { grade: "Xuất sắc", color: "#6f42c1", icon: "🏆", desc: "Sớm hơn 1 ngày" };
-      if (progress >= 90 && diffDaysEarly >= 0) return { grade: "Tốt", color: "#198754", icon: "🌟", desc: "Đúng hạn" };
-      if (progress >= 70 && progress <= 85 && diffDaysEarly >= 0) return { grade: "Cần điều chỉnh", color: "#fd7e14", icon: "⚠️", desc: "Đạt mức trung bình" };
-      if (progress >= 60 && progress <= 70 && diffDaysLate > 3) return { grade: "Cảnh cáo", color: "#dc3545", icon: "⛔", desc: "Trễ quá 3 ngày" };
-      return { grade: "Kỷ luật / Không đạt", color: "#343a40", icon: "🔨", desc: "Không đạt yêu cầu" };
-  };
-
-  // --- LOGIC TÍNH LƯƠNG NHÂN VỚI GIỜ LÀM VIỆC ---
-  let ubiMultiplier = 1;
-  const myScheduleTasks = myTasks.filter(t => t.fromScheduleId);
-
-  const filteredScheduleTasks = myScheduleTasks.filter(t => {
-      if (!t.startTime) return false;
-      const d = new Date(t.startTime);
-      if (isNaN(d.getTime())) return false;
-      
-      if (incomeFilter === 'Day') return isSameDay(d, now);
-      if (incomeFilter === 'Week') return isSameWeek(d, now);
-      if (incomeFilter === 'Month') return isSameMonth(d, now);
-      if (incomeFilter === 'Year') return isSameYear(d, now);
-      return true;
+  // State quản lý bộ lọc Tháng/Năm cho phần Thu Nhập
+  const [incomeMonthFilter, setIncomeMonthFilter] = useState(() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  if (incomeFilter === 'Day') ubiMultiplier = 1 / 30;
-  if (incomeFilter === 'Week') ubiMultiplier = 1 / 4;
-  if (incomeFilter === 'Month') ubiMultiplier = 1;
-  if (incomeFilter === 'Year') ubiMultiplier = 12;
+  const currentUserData = staffList.find(s => s.id === user?.id) || {};
 
-  // 1. Tính UBI
-  const ubi1Month = parseAmount(currentUser.ubi1Base) * getPercent(currentUser.ubi1Percent) / 100;
-  const ubi2Month = parseAmount(currentUser.ubi2Base) * getPercent(currentUser.ubi2Percent) / 100;
-  
-  const activeUbi1 = ubi1Month * ubiMultiplier;
-  const activeUbi2 = ubi2Month * ubiMultiplier;
-  const totalUBI = activeUbi1 + activeUbi2;
+  // ==========================================
+  // LOGIC 1: TÍNH TOÁN THU NHẬP ƯỚC TÍNH (THEO THÁNG ĐƯỢC CHỌN)
+  // ==========================================
+  const ubi1 = parseAmount(currentUserData.ubi1Base) * getPercent(currentUserData.ubi1Percent) / 100;
+  const ubi2 = parseAmount(currentUserData.ubi2Base) * getPercent(currentUserData.ubi2Percent) / 100;
+  const totalUBI = ubi1 + ubi2;
 
-  // 2. Tính Tổng giờ & Lưu danh sách mức lương
+  const myScheduleTasks = tasks.filter(t => String(t.assigneeId) === String(user?.id) && t.fromScheduleId);
+
+  // Lọc Task theo Dropbox Tháng/Năm
+  const filteredIncomeTasks = myScheduleTasks.filter(t => {
+      if (incomeMonthFilter === 'all') return true;
+      if (!t.startTime) return false;
+      const d = new Date(t.startTime);
+      const taskMonthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return taskMonthStr === incomeMonthFilter;
+  });
+
+  let taskRemuneration = 0;
   let totalMatchedHours = 0;
   let matchedTasksList = [];
 
-  filteredScheduleTasks.forEach(task => {
-      if (!currentUser.remunerations || !Array.isArray(currentUser.remunerations)) return;
-      if (!task.checkInTime || !task.checkOutTime) return;
-
-      const matchedRule = currentUser.remunerations.find(rem => {
+  filteredIncomeTasks.forEach(task => {
+      if (!currentUserData.remunerations || !Array.isArray(currentUserData.remunerations)) return;
+      if (!task.checkInTime || !task.checkOutTime) return; 
+      
+      const matchedRule = currentUserData.remunerations.find(rem => {
           if (!rem) return false; 
           
           if (rem.position && String(rem.position).trim() !== '') {
               const rulePos = String(rem.position).trim().toLowerCase();
               const taskPos = String(task.assignedRole || '').trim().toLowerCase();
-              if (rulePos !== taskPos) return false; 
+              if (rulePos !== taskPos) return false;
           }
           
           if (rem.keywords && String(rem.keywords).trim() !== '') {
@@ -149,7 +139,6 @@ const Performance = () => {
               const isMatch = keywords.some(k => titleLower.includes(k));
               if (!isMatch) return false;
           }
-
           return true;
       });
 
@@ -157,110 +146,178 @@ const Performance = () => {
           const workedHours = calculateWorkHoursDecimal(task.startTime, task.endTime, task.checkInTime, task.checkOutTime);
           totalMatchedHours += workedHours;
           matchedTasksList.push({
+              title: task.title,
+              date: task.startTime,
               hours: workedHours,
               rate: parseAmount(matchedRule.amount)
           });
       }
   });
 
-  // 3. ÁP DỤNG THUẬT TOÁN GIỜ TỐI THIỂU
-  let activeRemuneration = 0;
-  const minHoursThreshold = parseAmount(currentUser.minWorkHours) * ubiMultiplier;
-
-  if (totalMatchedHours >= minHoursThreshold) {
-      // Đạt tối thiểu: Sắp xếp theo Rate TĂNG DẦN (thấp bù trước)
+  const minHours = parseAmount(currentUserData.minWorkHours);
+  
+  if (totalMatchedHours >= minHours) {
       matchedTasksList.sort((a, b) => a.rate - b.rate);
-      
-      let hoursToOffset = minHoursThreshold;
+      let hoursToOffset = minHours;
 
       matchedTasksList.forEach(t => {
           if (hoursToOffset > 0) {
               if (t.hours <= hoursToOffset) {
                   hoursToOffset -= t.hours;
-                  t.hours = 0; // Đã dùng để bù UBI
+                  t.hours = 0;
               } else {
                   t.hours -= hoursToOffset;
-                  hoursToOffset = 0; // Đã bù đủ
+                  hoursToOffset = 0;
               }
           }
-          // Giờ vượt mức được nhân với rate
           if (t.hours > 0) {
-              activeRemuneration += t.hours * t.rate;
+              taskRemuneration += t.hours * t.rate;
           }
       });
   } else {
-      // Dưới tối thiểu: Không được tính Remuneration
-      activeRemuneration = 0;
+      taskRemuneration = 0;
   }
 
-  const estimatedIncome = totalUBI + activeRemuneration;
-  const excessHours = Math.max(0, totalMatchedHours - minHoursThreshold);
+  const totalEstimatedIncome = totalUBI + taskRemuneration;
+
+  // ==========================================
+  // LOGIC 2: ĐÁNH GIÁ HIỆU SUẤT CÔNG VIỆC
+  // ==========================================
+  const myOpTasks = tasks.filter(t => String(t.assigneeId) === String(user?.id) && !t.fromScheduleId);
+  const filteredEvalTasks = myOpTasks.filter(t => {
+      const taskDate = new Date(t.startTime || t.createdDate);
+      const currentTime = new Date();
+      if (timeFilter === 'day') return isSameDay(taskDate, currentTime);
+      if (timeFilter === 'week') return isSameWeek(taskDate, currentTime);
+      if (timeFilter === 'month') return isSameMonth(taskDate, currentTime);
+      if (timeFilter === 'year') return isSameYear(taskDate, currentTime);
+      return true;
+  });
+
+  const getTaskEvaluation = (task) => {
+      const isCompleted = task.status === 'completed';
+      const isOverdue = new Date() > new Date(task.endTime) && !isCompleted;
+      const progress = task.progress || 0;
+
+      if (isCompleted && !isOverdue) return { grade: 'Hạng A', color: '#10b981', desc: 'Hoàn thành tốt', icon: '⭐' };
+      if (isCompleted && isOverdue) return { grade: 'Hạng B', color: '#f59e0b', desc: 'Hoàn thành trễ', icon: '⚠️' };
+      if (!isCompleted && !isOverdue && progress > 50) return { grade: 'Hạng C', color: '#3b82f6', desc: 'Đang triển khai', icon: '⏳' };
+      if (isOverdue) return { grade: 'Hạng F', color: '#ef4444', desc: 'Quá hạn', icon: '❌' };
+      return { grade: 'Chưa đánh giá', color: '#6b7280', desc: 'Chưa đủ dữ liệu', icon: '➖' };
+  };
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h2 style={{color:'#003366', fontSize:'1.5rem', fontWeight:'700'}}>Hiệu suất & Thu nhập</h2>
+    <div style={{ paddingBottom: '40px' }}>
       
-      {/* 1. TỔNG QUAN THU NHẬP */}
-      <div style={{background: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '30px', border: '1px solid #f3f4f6'}}>
-          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid #eee', paddingBottom:'15px', marginBottom:'15px'}}>
-            <h4 style={{margin:0, color:'#374151', fontSize:'1rem'}}>Tổng thu nhập ước tính</h4>
-            <select value={incomeFilter} onChange={e => setIncomeFilter(e.target.value)} style={{padding:'8px', borderRadius:'6px', border:'1px solid #d1d5db', outline:'none', fontSize:'0.9rem'}}>
-                <option value="Day">Hôm nay</option>
-                <option value="Week">Tuần này</option>
-                <option value="Month">Tháng này</option>
-                <option value="Year">Năm nay</option>
-            </select>
-          </div>
-          
-          <div style={{textAlign:'center', marginBottom:'20px'}}>
-             <h1 style={{color: '#059669', fontSize:'2.2rem', margin:0, fontWeight:'700'}}>{Math.round(estimatedIncome).toLocaleString('vi-VN')} VNĐ</h1>
-             <span style={{color:'#6b7280', fontSize:'0.9rem'}}>Thu nhập dự kiến ({incomeFilter})</span>
-          </div>
-
-          <div style={{background:'#f9fafb', padding:'15px', borderRadius:'8px', display:'grid', gap:'12px', border:'1px solid #f3f4f6'}}>
-              <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.9rem'}}>
-                  <span style={{color:'#4b5563'}}>UBI 1 (Cơ bản):</span>
-                  <strong style={{color:'#111827'}}>{Math.round(activeUbi1).toLocaleString()} đ</strong>
-              </div>
-              <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.9rem'}}>
-                  <span style={{color:'#4b5563'}}>UBI 2 (Hiệu suất):</span>
-                  <strong style={{color:'#111827'}}>{Math.round(activeUbi2).toLocaleString()} đ</strong>
-              </div>
-              <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.9rem'}}>
-                  <span style={{color:'#4b5563'}}>Giờ làm thực tế (Tối thiểu {minHoursThreshold.toFixed(1)}h):</span>
-                  <strong style={{color: totalMatchedHours >= minHoursThreshold ? '#059669' : '#dc2626'}}>{totalMatchedHours.toFixed(1)} giờ</strong>
-              </div>
-              <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.9rem'}}>
-                  <span style={{color:'#4b5563'}}>Thù lao vượt mức ({excessHours.toFixed(1)} giờ):</span>
-                  <strong style={{color:'#003366'}}>{Math.round(activeRemuneration).toLocaleString()} đ</strong>
-              </div>
-          </div>
+      {/* TABS NAVIGATION */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', borderBottom: '2px solid #e5e7eb', paddingBottom: '10px', overflowX: 'auto' }}>
+          <button 
+              onClick={() => setActiveTab('income')} 
+              style={{ ...styles.tabBtn, background: activeTab === 'income' ? '#003366' : 'transparent', color: activeTab === 'income' ? 'white' : '#4b5563' }}
+          >
+              <div style={{display:'flex', alignItems:'center', gap:'6px'}}><Icons.Money /> Thu nhập</div>
+          </button>
+          <button 
+              onClick={() => setActiveTab('tasks')} 
+              style={{ ...styles.tabBtn, background: activeTab === 'tasks' ? '#003366' : 'transparent', color: activeTab === 'tasks' ? 'white' : '#4b5563' }}
+          >
+              <div style={{display:'flex', alignItems:'center', gap:'6px'}}><Icons.Trend /> Đánh giá KPI</div>
+          </button>
       </div>
 
-      {/* 2. ĐÁNH GIÁ CHI TIẾT THEO TASK */}
-      <div style={{background: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid #f3f4f6'}}>
-         <div style={{display:'flex', alignItems:'center', gap:'10px', borderBottom:'1px solid #f3f4f6', paddingBottom:'15px', marginBottom:'20px'}}>
-             <Icons.History />
-             <h3 style={{margin:0, color:'#003366', fontSize:'1.1rem', fontWeight:'600'}}>Lịch sử đánh giá nhiệm vụ</h3>
-         </div>
-         
-         {completedTasks.length === 0 ? (
-             <p style={{color:'#9ca3af', fontStyle:'italic', textAlign:'center', padding:'20px'}}>Chưa có dữ liệu đánh giá.</p>
-         ) : (
-             <div style={{display:'flex', flexDirection:'column', gap:'15px'}}>
-                 {completedTasks.sort((a,b) => new Date(b.finishedAt) - new Date(a.finishedAt)).map(task => {
-                     const evalResult = evaluateTask(task);
+      <div style={{display: 'grid', gap: '20px'}}>
+         {activeTab === 'income' && (
+             <div style={{ display: 'grid', gap: '20px' }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                     <h3 style={{ margin: 0, color: '#111827', fontSize: '1.2rem', fontWeight: 'bold' }}>Tổng thu nhập ước tính</h3>
+                     
+                     {/* DROPBOX LỌC THÁNG NĂM TỪ 2026-2030 */}
+                     <select 
+                         value={incomeMonthFilter} 
+                         onChange={(e) => setIncomeMonthFilter(e.target.value)} 
+                         style={styles.filterSelect}
+                     >
+                         <option value="all">Tất cả các tháng</option>
+                         {monthYearOptions.map(opt => (
+                             <option key={opt.value} value={opt.value}>{opt.label}</option>
+                         ))}
+                     </select>
+                 </div>
+
+                 <div style={styles.card}>
+                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px'}}>
+                         <span style={{color:'#4b5563', fontWeight:'600'}}>UBI Cơ bản (1):</span>
+                         <span style={{fontWeight:'bold'}}>{Math.round(ubi1).toLocaleString()} VNĐ</span>
+                     </div>
+                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px', borderBottom:'1px solid #f3f4f6', paddingBottom:'15px'}}>
+                         <span style={{color:'#4b5563', fontWeight:'600'}}>UBI Trách nhiệm (2):</span>
+                         <span style={{fontWeight:'bold'}}>{Math.round(ubi2).toLocaleString()} VNĐ</span>
+                     </div>
+                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px', color:'#059669'}}>
+                         <span style={{fontWeight:'700'}}>Tổng UBI Cố định:</span>
+                         <span style={{fontWeight:'800', fontSize:'1.1rem'}}>{Math.round(totalUBI).toLocaleString()} VNĐ</span>
+                     </div>
+                 </div>
+
+                 <div style={styles.card}>
+                     <h4 style={{margin:'0 0 15px 0', color:'#111827'}}>Thù lao phát sinh (Vượt giờ chuẩn)</h4>
+                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px', fontSize:'0.9rem'}}>
+                         <span style={{color:'#6b7280'}}>Giờ chuẩn tối thiểu:</span>
+                         <span style={{fontWeight:'bold'}}>{minHours} giờ</span>
+                     </div>
+                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px', fontSize:'0.9rem', borderBottom:'1px solid #f3f4f6', paddingBottom:'15px'}}>
+                         <span style={{color:'#6b7280'}}>Giờ thực tế đã làm:</span>
+                         <span style={{fontWeight:'bold', color: totalMatchedHours >= minHours ? '#059669' : '#ef4444'}}>{totalMatchedHours.toFixed(1)} giờ</span>
+                     </div>
+                     <div style={{display:'flex', justifyContent:'space-between', color:'#003366'}}>
+                         <span style={{fontWeight:'700'}}>Thù lao vượt mức:</span>
+                         <span style={{fontWeight:'800', fontSize:'1.1rem'}}>+ {Math.round(taskRemuneration).toLocaleString()} VNĐ</span>
+                     </div>
+                 </div>
+
+                 <div style={{...styles.card, background:'#003366', color:'white'}}>
+                     <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                         <span style={{fontWeight:'600', fontSize:'1.1rem'}}>TỔNG CỘNG DỰ KIẾN:</span>
+                         <span style={{fontWeight:'800', fontSize:'1.5rem', color:'#fcd34d'}}>{Math.round(totalEstimatedIncome).toLocaleString()} đ</span>
+                     </div>
+                 </div>
+             </div>
+         )}
+
+         {activeTab === 'tasks' && (
+             <div style={{ display: 'grid', gap: '15px' }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                     <h3 style={{ margin: 0, color: '#111827', fontSize: '1.2rem', fontWeight: 'bold' }}>Kết quả Nhiệm vụ (KPI)</h3>
+                     <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)} style={styles.filterSelect}>
+                         <option value="day">Hôm nay</option>
+                         <option value="week">Tuần này</option>
+                         <option value="month">Tháng này</option>
+                         <option value="year">Năm nay</option>
+                         <option value="all">Tất cả</option>
+                     </select>
+                 </div>
+
+                 {filteredEvalTasks.length === 0 && (
+                     <div style={{textAlign:'center', padding:'30px', color:'#9ca3af', fontStyle:'italic', background:'white', borderRadius:'12px', border:'1px dashed #e5e7eb'}}>
+                         Không có nhiệm vụ nào trong khoảng thời gian này.
+                     </div>
+                 )}
+
+                 {filteredEvalTasks.map(task => {
+                     const evalResult = getTaskEvaluation(task);
                      return (
-                         <div key={task.id} style={{
-                             border: '1px solid #e5e7eb', borderRadius: '10px', padding: '16px',
-                             borderLeft: `5px solid ${evalResult.color}`,
-                             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                             background: '#fff'
-                         }}>
-                             <div>
-                                 <div style={{fontWeight:'600', color:'#111827', fontSize:'1rem'}}>{task.title}</div>
-                                 <div style={{fontSize:'0.85rem', color:'#6b7280', marginTop:'4px'}}>
-                                     Hoàn thành: {new Date(task.finishedAt).toLocaleString()}
+                         <div key={task.id} style={styles.kpiCard}>
+                             <div style={{flex: 1}}>
+                                 <div style={{fontWeight:'700', fontSize:'1rem', color:'#1f2937', marginBottom:'4px'}}>
+                                     {task.title}
+                                 </div>
+                                 <div style={{fontSize:'0.85rem', color:'#64748b', marginBottom:'8px'}}>
+                                     Hạn chót: {new Date(task.endTime).toLocaleDateString('vi-VN')}
+                                 </div>
+                                 
+                                 {/* Progress Bar */}
+                                 <div style={{width:'100%', height:'8px', background:'#f1f5f9', borderRadius:'4px', marginBottom:'8px', overflow:'hidden'}}>
+                                     <div style={{width: `${task.progress}%`, height:'100%', background: evalResult.color, borderRadius:'4px'}}></div>
                                  </div>
                                  <div style={{fontSize:'0.85rem', color:'#6b7280'}}>
                                      Tiến độ: <strong>{task.progress}%</strong>
@@ -291,6 +348,13 @@ const Performance = () => {
       </div>
     </div>
   );
+};
+
+const styles = {
+    tabBtn: { padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s', whiteSpace: 'nowrap' },
+    card: { background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' },
+    kpiCard: { background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '15px' },
+    filterSelect: { padding: '8px 12px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', color: '#374151', cursor: 'pointer', background: 'white', fontWeight: '600' }
 };
 
 export default Performance;
