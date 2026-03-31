@@ -46,7 +46,7 @@ const getPercent = (val) => {
 };
 
 // --- HELPER TÍNH GIỜ LÀM VIỆC (THẬP PHÂN) ---
-const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCheckOut) => {
+const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCheckOut, isAdminEdited = false) => {
     if (!schedStart || !schedEnd || !actualCheckIn || !actualCheckOut) return 0;
     
     const sStart = new Date(schedStart);
@@ -54,21 +54,29 @@ const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCh
     const aIn = new Date(actualCheckIn);
     const aOut = new Date(actualCheckOut);
 
-    let calcStart = aIn > sStart ? aIn : sStart;
-    let calcEnd;
-    
-    if (aOut > sEnd) {
-        calcEnd = sEnd;
+    let diffMs = 0;
+
+    if (isAdminEdited) {
+        const scheduledMs = sEnd - sStart;
+        const actualMs = aOut - aIn;
+        diffMs = actualMs > scheduledMs ? scheduledMs : actualMs;
     } else {
-        const diffMinutesEarly = (sEnd - aOut) / 60000;
-        if (diffMinutesEarly <= 10) {
-            calcEnd = sEnd; 
+        let calcStart = aIn > sStart ? aIn : sStart;
+        let calcEnd;
+        
+        if (aOut > sEnd) {
+            calcEnd = sEnd;
         } else {
-            calcEnd = aOut;
+            const diffMinutesEarly = (sEnd - aOut) / 60000;
+            if (diffMinutesEarly <= 10) {
+                calcEnd = sEnd; 
+            } else {
+                calcEnd = aOut;
+            }
         }
+        diffMs = calcEnd - calcStart;
     }
 
-    const diffMs = calcEnd - calcStart;
     if (diffMs < 0) return 0;
 
     const totalMinutes = Math.floor(diffMs / (1000 * 60));
@@ -117,50 +125,57 @@ const Performance = () => {
   });
 
   let taskRemuneration = 0;
-  let totalMatchedHours = 0;
-  let matchedTasksList = [];
+  let totalWorkedHours = 0;
+  let allTasksList = []; // Chứa toàn bộ ca làm hợp lệ
 
   filteredIncomeTasks.forEach(task => {
-      if (!currentUserData.remunerations || !Array.isArray(currentUserData.remunerations)) return;
       if (!task.checkInTime || !task.checkOutTime) return; 
       
-      const matchedRule = currentUserData.remunerations.find(rem => {
-          if (!rem) return false; 
-          
-          if (rem.position && String(rem.position).trim() !== '') {
-              const rulePos = String(rem.position).trim().toLowerCase();
-              const taskPos = String(task.assignedRole || '').trim().toLowerCase();
-              if (rulePos !== taskPos) return false;
-          }
-          
-          if (rem.keywords && String(rem.keywords).trim() !== '') {
-              const keywords = String(rem.keywords).split(',').map(k => k.trim().toLowerCase()).filter(k => k);
-              const titleLower = String(task.title || '').toLowerCase();
-              const isMatch = keywords.some(k => titleLower.includes(k));
-              if (!isMatch) return false;
-          }
-          return true;
-      });
+      const workedHours = calculateWorkHoursDecimal(task.startTime, task.endTime, task.checkInTime, task.checkOutTime, task.adminEdited);
+      totalWorkedHours += workedHours;
 
-      if (matchedRule) {
-          const workedHours = calculateWorkHoursDecimal(task.startTime, task.endTime, task.checkInTime, task.checkOutTime);
-          totalMatchedHours += workedHours;
-          matchedTasksList.push({
-              title: task.title,
-              date: task.startTime,
-              hours: workedHours,
-              rate: parseAmount(matchedRule.amount)
+      let taskRate = 0;
+
+      if (currentUserData.remunerations && Array.isArray(currentUserData.remunerations)) {
+          const matchedRule = currentUserData.remunerations.find(rem => {
+              if (!rem) return false; 
+              
+              if (rem.position && String(rem.position).trim() !== '') {
+                  const rulePos = String(rem.position).trim().toLowerCase();
+                  const taskPos = String(task.assignedRole || '').trim().toLowerCase();
+                  if (rulePos !== taskPos) return false;
+              }
+              
+              if (rem.keywords && String(rem.keywords).trim() !== '') {
+                  const keywords = String(rem.keywords).split(',').map(k => k.trim().toLowerCase()).filter(k => k);
+                  const titleLower = String(task.title || '').toLowerCase();
+                  const isMatch = keywords.some(k => titleLower.includes(k));
+                  if (!isMatch) return false;
+              }
+              return true;
           });
+
+          if (matchedRule) {
+              taskRate = parseAmount(matchedRule.amount);
+          }
       }
+
+      allTasksList.push({
+          title: task.title,
+          date: task.startTime,
+          hours: workedHours,
+          rate: taskRate
+      });
   });
 
   const minHours = parseAmount(currentUserData.minWorkHours);
   
-  if (totalMatchedHours >= minHours) {
-      matchedTasksList.sort((a, b) => a.rate - b.rate);
+  if (totalWorkedHours >= minHours) {
+      // Ưu tiên trừ giờ chuẩn vào các ca có rate thấp (rate 0), giữ lại các ca có rate cao để nhân tiền vượt mức
+      allTasksList.sort((a, b) => a.rate - b.rate);
       let hoursToOffset = minHours;
 
-      matchedTasksList.forEach(t => {
+      allTasksList.forEach(t => {
           if (hoursToOffset > 0) {
               if (t.hours <= hoursToOffset) {
                   hoursToOffset -= t.hours;
@@ -170,7 +185,7 @@ const Performance = () => {
                   hoursToOffset = 0;
               }
           }
-          if (t.hours > 0) {
+          if (t.hours > 0 && t.rate > 0) {
               taskRemuneration += t.hours * t.rate;
           }
       });
@@ -267,7 +282,7 @@ const Performance = () => {
                      </div>
                      <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px', fontSize:'0.9rem', borderBottom:'1px solid #f3f4f6', paddingBottom:'15px'}}>
                          <span style={{color:'#6b7280'}}>Giờ thực tế đã làm:</span>
-                         <span style={{fontWeight:'bold', color: totalMatchedHours >= minHours ? '#059669' : '#ef4444'}}>{totalMatchedHours.toFixed(1)} giờ</span>
+                         <span style={{fontWeight:'bold', color: totalWorkedHours >= minHours ? '#059669' : '#ef4444'}}>{totalWorkedHours.toFixed(1)} giờ</span>
                      </div>
                      <div style={{display:'flex', justifyContent:'space-between', color:'#003366'}}>
                          <span style={{fontWeight:'700'}}>Thù lao vượt mức:</span>

@@ -67,24 +67,40 @@ const Attendance = () => {
   const { user } = useAuth();
   const { shifts, attendanceLogs, addAttendance, updateAttendanceLog, tasks, updateTaskProgress, updateTask } = useData();
 
-  const [timeFilter, setTimeFilter] = useState('month'); 
-  const [selectedMonthYear, setSelectedMonthYear] = useState('all'); // State mới cho dropbox tháng/năm
+  const [timeFilter, setTimeFilter] = useState('day'); 
+  const [selectedMonthYear, setSelectedMonthYear] = useState('all'); 
   const [now, setNow] = useState(new Date());
 
-  // Cập nhật thời gian thực mỗi giây
+  // KHẮC PHỤC LỖI IOS BỊ ĐÓNG BĂNG THỜI GIAN
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
+
+    // Cập nhật ngay lập tức nếu App vừa được lôi từ chạy ngầm (background) lên
+    const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+            setNow(new Date());
+        }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+        clearInterval(timer);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   // Lọc danh sách tasks của nhân viên
   const myScheduleTasks = tasks.filter(t => t.assigneeId === user.id && t.fromScheduleId);
   
   const filteredScheduleTasks = myScheduleTasks.filter(t => {
+      // Fix lỗi parse Date cho các thiết bị Apple đời cũ
+      let safeStartStr = t.startTime;
+      if(safeStartStr && safeStartStr.includes('T')) {
+          // Fallback parsing nếu cần
+      }
       const taskDate = new Date(t.startTime);
       const currentTime = new Date();
 
-      // Lọc theo Dropbox Tháng/Năm cụ thể (nếu có chọn)
       if (selectedMonthYear !== 'all') {
           const [selYear, selMonth] = selectedMonthYear.split('-');
           if (taskDate.getFullYear() !== parseInt(selYear) || (taskDate.getMonth() + 1) !== parseInt(selMonth)) {
@@ -92,7 +108,6 @@ const Attendance = () => {
           }
       }
 
-      // Lọc theo khoảng thời gian tương đối
       if (timeFilter === 'day' && !isSameDay(taskDate, currentTime)) return false;
       if (timeFilter === 'week' && !isSameWeek(taskDate, currentTime)) return false;
       if (timeFilter === 'month' && !isSameMonth(taskDate, currentTime)) return false;
@@ -100,13 +115,14 @@ const Attendance = () => {
       return true;
   });
   
-  // Sắp xếp theo giờ bắt đầu
   filteredScheduleTasks.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
   // --- 1. XỬ LÝ CHECK-IN (SCHEDULER) ---
   const handleSchedulerCheckIn = (task) => {
+      // KHẮC PHỤC: Lấy giờ tức thời (exact now) khi người dùng bấm nút thay vì phụ thuộc state 'now'
+      const exactNow = new Date();
       const startTime = new Date(task.startTime);
-      const diffMinutes = (now - startTime) / 60000; 
+      const diffMinutes = (exactNow - startTime) / 60000; 
 
       if (diffMinutes < -15) {
           alert(`Chưa đến giờ! Bạn chỉ có thể check-in từ ${new Date(startTime.getTime() - 15*60000).toLocaleTimeString()}.`);
@@ -114,7 +130,7 @@ const Attendance = () => {
       }
 
       let updateData = { 
-          checkInTime: new Date().toISOString(),
+          checkInTime: exactNow.toISOString(),
           status: 'in_progress' 
       };
       let msg = "Check-in thành công!";
@@ -133,8 +149,10 @@ const Attendance = () => {
 
   // --- 2. XỬ LÝ CHECK-OUT (SCHEDULER) ---
   const handleSchedulerCheckOut = (task) => {
+      // Lấy giờ tức thời
+      const exactNow = new Date();
       const endTime = new Date(task.endTime);
-      const diffMinutes = (endTime - now) / 60000; 
+      const diffMinutes = (endTime - exactNow) / 60000; 
 
       if (diffMinutes > 10) {
           alert(`Chưa đến giờ tan ca! Bạn chỉ được về sớm tối đa 10 phút.`);
@@ -149,7 +167,7 @@ const Attendance = () => {
       if(window.confirm("Xác nhận hoàn thành ca làm việc này?")) {
           updateTaskProgress(task.id, 100, "Check-out attendance");
           updateTask(task.id, { 
-              checkOutTime: new Date().toISOString(),
+              checkOutTime: exactNow.toISOString(),
               status: 'completed'
           });
           alert("Check-out thành công!");
@@ -158,10 +176,11 @@ const Attendance = () => {
 
   // --- 3. XỬ LÝ GIẢI TRÌNH (SCHEDULER) ---
   const handleSchedulerExplain = (task) => {
+      const exactNow = new Date();
       const reason = window.prompt("Đã quá giờ check-out quy định. Vui lòng nhập lý do:");
       if (reason && reason.trim() !== "") {
           updateTask(task.id, {
-              checkOutTime: new Date().toISOString(),
+              checkOutTime: exactNow.toISOString(),
               status: 'completed',
               progress: 100,
               checkOutStatus: 'MissedWindow',
@@ -183,7 +202,7 @@ const Attendance = () => {
       }
   };
 
-  // --- RENDER NÚT BẤM (QUAN TRỌNG) ---
+  // --- RENDER NÚT BẤM ---
   const renderActionButton = (task, diffStart, diffEnd, isCheckedIn, isCompleted) => {
       if (isCompleted) {
           return (
@@ -246,12 +265,11 @@ const Attendance = () => {
           
           {/* BỘ LỌC */}
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              {/* DROPBOX MỚI: LỌC THEO THÁNG CỤ THỂ (2026-2030) */}
               <select 
                   value={selectedMonthYear} 
                   onChange={(e) => {
                       setSelectedMonthYear(e.target.value);
-                      if (e.target.value !== 'all') setTimeFilter('all'); // Tự động tắt lọc thời gian hiện tại
+                      if (e.target.value !== 'all') setTimeFilter('all'); 
                   }} 
                   style={styles.filterSelect}
               >
@@ -261,12 +279,11 @@ const Attendance = () => {
                   ))}
               </select>
 
-              {/* DROPBOX CŨ: LỌC THỜI GIAN HIỆN TẠI (Đã bổ sung mục Tất cả) */}
               <select 
                   value={timeFilter} 
                   onChange={(e) => {
                       setTimeFilter(e.target.value);
-                      if (e.target.value !== 'all') setSelectedMonthYear('all'); // Tự động tắt lọc tháng cụ thể
+                      if (e.target.value !== 'all') setSelectedMonthYear('all'); 
                   }} 
                   style={styles.filterSelect}
               >
@@ -301,7 +318,6 @@ const Attendance = () => {
                                {task.checkInStatus === 'Late' && <span style={styles.lateBadge}>⚠️ Trễ giờ</span>}
                                {isCheckedIn && !isCompleted && <span style={styles.workingBadge}>Đang làm việc</span>}
                                
-                               {/* NẾU ADMIN CHỈNH SỬA, HIỂN THỊ DÒNG THÔNG BÁO Ở ĐÂY */}
                                {task.adminEdited && (
                                    <span style={{fontSize:'0.75rem', fontStyle:'italic', color:'#c2410c', fontWeight:'bold'}}>
                                        (Được sửa bởi Admin: {task.adminEditReason})

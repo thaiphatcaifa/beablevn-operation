@@ -147,24 +147,20 @@ const Reports = () => {
   const [editingAttendanceId, setEditingAttendanceId] = useState(null);
   const [editAttForm, setEditAttForm] = useState({ checkIn: '', checkOut: '', reason: '' });
 
-  // --- STATE TÀI CHÍNH ---
   const [financeStaffFilter, setFinanceStaffFilter] = useState('all'); 
   const [financeMonthFilter, setFinanceMonthFilter] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  // --- STATE CSVC CẬP NHẬT (THÊM BỘ LỌC THÁNG 2026) ---
   const [facilityAreaFilter, setFacilityAreaFilter] = useState('all'); 
   const [facilityStaffFilter, setFacilityStaffFilter] = useState('all'); 
   const [facilityTimeFilter, setFacilityTimeFilter] = useState('month'); 
-  const [facilityMonthFilter, setFacilityMonthFilter] = useState('all'); // State mới
+  const [facilityMonthFilter, setFacilityMonthFilter] = useState('all'); 
   
-  // --- STATE TIẾN ĐỘ CÔNG VIỆC ---
   const [taskStaffFilter, setTaskStaffFilter] = useState('all');
   const [taskStatusFilter, setTaskStatusFilter] = useState('all');
 
-  // --- DỮ LIỆU THỜI GIAN CHUNG ---
   const currentYear = new Date().getFullYear();
   const availableYears = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
 
@@ -224,48 +220,52 @@ const Reports = () => {
 
       const staffTasks = currentMonthScheduleTasks.filter(t => String(t.assigneeId) === String(staff.id));
       let taskRemuneration = 0;
-      let totalMatchedHours = 0;
-      let matchedTasksList = [];
+      let totalWorkedHours = 0;
+      let allTasksList = [];
 
       staffTasks.forEach(task => {
-          if (!staff.remunerations || !Array.isArray(staff.remunerations)) return;
           if (!task.checkInTime || !task.checkOutTime) return; 
           
-          const matchedRule = staff.remunerations.find(rem => {
-              if (!rem) return false; 
-              
-              if (rem.position && String(rem.position).trim() !== '') {
-                  const rulePos = String(rem.position).trim().toLowerCase();
-                  const taskPos = String(task.assignedRole || '').trim().toLowerCase();
-                  if (rulePos !== taskPos) return false;
-              }
-              
-              if (rem.keywords && String(rem.keywords).trim() !== '') {
-                  const keywords = String(rem.keywords).split(',').map(k => k.trim().toLowerCase()).filter(k => k);
-                  const titleLower = String(task.title || '').toLowerCase();
-                  const isMatch = keywords.some(k => titleLower.includes(k));
-                  if (!isMatch) return false;
-              }
-              return true;
-          });
+          const workedHours = calculateWorkHoursDecimal(task.startTime, task.endTime, task.checkInTime, task.checkOutTime, task.adminEdited);
+          totalWorkedHours += workedHours;
 
-          if (matchedRule) {
-              const workedHours = calculateWorkHoursDecimal(task.startTime, task.endTime, task.checkInTime, task.checkOutTime, task.adminEdited);
-              totalMatchedHours += workedHours;
-              matchedTasksList.push({
-                  hours: workedHours,
-                  rate: parseAmount(matchedRule.amount)
+          let taskRate = 0;
+
+          if (staff.remunerations && Array.isArray(staff.remunerations)) {
+              const matchedRule = staff.remunerations.find(rem => {
+                  if (!rem) return false; 
+                  if (rem.position && String(rem.position).trim() !== '') {
+                      const rulePos = String(rem.position).trim().toLowerCase();
+                      const taskPos = String(task.assignedRole || '').trim().toLowerCase();
+                      if (rulePos !== taskPos) return false;
+                  }
+                  if (rem.keywords && String(rem.keywords).trim() !== '') {
+                      const keywords = String(rem.keywords).split(',').map(k => k.trim().toLowerCase()).filter(k => k);
+                      const titleLower = String(task.title || '').toLowerCase();
+                      const isMatch = keywords.some(k => titleLower.includes(k));
+                      if (!isMatch) return false;
+                  }
+                  return true;
               });
+
+              if (matchedRule) {
+                  taskRate = parseAmount(matchedRule.amount);
+              }
           }
+
+          allTasksList.push({
+              hours: workedHours,
+              rate: taskRate
+          });
       });
 
       const minHours = parseAmount(staff.minWorkHours);
       
-      if (totalMatchedHours >= minHours) {
-          matchedTasksList.sort((a, b) => a.rate - b.rate);
+      if (totalWorkedHours >= minHours) {
+          allTasksList.sort((a, b) => a.rate - b.rate);
           let hoursToOffset = minHours;
 
-          matchedTasksList.forEach(t => {
+          allTasksList.forEach(t => {
               if (hoursToOffset > 0) {
                   if (t.hours <= hoursToOffset) {
                       hoursToOffset -= t.hours;
@@ -275,7 +275,7 @@ const Reports = () => {
                       hoursToOffset = 0;
                   }
               }
-              if (t.hours > 0) {
+              if (t.hours > 0 && t.rate > 0) {
                   taskRemuneration += t.hours * t.rate;
               }
           });
@@ -288,7 +288,7 @@ const Reports = () => {
       if (totalSalary > 0 || minHours > 0) {
           financeRows.push({
               item: staff.name,
-              type: `UBI: ${Math.round(totalUBI).toLocaleString()}đ + Thù lao vượt mức: ${Math.round(taskRemuneration).toLocaleString()}đ (Làm ${totalMatchedHours.toFixed(1)}/${minHours}h)`,
+              type: `UBI: ${Math.round(totalUBI).toLocaleString()}đ + Thù lao vượt mức: ${Math.round(taskRemuneration).toLocaleString()}đ (Làm ${totalWorkedHours.toFixed(1)}/${minHours}h)`,
               amount: totalSalary,
               date: new Date().toLocaleDateString('vi-VN')
           });
@@ -296,7 +296,7 @@ const Reports = () => {
       }
   });
 
-  // --- 2. CƠ SỞ VẬT CHẤT (ĐÃ CẬP NHẬT LOGIC LỌC THÁNG 2026) ---
+  // 2. CSVC
   const availableAreas = [...new Set(facilityLogs.map(l => l.area).filter(Boolean))];
   const availableReporters = [...new Set(facilityLogs.map(l => l.staffName).filter(Boolean))];
 
@@ -306,13 +306,11 @@ const Reports = () => {
       
       const logDate = new Date(log.timestamp);
       const now = new Date();
-
-      // Lọc theo thời gian tương đối
+      
       if (facilityTimeFilter === 'day' && !isSameDay(logDate, now)) return false;
       if (facilityTimeFilter === 'week' && !isSameWeek(logDate, now)) return false;
       if (facilityTimeFilter === 'month' && !isSameMonth(logDate, now)) return false;
       
-      // Lọc theo tháng cụ thể năm 2026
       if (facilityMonthFilter !== 'all') {
           const selectedMonth = parseInt(facilityMonthFilter, 10);
           if (logDate.getFullYear() !== 2026 || (logDate.getMonth() + 1) !== selectedMonth) {
@@ -518,7 +516,6 @@ const Reports = () => {
                         {availableReporters.map(name => <option key={name} value={name}>{name}</option>)}
                     </select>
 
-                    {/* Bộ lọc thời gian hiện tại */}
                     <select 
                         value={facilityTimeFilter} 
                         onChange={(e) => {
@@ -533,7 +530,6 @@ const Reports = () => {
                         <option value="month">Tháng này</option>
                     </select>
 
-                    {/* Bộ lọc Tháng/Năm 2026 */}
                     <select 
                         value={facilityMonthFilter} 
                         onChange={(e) => {
@@ -646,8 +642,8 @@ const Reports = () => {
                        
                        const workedHoursDecimal = calculateWorkHoursDecimal(t.startTime, t.endTime, t.checkInTime, t.checkOutTime, t.adminEdited);
                        
-                       // CHỈ CHIEF MỚI ĐƯỢC THẤY NÚT SỬA, VÀ CA LÀM PHẢI QUÁ HẠN MÀ (CHƯA XONG HOẶC THỜI GIAN = 0)
-                       const canEdit = user?.role === 'chief' && isOverdue && (!isCompleted || workedHoursDecimal === 0);
+                       // NÚT SỬA HIỂN THỊ KHI: Trưởng nhóm xem VÀ đã quá hạn VÀ (Chưa xong HOẶC (đã xong nhưng bị tính 0 giờ) HOẶC là ca trước đó đã do Admin sửa)
+                       const canEdit = user?.role === 'chief' && isOverdue && (!isCompleted || workedHoursDecimal === 0 || t.adminEdited);
 
                        const statusDetails = [];
 
@@ -657,7 +653,7 @@ const Reports = () => {
                            const plannedStart = new Date(t.startTime);
                            const actualIn = new Date(t.checkInTime);
                            const diffIn = (actualIn - plannedStart) / 60000; 
-                           if (diffIn > 3) statusDetails.push(`Check-in trễ ${Math.round(diffIn)}p`);
+                           if (diffIn > 3 && !t.adminEdited) statusDetails.push(`Check-in trễ ${Math.round(diffIn)}p`);
 
                            if (!t.checkOutTime) {
                                statusDetails.push("Chưa check-out");
@@ -665,7 +661,7 @@ const Reports = () => {
                                const plannedEnd = new Date(t.endTime);
                                const actualOut = new Date(t.checkOutTime);
                                const diffOut = (actualOut - plannedEnd) / 60000;
-                               if (diffOut > 15) statusDetails.push(`Check-out trễ ${Math.round(diffOut)}p`);
+                               if (diffOut > 15 && !t.adminEdited) statusDetails.push(`Check-out trễ ${Math.round(diffOut)}p`);
                            }
                        }
 
@@ -673,7 +669,6 @@ const Reports = () => {
                            statusDetails.push(`Giải trình: ${t.explanation}`);
                        }
 
-                       // Cập nhật thông tin ngày/giờ hiển thị (nếu admin sửa thì lấy giờ admin)
                        const displayStart = t.adminEdited && t.checkInTime ? t.checkInTime : t.startTime;
                        const displayEnd = t.adminEdited && t.checkOutTime ? t.checkOutTime : t.endTime;
 
@@ -750,7 +745,7 @@ const Reports = () => {
                                            <span style={styles.badgeSuccess}>Đã chấm công</span> : 
                                            <span style={styles.badgePending}>Chưa hoàn thành</span>
                                          }
-                                         {statusDetails.length > 0 && (
+                                         {statusDetails.length > 0 && !t.adminEdited && (
                                              <div style={{fontSize: '0.75rem', color: '#6b7280', marginTop: '4px', fontStyle:'italic'}}>
                                                  {statusDetails.map((detail, idx) => (
                                                      <div key={idx}>- {detail}</div>
