@@ -14,6 +14,9 @@ export const DataProvider = ({ children }) => {
   const [disciplineTypes, setDisciplineTypes] = useState([]); 
   const [disciplineRecords, setDisciplineRecords] = useState([]);
   const [schedules, setSchedules] = useState([]);
+  
+  // THÊM MỚI: State lưu dữ liệu báo cáo tài chính đã chốt
+  const [payrollRecords, setPayrollRecords] = useState([]);
 
   // --- FIREBASE LISTENERS ---
   useEffect(() => {
@@ -72,43 +75,50 @@ export const DataProvider = ({ children }) => {
       setSchedules(data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : []);
     });
 
+    // 8. PAYROLL RECORDS (THÊM MỚI: Lắng nghe danh sách chốt lương)
+    const payrollRef = ref(db, 'payrollRecords');
+    const unsubPayroll = onValue(payrollRef, (snapshot) => {
+      const data = snapshot.val();
+      setPayrollRecords(data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : []);
+    });
+
     return () => {
       unsubStaff(); unsubTasks(); unsubShifts(); unsubAtt();
-      unsubFacility(); unsubDiscType(); unsubDiscRec(); unsubSchedules();
+      unsubFacility(); unsubDiscType(); unsubDiscRec(); unsubSchedules(); 
+      unsubPayroll(); // Hủy lắng nghe payroll khi component unmount
     };
   }, []);
 
   // --- ACTIONS ---
 
   // Staff
-  const addStaff = (s) => { const newId = Date.now().toString(); set(ref(db, 'staff/' + newId), { ...s, id: newId }); };
+  const addStaff = (s) => { const newId = Date.now().toString(); return set(ref(db, 'staff/' + newId), { ...s, id: newId }); };
   const deleteStaff = (id) => remove(ref(db, 'staff/' + id));
-  // QUAN TRỌNG: Hàm cập nhật thông tin nhân viên (bao gồm đổi mật khẩu)
   const updateStaffInfo = (id, updates) => update(ref(db, 'staff/' + id), updates);
 
   // Tasks
   const addTask = (t) => { 
       const newId = Date.now().toString() + Math.random().toString(36).substr(2, 5); 
-      set(ref(db, 'tasks/' + newId), { ...t, id: newId, progress: 0, status: 'assigned', createdDate: new Date().toISOString() }); 
+      return set(ref(db, 'tasks/' + newId), { ...t, id: newId, progress: 0, status: 'assigned', createdDate: new Date().toISOString() }); 
   };
   const updateTask = (taskId, newData) => update(ref(db, 'tasks/' + taskId), newData);
   const deleteTask = (taskId) => remove(ref(db, 'tasks/' + taskId));
   const updateTaskProgress = (taskId, progress, reason) => update(ref(db, 'tasks/' + taskId), { progress, reason });
   
   const finishTask = (taskId) => {
-    update(ref(db, 'tasks/' + taskId), { 
+    return update(ref(db, 'tasks/' + taskId), { 
       status: 'completed',
       finishedAt: new Date().toISOString() 
     });
   };
 
   // Facility
-  const addFacilityLog = (log) => { const newId = Date.now().toString(); set(ref(db, 'facilityLogs/' + newId), { ...log, id: newId, timestamp: new Date().toISOString() }); };
+  const addFacilityLog = (log) => { const newId = Date.now().toString(); return set(ref(db, 'facilityLogs/' + newId), { ...log, id: newId, timestamp: new Date().toISOString() }); };
 
   // Discipline Types
   const addDisciplineType = (typeObj) => { 
       const newId = Date.now().toString(); 
-      set(ref(db, 'disciplineTypes/' + newId), { 
+      return set(ref(db, 'disciplineTypes/' + newId), { 
           ...typeObj, 
           id: newId,
           createdAt: new Date().toISOString() 
@@ -117,7 +127,7 @@ export const DataProvider = ({ children }) => {
   const updateDisciplineTypeStatus = (id, status) => update(ref(db, 'disciplineTypes/' + id), { status });
   
   const softDeleteDisciplineType = (id, deleteInfo) => {
-      update(ref(db, 'disciplineTypes/' + id), {
+      return update(ref(db, 'disciplineTypes/' + id), {
           status: 'Deleted',
           deletedBy: deleteInfo.deletedBy,
           deleteReason: deleteInfo.deleteReason,
@@ -126,11 +136,11 @@ export const DataProvider = ({ children }) => {
   };
 
   const deleteDisciplineType = (id) => {
-      remove(ref(db, 'disciplineTypes/' + id));
+      return remove(ref(db, 'disciplineTypes/' + id));
   };
 
   const proposeDeleteDisciplineType = (id, info) => {
-      update(ref(db, 'disciplineTypes/' + id), {
+      return update(ref(db, 'disciplineTypes/' + id), {
           isDeleteProposed: true,
           deleteProposalReason: info.reason,
           deleteProposedBy: info.by,
@@ -139,13 +149,13 @@ export const DataProvider = ({ children }) => {
   };
 
   // Discipline Records
-  const addDisciplineRecord = (record) => { const newId = Date.now().toString(); set(ref(db, 'disciplineRecords/' + newId), { ...record, id: newId, status: 'Active' }); };
+  const addDisciplineRecord = (record) => { const newId = Date.now().toString(); return set(ref(db, 'disciplineRecords/' + newId), { ...record, id: newId, status: 'Active' }); };
   const updateDisciplineRecordStatus = (id, status) => update(ref(db, 'disciplineRecords/' + id), { status });
   const deleteDisciplineRecord = (id) => remove(ref(db, 'disciplineRecords/' + id));
 
   // Attendance
-  const addAttendance = (log) => { const newId = Date.now().toString(); set(ref(db, 'attendance/' + newId), { ...log, id: newId }); };
-  const updateAttendanceLog = (logId, updates) => { update(ref(db, 'attendance/' + logId), updates); };
+  const addAttendance = (log) => { const newId = Date.now().toString(); return set(ref(db, 'attendance/' + newId), { ...log, id: newId }); };
+  const updateAttendanceLog = (logId, updates) => { return update(ref(db, 'attendance/' + logId), updates); };
 
   // Schedules
   const addSchedule = (sched) => { 
@@ -156,17 +166,25 @@ export const DataProvider = ({ children }) => {
   const updateSchedule = (id, updates) => update(ref(db, 'schedules/' + id), updates);
   const deleteSchedule = (id) => remove(ref(db, 'schedules/' + id));
 
+  // --- PAYROLL RECORDS (THÊM MỚI: Chốt báo cáo) ---
+  const savePayrollRecord = (recordData) => {
+    // Lưu với id chính là "YYYY-MM" (VD: "2026-04") để mỗi tháng chỉ tồn tại 1 bản cứng duy nhất,
+    // nếu ấn chốt lại thì sẽ ghi đè lên bản cũ của tháng đó.
+    return set(ref(db, 'payrollRecords/' + recordData.month), { ...recordData, id: recordData.month });
+  };
+
   // --- EXPORT CONTEXT ---
   return (
     <DataContext.Provider value={{ 
-      // Đã đảm bảo updateStaffInfo được export
       staffList, addStaff, deleteStaff, updateStaffInfo, 
       tasks, addTask, updateTask, deleteTask, updateTaskProgress, finishTask,
       shifts, attendanceLogs, addAttendance, updateAttendanceLog,
       facilityLogs, addFacilityLog,
       disciplineTypes, addDisciplineType, updateDisciplineTypeStatus, softDeleteDisciplineType, proposeDeleteDisciplineType, deleteDisciplineType,
       disciplineRecords, addDisciplineRecord, updateDisciplineRecordStatus, deleteDisciplineRecord,
-      schedules, addSchedule, updateSchedule, deleteSchedule 
+      schedules, addSchedule, updateSchedule, deleteSchedule,
+      // Xuất 2 thành phần mới ra để Reports.jsx sử dụng
+      payrollRecords, savePayrollRecord 
     }}>
       {children}
     </DataContext.Provider>

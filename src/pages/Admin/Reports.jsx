@@ -18,9 +18,10 @@ const getPercent = (val) => {
 };
 
 // --- HELPER THỜI GIAN ---
-const isSameDay = (d1, d2) => d1.toDateString() === d2.toDateString();
-const isSameMonth = (d1, d2) => d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
+const isSameDay = (d1, d2) => d1 && d2 && d1.toDateString() === d2.toDateString();
+const isSameMonth = (d1, d2) => d1 && d2 && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
 const isSameWeek = (d1, d2) => {
+    if (!d1 || !d2) return false;
     const start = new Date(d2);
     start.setHours(0,0,0,0);
     start.setDate(start.getDate() - start.getDay() + 1); 
@@ -53,10 +54,12 @@ const calculateWorkHours = (schedStart, schedEnd, actualCheckIn, actualCheckOut,
     let diffMs = 0;
 
     if (isAdminEdited) {
+        // Admin chỉnh sửa: Cập nhật giờ theo Admin nhưng không vượt quá thời lượng ca của Scheduler
         const scheduledMs = sEnd - sStart;
         const actualMs = aOut - aIn;
         diffMs = actualMs > scheduledMs ? scheduledMs : actualMs;
     } else {
+        // Nhân viên tự Check-in: Khóa giờ trong khung [schedStart, schedEnd] có du di 10p
         let calcStart = aIn > sStart ? aIn : sStart;
         let calcEnd;
         if (aOut > sEnd) {
@@ -127,12 +130,13 @@ const Icons = {
   Schedule: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>),
   Print: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" /></svg>),
   ArrowRight: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>),
-  Back: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>)
+  Back: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>),
+  Lock: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>)
 };
 
 const Reports = () => {
   const { user } = useAuth();
-  const { tasks, staffList, facilityLogs, updateTask } = useData(); 
+  const { tasks, staffList, facilityLogs, updateTask, payrollRecords, savePayrollRecord } = useData(); 
   
   const [activeTab, setActiveTab] = useState('overview'); 
 
@@ -147,20 +151,28 @@ const Reports = () => {
   const [editingAttendanceId, setEditingAttendanceId] = useState(null);
   const [editAttForm, setEditAttForm] = useState({ checkIn: '', checkOut: '', reason: '' });
 
+  // --- STATE TÀI CHÍNH ---
   const [financeStaffFilter, setFinanceStaffFilter] = useState('all'); 
   const [financeMonthFilter, setFinanceMonthFilter] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
 
+  // KHẮC PHỤC LỖI no-undef: Đưa khai báo selYear và selMonth ra phạm vi component
+  const [selYear, selMonth] = (financeMonthFilter || '').split('-');
+  const selectedFinanceMonth = new Date(selYear, selMonth - 1, 1);
+
+  // --- STATE CSVC ---
   const [facilityAreaFilter, setFacilityAreaFilter] = useState('all'); 
   const [facilityStaffFilter, setFacilityStaffFilter] = useState('all'); 
   const [facilityTimeFilter, setFacilityTimeFilter] = useState('month'); 
   const [facilityMonthFilter, setFacilityMonthFilter] = useState('all'); 
   
+  // --- STATE TIẾN ĐỘ CÔNG VIỆC ---
   const [taskStaffFilter, setTaskStaffFilter] = useState('all');
   const [taskStatusFilter, setTaskStatusFilter] = useState('all');
 
+  // --- DỮ LIỆU THỜI GIAN CHUNG ---
   const currentYear = new Date().getFullYear();
   const availableYears = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
 
@@ -192,121 +204,152 @@ const Reports = () => {
       alert("Đã cập nhật dữ liệu chấm công thành công. Hệ thống đã gửi thông báo đến nhân sự!");
   };
 
-  // --- PHÂN TÁCH DỮ LIỆU ---
-  const opAdminTasks = Array.isArray(tasks) ? tasks.filter(t => !t.fromScheduleId) : [];
-  const scheduleTasks = Array.isArray(tasks) ? tasks.filter(t => t.fromScheduleId) : [];
-
-  // --- 1. TÀI CHÍNH ---
-  let totalEstimatedCost = 0;
-  const financeRows = [];
-
-  const [selYear, selMonth] = financeMonthFilter.split('-');
-  const selectedFinanceMonth = new Date(selYear, selMonth - 1, 1);
-
-  const currentMonthScheduleTasks = scheduleTasks.filter(t => {
-      if (!t.startTime) return false;
-      const d = new Date(t.startTime);
-      return !isNaN(d.getTime()) && isSameMonth(d, selectedFinanceMonth);
-  });
-
+  // --- PHÂN TÁCH DỮ LIỆU (Bảo vệ Undefined) ---
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
   const safeStaffList = Array.isArray(staffList) ? staffList : [];
+  const safeFacilityLogs = Array.isArray(facilityLogs) ? facilityLogs : [];
 
-  safeStaffList.forEach(staff => {
-      if (financeStaffFilter !== 'all' && String(staff.id) !== String(financeStaffFilter)) return;
+  const opAdminTasks = safeTasks.filter(t => !t.fromScheduleId);
+  const scheduleTasks = safeTasks.filter(t => t.fromScheduleId);
 
-      const ubi1 = parseAmount(staff.ubi1Base) * getPercent(staff.ubi1Percent) / 100;
-      const ubi2 = parseAmount(staff.ubi2Base) * getPercent(staff.ubi2Percent) / 100;
-      const totalUBI = ubi1 + ubi2;
+  // ==============================================================
+  // 1. LOGIC TÀI CHÍNH (ĐÃ NÂNG CẤP CƠ CHẾ SNAPSHOT / CHỐT LƯƠNG)
+  // ==============================================================
+  let totalEstimatedCost = 0;
+  let financeRows = [];
+  let isLocked = false;
+  let lockedInfo = null;
 
-      const staffTasks = currentMonthScheduleTasks.filter(t => String(t.assigneeId) === String(staff.id));
-      let taskRemuneration = 0;
-      let totalWorkedHours = 0;
-      let allTasksList = [];
+  const lockedRecord = Array.isArray(payrollRecords) ? payrollRecords.find(r => r.month === financeMonthFilter) : null;
 
-      staffTasks.forEach(task => {
-          if (!task.checkInTime || !task.checkOutTime) return; 
-          
-          const workedHours = calculateWorkHoursDecimal(task.startTime, task.endTime, task.checkInTime, task.checkOutTime, task.adminEdited);
-          totalWorkedHours += workedHours;
-
-          let taskRate = 0;
-
-          if (staff.remunerations && Array.isArray(staff.remunerations)) {
-              const matchedRule = staff.remunerations.find(rem => {
-                  if (!rem) return false; 
-                  if (rem.position && String(rem.position).trim() !== '') {
-                      const rulePos = String(rem.position).trim().toLowerCase();
-                      const taskPos = String(task.assignedRole || '').trim().toLowerCase();
-                      if (rulePos !== taskPos) return false;
-                  }
-                  if (rem.keywords && String(rem.keywords).trim() !== '') {
-                      const keywords = String(rem.keywords).split(',').map(k => k.trim().toLowerCase()).filter(k => k);
-                      const titleLower = String(task.title || '').toLowerCase();
-                      const isMatch = keywords.some(k => titleLower.includes(k));
-                      if (!isMatch) return false;
-                  }
-                  return true;
-              });
-
-              if (matchedRule) {
-                  taskRate = parseAmount(matchedRule.amount);
-              }
-          }
-
-          allTasksList.push({
-              hours: workedHours,
-              rate: taskRate
-          });
+  if (lockedRecord) {
+      isLocked = true;
+      financeRows = lockedRecord.data || [];
+      totalEstimatedCost = lockedRecord.totalCost || 0;
+      lockedInfo = { by: lockedRecord.lockedBy, at: lockedRecord.lockedAt };
+  } else {
+      const currentMonthScheduleTasks = scheduleTasks.filter(t => {
+          if (!t.startTime) return false;
+          const d = new Date(t.startTime);
+          return !isNaN(d.getTime()) && isSameMonth(d, selectedFinanceMonth);
       });
 
-      const minHours = parseAmount(staff.minWorkHours);
-      
-      if (totalWorkedHours >= minHours) {
-          allTasksList.sort((a, b) => a.rate - b.rate);
-          let hoursToOffset = minHours;
+      safeStaffList.forEach(staff => {
+          if (financeStaffFilter !== 'all' && String(staff.id) !== String(financeStaffFilter)) return;
 
-          allTasksList.forEach(t => {
-              if (hoursToOffset > 0) {
-                  if (t.hours <= hoursToOffset) {
-                      hoursToOffset -= t.hours;
-                      t.hours = 0;
-                  } else {
-                      t.hours -= hoursToOffset;
-                      hoursToOffset = 0;
+          const ubi1 = parseAmount(staff.ubi1Base) * getPercent(staff.ubi1Percent) / 100;
+          const ubi2 = parseAmount(staff.ubi2Base) * getPercent(staff.ubi2Percent) / 100;
+          const totalUBI = ubi1 + ubi2;
+
+          const staffTasks = currentMonthScheduleTasks.filter(t => String(t.assigneeId) === String(staff.id));
+          
+          let taskRemuneration = 0;
+          let totalWorkedHours = 0;
+          let allTasksList = [];
+
+          staffTasks.forEach(task => {
+              if (!task.checkInTime || !task.checkOutTime) return; 
+              
+              const workedHours = calculateWorkHoursDecimal(task.startTime, task.endTime, task.checkInTime, task.checkOutTime, task.adminEdited);
+              totalWorkedHours += workedHours;
+
+              let taskRate = 0;
+
+              if (staff.remunerations && Array.isArray(staff.remunerations)) {
+                  const matchedRule = staff.remunerations.find(rem => {
+                      if (!rem) return false; 
+                      
+                      if (rem.position && String(rem.position).trim() !== '') {
+                          const rulePos = String(rem.position).trim().toLowerCase();
+                          const taskPos = String(task.assignedRole || '').trim().toLowerCase();
+                          if (rulePos !== taskPos) return false;
+                      }
+                      
+                      if (rem.keywords && String(rem.keywords).trim() !== '') {
+                          const keywords = String(rem.keywords).split(',').map(k => k.trim().toLowerCase()).filter(k => k);
+                          const titleLower = String(task.title || '').toLowerCase();
+                          const isMatch = keywords.some(k => titleLower.includes(k));
+                          if (!isMatch) return false;
+                      }
+                      return true;
+                  });
+
+                  if (matchedRule) {
+                      taskRate = parseAmount(matchedRule.amount);
                   }
               }
-              if (t.hours > 0 && t.rate > 0) {
-                  taskRemuneration += t.hours * t.rate;
-              }
+
+              allTasksList.push({
+                  hours: workedHours,
+                  rate: taskRate
+              });
           });
-      } else {
-          taskRemuneration = 0;
+
+          const minHours = parseAmount(staff.minWorkHours);
+          
+          if (totalWorkedHours >= minHours) {
+              allTasksList.sort((a, b) => a.rate - b.rate);
+              let hoursToOffset = minHours;
+
+              allTasksList.forEach(t => {
+                  if (hoursToOffset > 0) {
+                      if (t.hours <= hoursToOffset) {
+                          hoursToOffset -= t.hours;
+                          t.hours = 0;
+                      } else {
+                          t.hours -= hoursToOffset;
+                          hoursToOffset = 0;
+                      }
+                  }
+                  if (t.hours > 0 && t.rate > 0) {
+                      taskRemuneration += t.hours * t.rate;
+                  }
+              });
+          } else {
+              taskRemuneration = 0;
+          }
+
+          const totalSalary = totalUBI + taskRemuneration;
+
+          if (totalSalary > 0 || minHours > 0) {
+              financeRows.push({
+                  item: staff.name,
+                  type: `UBI: ${Math.round(totalUBI).toLocaleString()}đ + Thù lao vượt mức: ${Math.round(taskRemuneration).toLocaleString()}đ (Làm ${totalWorkedHours.toFixed(1)}/${minHours}h)`,
+                  amount: totalSalary,
+                  date: new Date().toLocaleDateString('vi-VN')
+              });
+              totalEstimatedCost += totalSalary;
+          }
+      });
+  }
+
+  const handleLockPayroll = () => {
+      if(!savePayrollRecord) {
+          alert("Lỗi: Hệ thống chưa được cấu hình API savePayrollRecord trong DataContext. Vui lòng xem lại hướng dẫn chèn mã file DataContext ở tin nhắn trước.");
+          return;
       }
-
-      const totalSalary = totalUBI + taskRemuneration;
-
-      if (totalSalary > 0 || minHours > 0) {
-          financeRows.push({
-              item: staff.name,
-              type: `UBI: ${Math.round(totalUBI).toLocaleString()}đ + Thù lao vượt mức: ${Math.round(taskRemuneration).toLocaleString()}đ (Làm ${totalWorkedHours.toFixed(1)}/${minHours}h)`,
-              amount: totalSalary,
-              date: new Date().toLocaleDateString('vi-VN')
+      if(window.confirm(`Bạn có chắc chắn muốn CHỐT BÁO CÁO tháng ${financeMonthFilter} không?\n\nCảnh báo: Dữ liệu này sẽ được lưu thành bản cứng (Snapshot) để ngăn chặn các thay đổi lịch sử lương trong tương lai. Bạn không thể hoàn tác hành động này!`)) {
+          savePayrollRecord({
+              month: financeMonthFilter,
+              data: financeRows,
+              totalCost: totalEstimatedCost,
+              lockedAt: new Date().toISOString(),
+              lockedBy: user?.username || 'Admin'
           });
-          totalEstimatedCost += totalSalary;
+          alert("Đã chốt báo cáo thành công!");
       }
-  });
+  };
 
-  // 2. CSVC
-  const availableAreas = [...new Set(facilityLogs.map(l => l.area).filter(Boolean))];
-  const availableReporters = [...new Set(facilityLogs.map(l => l.staffName).filter(Boolean))];
+  // --- 2. CƠ SỞ VẬT CHẤT ---
+  const availableAreas = [...new Set(safeFacilityLogs.map(l => l.area).filter(Boolean))];
+  const availableReporters = [...new Set(safeFacilityLogs.map(l => l.staffName).filter(Boolean))];
 
-  const filteredFacilityLogs = facilityLogs.filter(log => {
+  const filteredFacilityLogs = safeFacilityLogs.filter(log => {
       if (facilityAreaFilter !== 'all' && log.area !== facilityAreaFilter) return false;
       if (facilityStaffFilter !== 'all' && log.staffName !== facilityStaffFilter) return false;
       
       const logDate = new Date(log.timestamp);
       const now = new Date();
-      
       if (facilityTimeFilter === 'day' && !isSameDay(logDate, now)) return false;
       if (facilityTimeFilter === 'week' && !isSameWeek(logDate, now)) return false;
       if (facilityTimeFilter === 'month' && !isSameMonth(logDate, now)) return false;
@@ -321,7 +364,7 @@ const Reports = () => {
       return true;
   });
 
-  // 3. TIẾN ĐỘ CÔNG VIỆC
+  // --- 3. TIẾN ĐỘ CÔNG VIỆC ---
   const filteredOpTasks = opAdminTasks.filter(t => {
       if (taskStaffFilter !== 'all' && String(t.assigneeId) !== String(taskStaffFilter)) return false;
       
@@ -339,7 +382,7 @@ const Reports = () => {
   const completedTasks = filteredOpTasks.filter(t => t.status === 'completed').length;
   const taskProgress = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
-  // 4. CHẤM CÔNG
+  // --- 4. CHẤM CÔNG ---
   const filteredAttendance = scheduleTasks.filter(t => {
       const taskDate = new Date(t.startTime);
       const now = new Date();
@@ -425,7 +468,7 @@ const Reports = () => {
     <div style={{ paddingBottom: '40px' }} className="reports-page">
       <style>{`
         @media print {
-          .admin-sidebar, .admin-header-mobile, .admin-bottom-nav, .btn-print, .filter-select, .nav-back-btn, .action-col { display: none !important; }
+          .admin-sidebar, .admin-header-mobile, .admin-bottom-nav, .btn-print, .filter-select, .nav-back-btn, .action-col, .lock-btn-container { display: none !important; }
           .admin-content { margin: 0 !important; padding: 20px !important; width: 100% !important; }
           body { background: white; -webkit-print-color-adjust: exact; }
           .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
@@ -449,7 +492,10 @@ const Reports = () => {
                <div style={{...styles.cardHeader, justifyContent: 'space-between', flexWrap: 'wrap'}}>
                   <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                       <div style={styles.iconBox}><Icons.Finance /></div>
-                      <h3 style={styles.cardTitle}>Tài chính & Thu nhập (Tháng {Number(selMonth)}/{selYear})</h3>
+                      <div>
+                          <h3 style={styles.cardTitle}>Tài chính & Thu nhập (Tháng {Number(selMonth)}/{selYear})</h3>
+                          {isLocked && <div style={{fontSize:'0.75rem', color:'#d97706', fontWeight:'bold', marginTop:'4px'}}>🔒 Đã chốt sổ bởi {lockedInfo?.by} ({new Date(lockedInfo?.at).toLocaleDateString('vi-VN')})</div>}
+                      </div>
                   </div>
                   <div style={{display:'flex', gap:'10px', alignItems:'center', flexWrap: 'wrap'}}>
                       <input 
@@ -461,8 +507,18 @@ const Reports = () => {
                       />
                       <select value={financeStaffFilter} onChange={(e) => setFinanceStaffFilter(e.target.value)} style={styles.filterSelect}>
                           <option value="all">Tất cả nhân sự</option>
-                          {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                          {safeStaffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
+                      
+                      {/* NÚT CHỐT DỮ LIỆU */}
+                      {!isLocked && (
+                          <div className="lock-btn-container">
+                              <button onClick={handleLockPayroll} style={{...styles.printBtn, background:'#f59e0b', color:'white', border:'none', borderColor:'#f59e0b'}}>
+                                  <Icons.Lock /> Chốt Báo Cáo
+                              </button>
+                          </div>
+                      )}
+
                       <button onClick={() => setActiveTab('overview')} style={styles.backBtn} className="nav-back-btn"><Icons.Back /> Ẩn</button>
                   </div>
                </div>
@@ -599,7 +655,7 @@ const Reports = () => {
                <div className="filter-group" style={{width: '100%'}}>
                    <select value={attendanceStaffFilter} onChange={(e) => setAttendanceStaffFilter(e.target.value)} style={{...styles.filterSelect, flex: 1}}>
                         <option value="all">Nhân sự: Tất cả</option>
-                        {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        {safeStaffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                     <select value={attendanceDayFilter} onChange={(e) => setAttendanceDayFilter(e.target.value)} style={{...styles.filterSelect, flex: 1}}>
                         <option value="all">Ngày: Tất cả</option>
@@ -642,8 +698,9 @@ const Reports = () => {
                        
                        const workedHoursDecimal = calculateWorkHoursDecimal(t.startTime, t.endTime, t.checkInTime, t.checkOutTime, t.adminEdited);
                        
-                       // NÚT SỬA HIỂN THỊ KHI: Trưởng nhóm xem VÀ đã quá hạn VÀ (Chưa xong HOẶC (đã xong nhưng bị tính 0 giờ) HOẶC là ca trước đó đã do Admin sửa)
-                       const canEdit = user?.role === 'chief' && isOverdue && (!isCompleted || workedHoursDecimal === 0 || t.adminEdited);
+                       const isStaffSuccess = isCompleted && !t.adminEdited && workedHoursDecimal > 0;
+
+                       const canEdit = user?.role === 'chief' && isOverdue && !isStaffSuccess;
 
                        const statusDetails = [];
 
@@ -809,7 +866,7 @@ const Reports = () => {
                           style={{...styles.filterSelect, flex: 1}}
                       >
                           <option value="all">Nhân sự: Tất cả</option>
-                          {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                          {safeStaffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                       <select 
                           value={taskStatusFilter} 
@@ -919,7 +976,8 @@ const styles = {
   statBoxGray: { flex: 1, background: '#f9fafb', padding: '15px', borderRadius: '12px', border: '1px solid #e5e7eb', minWidth: '120px' },
   menuCard: { background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '160px' },
   accessBtn: { marginTop: 'auto', background: '#003366', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background 0.2s' },
-  backBtn: { background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }
+  backBtn: { background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' },
+  lockBtnContainer: { display: 'flex', gap: '10px' }
 };
 
 export default Reports;
