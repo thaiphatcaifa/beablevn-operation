@@ -1,10 +1,8 @@
 {
   "rules": {
-    // 1. KHÓA CỬA CHÍNH (ROOT)
     ".read": false,
     ".write": false,
 
-    // 2. MỞ CỬA TỪNG PHÒNG (NODE) CỤ THỂ
     "staff": {
       ".read": true,
       ".write": true
@@ -25,7 +23,7 @@
       ".write": true
     },
     
-    "attendance": {  // Lưu ý: Trong DataContext bạn dùng ref(db, 'attendance') chứ không phải attendanceLogs
+    "attendance": {
       ".read": true,
       ".write": true
     },
@@ -35,13 +33,17 @@
       ".write": true
     },
     
-    // Đã sửa lại đúng tên 2 bảng kỷ luật theo DataContext.js
     "disciplineTypes": {
       ".read": true,
       ".write": true
     },
 
     "disciplineRecords": {
+      ".read": true,
+      ".write": true
+    },
+
+    "payrollRecords": {
       ".read": true,
       ".write": true
     }
