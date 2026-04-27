@@ -5,41 +5,13 @@ import bcrypt from 'bcryptjs';
 
 // --- BỘ ICON MINIMALIST ---
 const Icons = {
-  Edit: () => (
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-    </svg>
-  ),
-  Save: () => (
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="1.5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-    </svg>
-  ),
-  Delete: () => (
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-    </svg>
-  ),
-  Add: () => (
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="1.5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-    </svg>
-  ),
-  Key: () => (
-    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" strokeWidth="1.5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
-    </svg>
-  ),
-  Search: () => (
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#6b7280" strokeWidth="1.5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-    </svg>
-  ),
-  Trash: () => (
-    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth="1.5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-    </svg>
-  )
+  Edit: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>),
+  Save: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>),
+  Delete: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>),
+  Add: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>),
+  Key: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>),
+  Search: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#6b7280" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>),
+  Trash: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>)
 };
 
 // --- HELPER AN TOÀN SỐ ---
@@ -94,8 +66,10 @@ const StaffManager = () => {
         ...formData, 
         password: hashedPassword,
         role: 'staff', positions: [], 
-        minWorkHours: 0, // Giá trị mặc định
-        ubi1Base: 0, ubi1Percent: 100, ubi2Base: 0, ubi2Percent: 100,
+        minWorkHours: 0,
+        ubiBase: 0, 
+        secondaryUBIs: [], 
+        specificAllowance: 0, 
         remunerations: [], 
         status: 'active' 
     });
@@ -106,28 +80,54 @@ const StaffManager = () => {
   const startEdit = (staff) => {
     setEditMode(staff.id);
     const currentRems = Array.isArray(staff.remunerations) ? staff.remunerations : [];
+    const currentSecUbis = Array.isArray(staff.secondaryUBIs) ? staff.secondaryUBIs : [];
+    
+    let initialUbiBase = staff.ubiBase;
+    if (initialUbiBase === undefined) {
+        initialUbiBase = safeNumber(staff.ubi1Base) * (safeNumber(staff.ubi1Percent)/100 || 1);
+    }
+
     setEditForm({ 
         ...staff, 
         newPassword: '',
-        remunerations: currentRems
+        remunerations: currentRems,
+        secondaryUBIs: currentSecUbis,
+        ubiBase: initialUbiBase,
+        specificAllowance: staff.specificAllowance || 0
     }); 
   };
 
+  // QUẢN LÝ THÙ LAO VƯỢT MỨC
   const handleRemunerationChange = (index, field, value) => {
       const newRems = [...editForm.remunerations];
       newRems[index] = { ...newRems[index], [field]: value };
       setEditForm({ ...editForm, remunerations: newRems });
   };
-
   const handleAddRemuneration = () => {
       const newRems = [...(editForm.remunerations || []), { amount: 0, position: '', keywords: '' }];
       setEditForm({ ...editForm, remunerations: newRems });
   };
-
   const handleRemoveRemuneration = (index) => {
       const newRems = [...editForm.remunerations];
       newRems.splice(index, 1);
       setEditForm({ ...editForm, remunerations: newRems });
+  };
+
+  // QUẢN LÝ UBI PHỤ
+  const handleSecUbiChange = (index, field, value) => {
+      const newUbis = [...editForm.secondaryUBIs];
+      newUbis[index] = { ...newUbis[index], [field]: value };
+      setEditForm({ ...editForm, secondaryUBIs: newUbis });
+  };
+  const handleAddSecUbi = () => {
+      // Mặc định tải 75%, role rỗng
+      const newUbis = [...(editForm.secondaryUBIs || []), { amount: 0, loadFactor: 75, role: '' }];
+      setEditForm({ ...editForm, secondaryUBIs: newUbis });
+  };
+  const handleRemoveSecUbi = (index) => {
+      const newUbis = [...editForm.secondaryUBIs];
+      newUbis.splice(index, 1);
+      setEditForm({ ...editForm, secondaryUBIs: newUbis });
   };
 
   const saveEdit = async (id) => {
@@ -140,21 +140,21 @@ const StaffManager = () => {
             updates.password = bcrypt.hashSync(newPassword, salt);
         }
         
-        // Xử lý số liệu
         updates.minWorkHours = safeNumber(updates.minWorkHours);
-        updates.ubi1Base = safeNumber(updates.ubi1Base);
-        updates.ubi1Percent = safeNumber(updates.ubi1Percent);
-        updates.ubi2Base = safeNumber(updates.ubi2Base);
-        updates.ubi2Percent = safeNumber(updates.ubi2Percent);
+        updates.ubiBase = safeNumber(updates.ubiBase);
+        updates.specificAllowance = safeNumber(updates.specificAllowance);
         
+        if (Array.isArray(updates.secondaryUBIs)) {
+            updates.secondaryUBIs = updates.secondaryUBIs.map(u => ({ 
+                ...u, amount: safeNumber(u.amount), loadFactor: safeNumber(u.loadFactor) 
+            }));
+        } else { updates.secondaryUBIs = []; }
+
         if (Array.isArray(updates.remunerations)) {
             updates.remunerations = updates.remunerations.map(r => ({ 
-                ...r, 
-                amount: safeNumber(r.amount) 
+                ...r, amount: safeNumber(r.amount) 
             }));
-        } else {
-            updates.remunerations = [];
-        }
+        } else { updates.remunerations = []; }
 
         await updateStaffInfo(id, updates);
         
@@ -186,10 +186,16 @@ const StaffManager = () => {
       }
   };
 
-  const calculateUBITotal = (s) => {
-      const ubi1 = safeNumber(s.ubi1Base) * safeNumber(s.ubi1Percent) / 100;
-      const ubi2 = safeNumber(s.ubi2Base) * safeNumber(s.ubi2Percent) / 100;
-      return ubi1 + ubi2;
+  const calculateFixedSalary = (s) => {
+      const base = s.ubiBase !== undefined ? safeNumber(s.ubiBase) : (safeNumber(s.ubi1Base) * (safeNumber(s.ubi1Percent)/100 || 1));
+      let secTotal = 0;
+      if (s.secondaryUBIs && s.secondaryUBIs.length > 0) {
+          secTotal = s.secondaryUBIs.reduce((sum, u) => sum + (safeNumber(u.amount) * (safeNumber(u.loadFactor)/100 || 1)), 0);
+      } else if (s.ubi2Base !== undefined) {
+          secTotal = safeNumber(s.ubi2Base) * (safeNumber(s.ubi2Percent)/100 || 1);
+      }
+      const allowance = safeNumber(s.specificAllowance);
+      return base + secTotal + allowance;
   };
 
   return (
@@ -280,7 +286,6 @@ const StaffManager = () => {
                               ))}
                           </div>
                           
-                          {/* SỐ GIỜ LÀM TỐI THIỂU */}
                           <div style={{marginTop: '12px', display:'flex', alignItems:'center', justifyContent:'space-between', borderTop:'1px dashed #e5e7eb', paddingTop:'10px'}}>
                               <span style={{fontSize:'0.8rem', fontWeight:'600', color:'#4b5563'}}>Số giờ làm tối thiểu/tháng:</span>
                               <input 
@@ -300,32 +305,114 @@ const StaffManager = () => {
 
                       {/* --- PHẦN 3: TÀI CHÍNH --- */}
                       <div style={styles.sectionBox}>
-                          <div style={styles.sectionTitle}>3. Tài chính</div>
+                          <div style={styles.sectionTitle}>3. Tài chính (Lương Cố Định)</div>
+                          
+                          {/* UBI CHÍNH */}
                           <div style={{...styles.financeRow, flexWrap: 'wrap'}}>
-                              <span style={styles.financeLabel}>UBI 1</span>
-                              <div style={{display:'flex', gap:'5px', flex: 1, minWidth: '150px'}}>
-                                  <input type="number" placeholder="VNĐ" value={editForm.ubi1Base} onChange={e => setEditForm({...editForm, ubi1Base: e.target.value})} style={{...styles.inputFull, flex: 2}} />
-                                  <input type="number" placeholder="%" value={editForm.ubi1Percent} onChange={e => setEditForm({...editForm, ubi1Percent: e.target.value})} style={{...styles.inputFull, flex: 1}} />
-                              </div>
+                              <span style={styles.financeLabel}>UBI Chính (Base)</span>
+                              <input type="number" placeholder="VNĐ" value={editForm.ubiBase} onChange={e => setEditForm({...editForm, ubiBase: e.target.value})} style={{...styles.inputFull, flex: 1}} />
                           </div>
-                          <div style={{...styles.financeRow, flexWrap: 'wrap'}}>
-                              <span style={styles.financeLabel}>UBI 2</span>
-                              <div style={{display:'flex', gap:'5px', flex: 1, minWidth: '150px'}}>
-                                  <input type="number" placeholder="VNĐ" value={editForm.ubi2Base} onChange={e => setEditForm({...editForm, ubi2Base: e.target.value})} style={{...styles.inputFull, flex: 2}} />
-                                  <input type="number" placeholder="%" value={editForm.ubi2Percent} onChange={e => setEditForm({...editForm, ubi2Percent: e.target.value})} style={{...styles.inputFull, flex: 1}} />
-                              </div>
+                          
+                          {/* PHỤ CẤP ĐẶC THÙ */}
+                          <div style={{...styles.financeRow, flexWrap: 'wrap', marginTop: '6px'}}>
+                              <span style={styles.financeLabel}>Phụ cấp đặc thù</span>
+                              <input type="number" placeholder="VNĐ" value={editForm.specificAllowance} onChange={e => setEditForm({...editForm, specificAllowance: e.target.value})} style={{...styles.inputFull, flex: 1}} />
                           </div>
                           
                           <div style={{height: '1px', background: '#e5e7eb', margin: '10px 0'}}></div>
                           
-                          {/* DANH SÁCH REMUNERATION */}
+                          {/* DANH SÁCH UBI PHỤ */}
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px'}}>
+                              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                                  <span style={{fontSize: '0.75rem', fontWeight:'600', color:'#4b5563'}}>UBI Phụ (Thứ cấp)</span>
+                                  <button 
+                                      type="button" 
+                                      onClick={handleAddSecUbi} 
+                                      style={{fontSize:'0.7rem', color:'#003366', background:'white', border:'1px solid #003366', borderRadius:'4px', padding:'4px 8px', cursor:'pointer', fontWeight:'bold'}}
+                                  >
+                                      + THÊM UBI PHỤ
+                                  </button>
+                              </div>
+                              
+                              {editForm.secondaryUBIs && editForm.secondaryUBIs.map((ubi, idx) => (
+                                  <div key={idx} style={{
+                                      display: 'flex', flexDirection: 'column', gap: '8px', 
+                                      background:'white', padding:'10px', borderRadius:'6px', border:'1px solid #e5e7eb'
+                                  }}>
+                                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                                          <span style={{fontSize: '0.8rem', color: '#003366', fontWeight:'bold'}}>UBI phụ thứ {idx+1}</span>
+                                          <button 
+                                              type="button" 
+                                              onClick={() => handleRemoveSecUbi(idx)}
+                                              style={{border:'none', background:'none', cursor:'pointer', padding:'4px', color:'#ef4444'}}
+                                              title="Xóa"
+                                          >
+                                              <Icons.Trash />
+                                          </button>
+                                      </div>
+
+                                      <div style={{display:'flex', gap:'10px', flexWrap: 'wrap'}}>
+                                          <div style={{flex: 1.5, minWidth: '120px'}}>
+                                              <label style={{fontSize:'0.7rem', fontWeight:'bold', color:'#4b5563'}}>Mức UBI phụ (VNĐ)</label>
+                                              <input 
+                                                  type="number" 
+                                                  placeholder="VNĐ" 
+                                                  value={ubi.amount} 
+                                                  onChange={(e) => handleSecUbiChange(idx, 'amount', e.target.value)} 
+                                                  style={{...styles.inputFull, marginTop: '4px'}} 
+                                              />
+                                          </div>
+                                          <div style={{flex: 1, minWidth: '100px'}}>
+                                              <label style={{fontSize:'0.7rem', fontWeight:'bold', color:'#4b5563'}}>Load Factor</label>
+                                              <select 
+                                                  value={ubi.loadFactor} 
+                                                  onChange={(e) => handleSecUbiChange(idx, 'loadFactor', e.target.value)} 
+                                                  style={{...styles.inputFull, marginTop: '4px', padding: '8px 2px'}} 
+                                              >
+                                                  <option value="75">75%</option>
+                                                  <option value="50">50%</option>
+                                                  <option value="30">30%</option>
+                                                  <option value="15">15%</option>
+                                              </select>
+                                          </div>
+                                      </div>
+                                      <div>
+                                          <label style={{fontSize:'0.7rem', fontWeight:'bold', color:'#4b5563'}}>Tên vai trò / Vị trí</label>
+                                          <select 
+                                              value={ubi.role} 
+                                              onChange={(e) => handleSecUbiChange(idx, 'role', e.target.value)} 
+                                              style={{...styles.inputFull, marginTop: '4px', padding: '8px 2px'}} 
+                                          >
+                                              <option value="">-- Chọn vai trò --</option>
+                                              <option value="Senior Teacher">Senior Teacher</option>
+                                              <option value="Tenured Teacher">Tenured Teacher</option>
+                                              <option value="Customer Care Specialist">Customer Care Specialist</option>
+                                              <option value="Customer Care Officer">Customer Care Officer</option>
+                                              <option value="Accountant">Accountant</option>
+                                              <option value="Infrastructure Officer / Technician">Infrastructure Officer / Technician</option>
+                                              <option value="Bartender / Chef">Bartender / Chef</option>
+                                              <option value="Waiter / Waitress">Waiter / Waitress</option>
+                                              <option value="Junior Marketing">Junior Marketing</option>
+                                          </select>
+                                      </div>
+                                  </div>
+                              ))}
+                              
+                              {(!editForm.secondaryUBIs || editForm.secondaryUBIs.length === 0) && (
+                                  <div style={{fontSize:'0.8rem', color:'#9ca3af', fontStyle:'italic', textAlign:'center', padding:'5px'}}>Chưa có UBI phụ.</div>
+                              )}
+                          </div>
+
+                          <div style={{height: '1px', background: '#e5e7eb', margin: '10px 0'}}></div>
+                          
+                          {/* DANH SÁCH REMUNERATION (THÙ LAO VƯỢT GIỜ) */}
                           <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
                               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                                  <span style={{fontSize: '0.75rem', fontWeight:'600', color:'#4b5563'}}>Remuneration (Theo việc)</span>
+                                  <span style={{fontSize: '0.75rem', fontWeight:'600', color:'#4b5563'}}>Thù lao vượt mức</span>
                                   <button 
                                       type="button" 
                                       onClick={handleAddRemuneration} 
-                                      style={{fontSize:'0.75rem', color:'#003366', background:'white', border:'1px solid #003366', borderRadius:'4px', padding:'4px 8px', cursor:'pointer', fontWeight:'bold'}}
+                                      style={{fontSize:'0.7rem', color:'#003366', background:'white', border:'1px solid #003366', borderRadius:'4px', padding:'4px 8px', cursor:'pointer', fontWeight:'bold'}}
                                   >
                                       + THÊM R
                                   </button>
@@ -401,12 +488,13 @@ const StaffManager = () => {
                           </div>
                           
                           <div style={{marginTop: '15px', padding:'10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #f3f4f6'}}>
-                               <div style={{fontSize: '0.7rem', color:'#6b7280', textTransform:'uppercase', letterSpacing: '0.5px', marginBottom:'4px'}}>Tổng UBI (Cố định)</div>
+                               <div style={{fontSize: '0.7rem', color:'#6b7280', textTransform:'uppercase', letterSpacing: '0.5px', marginBottom:'4px'}}>Tổng Lương Cố Định</div>
                                <div style={{color: '#059669', fontWeight:'700', fontSize:'1.1rem'}}>
-                                  {calculateUBITotal(staff).toLocaleString()} <span style={{fontSize:'0.75rem', color:'#374151', fontWeight: '400'}}>VNĐ</span>
+                                  {calculateFixedSalary(staff).toLocaleString()} <span style={{fontSize:'0.75rem', color:'#374151', fontWeight: '400'}}>VNĐ</span>
                                </div>
+                               
                                <div style={{marginTop: '10px', borderTop: '1px dashed #e5e7eb', paddingTop: '8px'}}>
-                                   <div style={{fontSize: '0.7rem', color:'#6b7280', marginBottom:'4px'}}>Remuneration (Theo việc):</div>
+                                   <div style={{fontSize: '0.7rem', color:'#6b7280', marginBottom:'4px'}}>Thù lao vượt mức:</div>
                                    {staff.remunerations && staff.remunerations.length > 0 ? (
                                        staff.remunerations.map((r, idx) => (
                                            r.amount > 0 && (
@@ -444,7 +532,7 @@ const styles = {
     sectionTitle: { fontSize: '0.75rem', fontWeight: '700', color: '#003366', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' },
     checkboxLabel: { fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', background: 'white', padding: '4px 8px', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer' },
     financeRow: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' },
-    financeLabel: { fontSize: '0.8rem', fontWeight: '600', color: '#4b5563', width: '90px' },
+    financeLabel: { fontSize: '0.8rem', fontWeight: '600', color: '#4b5563', width: '110px' },
     btnAdd: { border: 'none', borderRadius: '6px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500' },
     btnSave: { background: '#003366', color: 'white', border: 'none', borderRadius: '5px', padding: '8px', flex: 1, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', fontWeight: '500', fontSize: '0.85rem' },
     btnCancel: { background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '5px', padding: '8px 15px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500' },

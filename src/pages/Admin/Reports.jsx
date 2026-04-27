@@ -54,12 +54,10 @@ const calculateWorkHours = (schedStart, schedEnd, actualCheckIn, actualCheckOut,
     let diffMs = 0;
 
     if (isAdminEdited) {
-        // Admin chỉnh sửa: Cập nhật giờ theo Admin nhưng không vượt quá thời lượng ca của Scheduler
         const scheduledMs = sEnd - sStart;
         const actualMs = aOut - aIn;
         diffMs = actualMs > scheduledMs ? scheduledMs : actualMs;
     } else {
-        // Nhân viên tự Check-in: Khóa giờ trong khung [schedStart, schedEnd] có du di 10p
         let calcStart = aIn > sStart ? aIn : sStart;
         let calcEnd;
         if (aOut > sEnd) {
@@ -147,7 +145,6 @@ const Reports = () => {
   const [attendanceMonthFilter, setAttendanceMonthFilter] = useState('all'); 
   const [attendanceYearFilter, setAttendanceYearFilter] = useState('all');
 
-  // --- STATE BỔ SUNG CHO CHỨC NĂNG EDIT CỦA ADMIN ---
   const [editingAttendanceId, setEditingAttendanceId] = useState(null);
   const [editAttForm, setEditAttForm] = useState({ checkIn: '', checkOut: '', reason: '' });
 
@@ -158,7 +155,6 @@ const Reports = () => {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  // KHẮC PHỤC LỖI no-undef: Đưa khai báo selYear và selMonth ra phạm vi component
   const [selYear, selMonth] = (financeMonthFilter || '').split('-');
   const selectedFinanceMonth = new Date(selYear, selMonth - 1, 1);
 
@@ -172,7 +168,6 @@ const Reports = () => {
   const [taskStaffFilter, setTaskStaffFilter] = useState('all');
   const [taskStatusFilter, setTaskStatusFilter] = useState('all');
 
-  // --- DỮ LIỆU THỜI GIAN CHUNG ---
   const currentYear = new Date().getFullYear();
   const availableYears = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
 
@@ -184,7 +179,6 @@ const Reports = () => {
 
   const handlePrint = () => { window.print(); };
 
-  // --- HÀM XỬ LÝ LƯU EDIT CHẤM CÔNG ---
   const handleSaveAttendanceEdit = (taskId) => {
       if (!editAttForm.checkIn || !editAttForm.checkOut || !editAttForm.reason.trim()) {
           return alert("Vui lòng nhập đầy đủ Giờ vào, Giờ ra và Lý do chỉnh sửa!");
@@ -204,7 +198,6 @@ const Reports = () => {
       alert("Đã cập nhật dữ liệu chấm công thành công. Hệ thống đã gửi thông báo đến nhân sự!");
   };
 
-  // --- PHÂN TÁCH DỮ LIỆU (Bảo vệ Undefined) ---
   const safeTasks = Array.isArray(tasks) ? tasks : [];
   const safeStaffList = Array.isArray(staffList) ? staffList : [];
   const safeFacilityLogs = Array.isArray(facilityLogs) ? facilityLogs : [];
@@ -213,7 +206,7 @@ const Reports = () => {
   const scheduleTasks = safeTasks.filter(t => t.fromScheduleId);
 
   // ==============================================================
-  // 1. LOGIC TÀI CHÍNH (ĐÃ NÂNG CẤP CƠ CHẾ SNAPSHOT / CHỐT LƯƠNG)
+  // 1. LOGIC TÀI CHÍNH (CẬP NHẬT THEO CÔNG THỨC MỚI)
   // ==============================================================
   let totalEstimatedCost = 0;
   let financeRows = [];
@@ -237,9 +230,17 @@ const Reports = () => {
       safeStaffList.forEach(staff => {
           if (financeStaffFilter !== 'all' && String(staff.id) !== String(financeStaffFilter)) return;
 
-          const ubi1 = parseAmount(staff.ubi1Base) * getPercent(staff.ubi1Percent) / 100;
-          const ubi2 = parseAmount(staff.ubi2Base) * getPercent(staff.ubi2Percent) / 100;
-          const totalUBI = ubi1 + ubi2;
+          // CÔNG THỨC MỚI: Lương cố định
+          const baseUbi = staff.ubiBase !== undefined ? parseAmount(staff.ubiBase) : (parseAmount(staff.ubi1Base) * (parseAmount(staff.ubi1Percent)/100 || 1));
+          let secUbiTotal = 0;
+          if (staff.secondaryUBIs && staff.secondaryUBIs.length > 0) {
+              secUbiTotal = staff.secondaryUBIs.reduce((sum, u) => sum + (parseAmount(u.amount) * (parseAmount(u.loadFactor)/100 || 1)), 0);
+          } else if (staff.ubi2Base !== undefined) {
+              secUbiTotal = parseAmount(staff.ubi2Base) * (parseAmount(staff.ubi2Percent)/100 || 1);
+          }
+          const allowance = parseAmount(staff.specificAllowance);
+          
+          const totalFixedSalary = baseUbi + secUbiTotal + allowance;
 
           const staffTasks = currentMonthScheduleTasks.filter(t => String(t.assigneeId) === String(staff.id));
           
@@ -254,17 +255,14 @@ const Reports = () => {
               totalWorkedHours += workedHours;
 
               let taskRate = 0;
-
               if (staff.remunerations && Array.isArray(staff.remunerations)) {
                   const matchedRule = staff.remunerations.find(rem => {
                       if (!rem) return false; 
-                      
                       if (rem.position && String(rem.position).trim() !== '') {
                           const rulePos = String(rem.position).trim().toLowerCase();
                           const taskPos = String(task.assignedRole || '').trim().toLowerCase();
                           if (rulePos !== taskPos) return false;
                       }
-                      
                       if (rem.keywords && String(rem.keywords).trim() !== '') {
                           const keywords = String(rem.keywords).split(',').map(k => k.trim().toLowerCase()).filter(k => k);
                           const titleLower = String(task.title || '').toLowerCase();
@@ -309,12 +307,12 @@ const Reports = () => {
               taskRemuneration = 0;
           }
 
-          const totalSalary = totalUBI + taskRemuneration;
+          const totalSalary = totalFixedSalary + taskRemuneration;
 
           if (totalSalary > 0 || minHours > 0) {
               financeRows.push({
                   item: staff.name,
-                  type: `UBI: ${Math.round(totalUBI).toLocaleString()}đ + Thù lao vượt mức: ${Math.round(taskRemuneration).toLocaleString()}đ (Làm ${totalWorkedHours.toFixed(1)}/${minHours}h)`,
+                  type: `Cố định: ${Math.round(totalFixedSalary).toLocaleString()}đ + Vượt mức: ${Math.round(taskRemuneration).toLocaleString()}đ (Làm ${totalWorkedHours.toFixed(1)}/${minHours}h)`,
                   amount: totalSalary,
                   date: new Date().toLocaleDateString('vi-VN')
               });
@@ -340,7 +338,7 @@ const Reports = () => {
       }
   };
 
-  // --- 2. CƠ SỞ VẬT CHẤT ---
+  // --- 2. CSVC ---
   const availableAreas = [...new Set(safeFacilityLogs.map(l => l.area).filter(Boolean))];
   const availableReporters = [...new Set(safeFacilityLogs.map(l => l.staffName).filter(Boolean))];
 

@@ -107,11 +107,20 @@ const Performance = () => {
   const currentUserData = staffList.find(s => s.id === user?.id) || {};
 
   // ==========================================
-  // LOGIC 1: TÍNH TOÁN THU NHẬP ƯỚC TÍNH (THEO THÁNG ĐƯỢC CHỌN)
+  // LOGIC 1: TÍNH TOÁN THU NHẬP ƯỚC TÍNH (ÁP DỤNG CÔNG THỨC MỚI)
   // ==========================================
-  const ubi1 = parseAmount(currentUserData.ubi1Base) * getPercent(currentUserData.ubi1Percent) / 100;
-  const ubi2 = parseAmount(currentUserData.ubi2Base) * getPercent(currentUserData.ubi2Percent) / 100;
-  const totalUBI = ubi1 + ubi2;
+  
+  const baseUbi = currentUserData.ubiBase !== undefined ? parseAmount(currentUserData.ubiBase) : (parseAmount(currentUserData.ubi1Base) * (parseAmount(currentUserData.ubi1Percent)/100 || 1));
+  
+  let secUbiTotal = 0;
+  if (currentUserData.secondaryUBIs && currentUserData.secondaryUBIs.length > 0) {
+      secUbiTotal = currentUserData.secondaryUBIs.reduce((sum, u) => sum + (parseAmount(u.amount) * (parseAmount(u.loadFactor)/100 || 1)), 0);
+  } else if (currentUserData.ubi2Base !== undefined) {
+      secUbiTotal = parseAmount(currentUserData.ubi2Base) * (parseAmount(currentUserData.ubi2Percent)/100 || 1);
+  }
+  
+  const allowance = parseAmount(currentUserData.specificAllowance);
+  const totalFixedSalary = baseUbi + secUbiTotal + allowance;
 
   const myScheduleTasks = tasks.filter(t => String(t.assigneeId) === String(user?.id) && t.fromScheduleId);
 
@@ -126,7 +135,7 @@ const Performance = () => {
 
   let taskRemuneration = 0;
   let totalWorkedHours = 0;
-  let allTasksList = []; // Chứa toàn bộ ca làm hợp lệ
+  let allTasksList = []; 
 
   filteredIncomeTasks.forEach(task => {
       if (!task.checkInTime || !task.checkOutTime) return; 
@@ -171,7 +180,6 @@ const Performance = () => {
   const minHours = parseAmount(currentUserData.minWorkHours);
   
   if (totalWorkedHours >= minHours) {
-      // Ưu tiên trừ giờ chuẩn vào các ca có rate thấp (rate 0), giữ lại các ca có rate cao để nhân tiền vượt mức
       allTasksList.sort((a, b) => a.rate - b.rate);
       let hoursToOffset = minHours;
 
@@ -193,7 +201,7 @@ const Performance = () => {
       taskRemuneration = 0;
   }
 
-  const totalEstimatedIncome = totalUBI + taskRemuneration;
+  const totalEstimatedIncome = totalFixedSalary + taskRemuneration;
 
   // ==========================================
   // LOGIC 2: ĐÁNH GIÁ HIỆU SUẤT CÔNG VIỆC
@@ -261,16 +269,20 @@ const Performance = () => {
 
                  <div style={styles.card}>
                      <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px'}}>
-                         <span style={{color:'#4b5563', fontWeight:'600'}}>UBI Cơ bản (1):</span>
-                         <span style={{fontWeight:'bold'}}>{Math.round(ubi1).toLocaleString()} VNĐ</span>
+                         <span style={{color:'#4b5563', fontWeight:'600'}}>UBI Chính (Base):</span>
+                         <span style={{fontWeight:'bold'}}>{Math.round(baseUbi).toLocaleString()} VNĐ</span>
+                     </div>
+                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px'}}>
+                         <span style={{color:'#4b5563', fontWeight:'600'}}>Tổng UBI Phụ:</span>
+                         <span style={{fontWeight:'bold'}}>{Math.round(secUbiTotal).toLocaleString()} VNĐ</span>
                      </div>
                      <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px', borderBottom:'1px solid #f3f4f6', paddingBottom:'15px'}}>
-                         <span style={{color:'#4b5563', fontWeight:'600'}}>UBI Trách nhiệm (2):</span>
-                         <span style={{fontWeight:'bold'}}>{Math.round(ubi2).toLocaleString()} VNĐ</span>
+                         <span style={{color:'#4b5563', fontWeight:'600'}}>Phụ cấp đặc thù:</span>
+                         <span style={{fontWeight:'bold'}}>{Math.round(allowance).toLocaleString()} VNĐ</span>
                      </div>
                      <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px', color:'#059669'}}>
-                         <span style={{fontWeight:'700'}}>Tổng UBI Cố định:</span>
-                         <span style={{fontWeight:'800', fontSize:'1.1rem'}}>{Math.round(totalUBI).toLocaleString()} VNĐ</span>
+                         <span style={{fontWeight:'700'}}>Tổng Lương Cố Định:</span>
+                         <span style={{fontWeight:'800', fontSize:'1.1rem'}}>{Math.round(totalFixedSalary).toLocaleString()} VNĐ</span>
                      </div>
                  </div>
 
