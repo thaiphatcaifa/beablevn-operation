@@ -55,10 +55,9 @@ const TaskManager = () => {
   const isApprover = ['chief', 'reg', 'op'].includes(user?.role);
 
   // --- THẺ CON (SUB-TABS CHO ADMIN) ---
-  const [activeView, setActiveView] = useState('overview'); // 'overview', 'create_task', 'create_schedule', 'manage_tasks', 'manage_schedules'
+  const [activeView, setActiveView] = useState('overview'); 
   
-  // STATE MỚI: Dùng để chuyển đổi giữa Lịch Gốc và Ca Làm Việc trong Mục 4
-  const [scheduleTab, setScheduleTab] = useState('instances'); // 'instances' (Ca làm việc) hoặc 'templates' (Lịch gốc)
+  const [scheduleTab, setScheduleTab] = useState('instances'); 
 
   // --- STATE FORM ---
   const [newTask, setNewTask] = useState({ 
@@ -104,10 +103,11 @@ const TaskManager = () => {
   const [filterSchedTaskYear, setFilterSchedTaskYear] = useState('all');   
   const [scheduleSearchTerm, setScheduleSearchTerm] = useState('');
 
-  // --- STATE PHÂN TRANG (MỚI) ---
+  // --- STATE PHÂN TRANG ---
   const [adhocPage, setAdhocPage] = useState(1);
   const [genTaskPage, setGenTaskPage] = useState(1);
-  const ITEMS_PER_PAGE = 100;
+  const [schedulerPage, setSchedulerPage] = useState(1); // Trang dành cho Scheduler
+  const ITEMS_PER_PAGE = 50; // Thay đổi phân trang thành 50 dòng
 
   const daysOfWeek = [
       { key: 'Mon', label: 'T2', val: 1 }, { key: 'Tue', label: 'T3', val: 2 }, { key: 'Wed', label: 'T4', val: 3 },
@@ -360,6 +360,10 @@ const TaskManager = () => {
       const matchDay = filterDay === 'all' || (s.repeatDays && s.repeatDays.includes(filterDay));
       return matchStaff && matchDay;
   });
+
+  // Áp dụng Phân trang cho Scheduler
+  const totalSchedulerPages = Math.ceil(filteredSchedules.length / ITEMS_PER_PAGE);
+  const paginatedSchedules = filteredSchedules.slice((schedulerPage - 1) * ITEMS_PER_PAGE, schedulerPage * ITEMS_PER_PAGE);
 
   // Lọc Mục 3: Task Ad-hoc (Giao lẻ)
   const opAdminTasks = tasks.filter(t => !t.fromScheduleId);
@@ -904,7 +908,7 @@ const TaskManager = () => {
           </>
       ) : (
           // ==============================================================
-          // GIAO DIỆN SCHEDULER (GIỮ NGUYÊN)
+          // GIAO DIỆN SCHEDULER (GIỮ NGUYÊN VÀ CÓ PHÂN TRANG)
           // ==============================================================
           <>
               <div style={styles.formContainer}>
@@ -975,11 +979,11 @@ const TaskManager = () => {
                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'10px', marginBottom:'15px'}}>
                      <h4 style={{margin:0}}>Danh sách lịch đã thiết lập</h4>
                      <div style={{display:'flex', gap:'10px'}}>
-                         <select value={filterStaff} onChange={e => setFilterStaff(e.target.value)} style={styles.filterSelect}>
+                         <select value={filterStaff} onChange={e => { setFilterStaff(e.target.value); setSchedulerPage(1); }} style={styles.filterSelect}>
                              <option value="all">Tất cả nhân sự</option>
                              {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                          </select>
-                         <select value={filterDay} onChange={e => setFilterDay(e.target.value)} style={styles.filterSelect}>
+                         <select value={filterDay} onChange={e => { setFilterDay(e.target.value); setSchedulerPage(1); }} style={styles.filterSelect}>
                              <option value="all">Tất cả các ngày</option>
                              {daysOfWeek.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
                          </select>
@@ -1000,9 +1004,9 @@ const TaskManager = () => {
                            </tr>
                         </thead>
                         <tbody>
-                           {filteredSchedules.map((s, index) => (
+                           {paginatedSchedules.map((s, index) => (
                              <tr key={s.id} style={{ borderBottom: '1px solid #f9f9f9', background: s.request ? '#fefce8' : 'transparent' }}>
-                                <td style={{padding:'12px', textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{index + 1}</td>
+                                <td style={{padding:'12px', textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{(schedulerPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                                 <td style={{padding:'12px'}}>
                                     <strong>{s.title}</strong>
                                     <div style={{fontSize:'0.75rem', color:'#6b7280'}}>{s.description?.substring(0, 30)}...</div>
@@ -1037,12 +1041,21 @@ const TaskManager = () => {
                                 </td>
                              </tr>
                            ))}
-                           {filteredSchedules.length === 0 && (
+                           {paginatedSchedules.length === 0 && (
                                <tr><td colSpan="7" style={{padding:'30px', textAlign:'center', color:'#9ca3af', fontStyle:'italic'}}>Không tìm thấy lịch phù hợp.</td></tr>
                            )}
                         </tbody>
                      </table>
                  </div>
+
+                 {/* PHÂN TRANG CHO TÀI KHOẢN SCHEDULER */}
+                 {totalSchedulerPages > 1 && (
+                     <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '20px' }}>
+                         <button onClick={() => setSchedulerPage(p => Math.max(1, p - 1))} disabled={schedulerPage === 1} style={styles.pageBtn}>Trước</button>
+                         <span style={{ alignSelf: 'center', fontSize: '0.9rem', color:'#4b5563', fontWeight:'500' }}>Trang {schedulerPage} / {totalSchedulerPages}</span>
+                         <button onClick={() => setSchedulerPage(p => Math.min(totalSchedulerPages, p + 1))} disabled={schedulerPage === totalSchedulerPages} style={styles.pageBtn}>Sau</button>
+                     </div>
+                 )}
               </div>
           </>
       )}
