@@ -21,12 +21,27 @@ const toDateTimeLocal = (isoString) => {
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 };
 
+// Hàm tính Ngày/Tháng cụ thể từ Thứ trong tuần (Dành cho Scheduler)
+const getSpecificDate = (startDateStr, dayName) => {
+    if (!startDateStr) return '';
+    const daysMap = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 0 };
+    const baseDate = new Date(startDateStr);
+    const dayTarget = daysMap[dayName];
+    const dayCurrent = baseDate.getDay();
+    let diff = dayTarget - dayCurrent;
+    if (diff < 0) diff += 7; // Tìm ngày đầu tiên thỏa mãn Thứ đó
+    const resultDate = new Date(baseDate);
+    resultDate.setDate(baseDate.getDate() + diff);
+    return resultDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
 // --- ICONS ---
 const Icons = {
     Task: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" /></svg>),
     Schedule: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>),
     ArrowRight: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>),
-    Back: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>)
+    Back: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>),
+    Trash: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>)
 };
 
 const TaskManager = () => {
@@ -88,6 +103,11 @@ const TaskManager = () => {
   const [filterSchedTaskMonth, setFilterSchedTaskMonth] = useState('all'); 
   const [filterSchedTaskYear, setFilterSchedTaskYear] = useState('all');   
   const [scheduleSearchTerm, setScheduleSearchTerm] = useState('');
+
+  // --- STATE PHÂN TRANG (MỚI) ---
+  const [adhocPage, setAdhocPage] = useState(1);
+  const [genTaskPage, setGenTaskPage] = useState(1);
+  const ITEMS_PER_PAGE = 100;
 
   const daysOfWeek = [
       { key: 'Mon', label: 'T2', val: 1 }, { key: 'Tue', label: 'T3', val: 2 }, { key: 'Wed', label: 'T4', val: 3 },
@@ -366,6 +386,10 @@ const TaskManager = () => {
       return matchStaff && matchDay && matchTime && matchMonth && matchYear;
   });
 
+  // Áp dụng Phân trang (Pagination) cho Mục 3
+  const totalAdhocPages = Math.ceil(filteredAdhocTasks.length / ITEMS_PER_PAGE);
+  const paginatedAdhocTasks = filteredAdhocTasks.slice((adhocPage - 1) * ITEMS_PER_PAGE, adhocPage * ITEMS_PER_PAGE);
+
   // Lọc Mục 4: Lịch gốc
   const searchedAdminSchedules = schedules.filter(s => {
       if (!scheduleSearchTerm.trim()) return true;
@@ -399,6 +423,11 @@ const TaskManager = () => {
 
       return matchStaff && matchDay && matchTime && matchMonth && matchYear;
   });
+
+  // Áp dụng Phân trang (Pagination) cho Mục 4
+  const totalGenTaskPages = Math.ceil(filteredGeneratedTasks.length / ITEMS_PER_PAGE);
+  const paginatedGeneratedTasks = filteredGeneratedTasks.slice((genTaskPage - 1) * ITEMS_PER_PAGE, genTaskPage * ITEMS_PER_PAGE);
+
 
   return (
     <div style={{ paddingBottom: '20px' }}>
@@ -630,25 +659,25 @@ const TaskManager = () => {
                      </div>
                      
                      <div style={{display:'flex', gap:'10px', flexWrap:'wrap', marginBottom:'15px'}}>
-                         <select value={filterAdhocStaff} onChange={e => setFilterAdhocStaff(e.target.value)} style={styles.filterSelect}>
+                         <select value={filterAdhocStaff} onChange={e => { setFilterAdhocStaff(e.target.value); setAdhocPage(1); }} style={styles.filterSelect}>
                              <option value="all">Tất cả nhân sự</option>
                              {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                          </select>
-                         <select value={filterAdhocDay} onChange={e => setFilterAdhocDay(e.target.value)} style={styles.filterSelect}>
+                         <select value={filterAdhocDay} onChange={e => { setFilterAdhocDay(e.target.value); setAdhocPage(1); }} style={styles.filterSelect}>
                              <option value="all">Tất cả các thứ</option>
                              {daysOfWeek.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
                          </select>
-                         <select value={filterAdhocTime} onChange={e => setFilterAdhocTime(e.target.value)} style={styles.filterSelect}>
+                         <select value={filterAdhocTime} onChange={e => { setFilterAdhocTime(e.target.value); setAdhocPage(1); }} style={styles.filterSelect}>
                              <option value="all">Tất cả thời gian</option>
                              <option value="day">Hôm nay</option>
                              <option value="week">Tuần này</option>
                              <option value="month">Tháng này</option>
                          </select>
-                         <select value={filterAdhocMonth} onChange={e => setFilterAdhocMonth(e.target.value)} style={styles.filterSelect}>
+                         <select value={filterAdhocMonth} onChange={e => { setFilterAdhocMonth(e.target.value); setAdhocPage(1); }} style={styles.filterSelect}>
                              <option value="all">Tất cả các tháng</option>
                              {[...Array(12).keys()].map(i => <option key={i+1} value={i+1}>Tháng {i+1}</option>)}
                          </select>
-                         <select value={filterAdhocYear} onChange={e => setFilterAdhocYear(e.target.value)} style={styles.filterSelect}>
+                         <select value={filterAdhocYear} onChange={e => { setFilterAdhocYear(e.target.value); setAdhocPage(1); }} style={styles.filterSelect}>
                              <option value="all">Tất cả các năm</option>
                              {availableYears.map(y => <option key={y} value={y}>Năm {y}</option>)}
                          </select>
@@ -668,9 +697,9 @@ const TaskManager = () => {
                                </tr>
                             </thead>
                             <tbody>
-                               {filteredAdhocTasks.map((t, index) => (
+                               {paginatedAdhocTasks.map((t, index) => (
                                  <tr key={t.id} style={{ borderBottom: '1px solid #f9f9f9' }}>
-                                    <td style={{padding:'12px', textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{index + 1}</td>
+                                    <td style={{padding:'12px', textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{(adhocPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                                     <td style={{padding:'12px'}}>
                                         <strong>{t.title}</strong><br/>
                                         <span style={{fontSize:'0.75rem', color:'#059669', fontWeight:'600'}}>{t.paymentType}</span>
@@ -680,16 +709,25 @@ const TaskManager = () => {
                                     <td style={{padding:'12px'}}>{formatTaskTime(t.startTime, t.endTime)}</td>
                                     <td style={{padding:'12px'}}>{t.progress}%</td>
                                     <td style={{padding:'12px'}}>
-                                        <button onClick={()=>handleDeleteTask(t.id)} style={{color:'red', border:'none', background:'none', cursor:'pointer'}}>Xóa</button>
+                                        <button onClick={()=>handleDeleteTask(t.id)} style={{color:'red', border:'none', background:'none', cursor:'pointer'}}><Icons.Trash /></button>
                                     </td>
                                  </tr>
                                ))}
-                               {filteredAdhocTasks.length === 0 && (
+                               {paginatedAdhocTasks.length === 0 && (
                                    <tr><td colSpan="7" style={{padding:'30px', textAlign:'center', color:'#9ca3af', fontStyle:'italic'}}>Không tìm thấy nhiệm vụ phù hợp.</td></tr>
                                )}
                             </tbody>
                          </table>
                      </div>
+
+                     {/* PHÂN TRANG MỤC 3 */}
+                     {totalAdhocPages > 1 && (
+                         <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '20px' }}>
+                             <button onClick={() => setAdhocPage(p => Math.max(1, p - 1))} disabled={adhocPage === 1} style={styles.pageBtn}>Trước</button>
+                             <span style={{ alignSelf: 'center', fontSize: '0.9rem', color:'#4b5563', fontWeight:'500' }}>Trang {adhocPage} / {totalAdhocPages}</span>
+                             <button onClick={() => setAdhocPage(p => Math.min(totalAdhocPages, p + 1))} disabled={adhocPage === totalAdhocPages} style={styles.pageBtn}>Sau</button>
+                         </div>
+                     )}
                  </div>
              )}
 
@@ -707,7 +745,7 @@ const TaskManager = () => {
                     {/* MENU TABS CHUYỂN ĐỔI GÓC NHÌN */}
                     <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #f3f4f6', paddingBottom: '10px', overflowX: 'auto' }}>
                         <button 
-                            onClick={() => setScheduleTab('instances')} 
+                            onClick={() => { setScheduleTab('instances'); setGenTaskPage(1); }} 
                             style={{ ...styles.tabBtn, background: scheduleTab === 'instances' ? '#003366' : '#f3f4f6', color: scheduleTab === 'instances' ? 'white' : '#4b5563' }}
                         >
                             Danh sách Ca làm việc thực tế
@@ -720,29 +758,29 @@ const TaskManager = () => {
                         </button>
                     </div>
 
-                    {/* TAB A: CÁC CA LÀM VIỆC TỪ SCHEDULER (CÓ INLINE EDIT) */}
+                    {/* TAB A: CÁC CA LÀM VIỆC TỪ SCHEDULER (CÓ INLINE EDIT VÀ PHÂN TRANG) */}
                     {scheduleTab === 'instances' && (
                         <div>
                             <div style={{display:'flex', gap:'10px', flexWrap:'wrap', marginBottom:'15px'}}>
-                                <select value={filterSchedTaskStaff} onChange={e => setFilterSchedTaskStaff(e.target.value)} style={styles.filterSelect}>
+                                <select value={filterSchedTaskStaff} onChange={e => { setFilterSchedTaskStaff(e.target.value); setGenTaskPage(1); }} style={styles.filterSelect}>
                                     <option value="all">Tất cả nhân sự</option>
                                     {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
-                                <select value={filterSchedTaskDay} onChange={e => setFilterSchedTaskDay(e.target.value)} style={styles.filterSelect}>
+                                <select value={filterSchedTaskDay} onChange={e => { setFilterSchedTaskDay(e.target.value); setGenTaskPage(1); }} style={styles.filterSelect}>
                                     <option value="all">Tất cả các thứ</option>
                                     {daysOfWeek.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
                                 </select>
-                                <select value={filterSchedTaskTime} onChange={e => setFilterSchedTaskTime(e.target.value)} style={styles.filterSelect}>
+                                <select value={filterSchedTaskTime} onChange={e => { setFilterSchedTaskTime(e.target.value); setGenTaskPage(1); }} style={styles.filterSelect}>
                                     <option value="all">Tất cả thời gian</option>
                                     <option value="day">Hôm nay</option>
                                     <option value="week">Tuần này</option>
                                     <option value="month">Tháng này</option>
                                 </select>
-                                <select value={filterSchedTaskMonth} onChange={e => setFilterSchedTaskMonth(e.target.value)} style={styles.filterSelect}>
+                                <select value={filterSchedTaskMonth} onChange={e => { setFilterSchedTaskMonth(e.target.value); setGenTaskPage(1); }} style={styles.filterSelect}>
                                     <option value="all">Tất cả các tháng</option>
                                     {[...Array(12).keys()].map(i => <option key={i+1} value={i+1}>Tháng {i+1}</option>)}
                                 </select>
-                                <select value={filterSchedTaskYear} onChange={e => setFilterSchedTaskYear(e.target.value)} style={styles.filterSelect}>
+                                <select value={filterSchedTaskYear} onChange={e => { setFilterSchedTaskYear(e.target.value); setGenTaskPage(1); }} style={styles.filterSelect}>
                                     <option value="all">Tất cả các năm</option>
                                     {availableYears.map(y => <option key={y} value={y}>Năm {y}</option>)}
                                 </select>
@@ -761,9 +799,9 @@ const TaskManager = () => {
                                       </tr>
                                    </thead>
                                    <tbody>
-                                      {filteredGeneratedTasks.map((t, index) => (
+                                      {paginatedGeneratedTasks.map((t, index) => (
                                         <tr key={t.id} style={{ borderBottom: '1px solid #f9f9f9', background: editingTaskId === t.id ? '#f0fdf4' : 'transparent' }}>
-                                           <td style={{padding:'12px', textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{index + 1}</td>
+                                           <td style={{padding:'12px', textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{(genTaskPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                                            
                                            {editingTaskId === t.id ? (
                                                <>
@@ -805,12 +843,21 @@ const TaskManager = () => {
                                            )}
                                         </tr>
                                       ))}
-                                      {filteredGeneratedTasks.length === 0 && (
+                                      {paginatedGeneratedTasks.length === 0 && (
                                           <tr><td colSpan="7" style={{padding:'30px', textAlign:'center', color:'#9ca3af', fontStyle:'italic'}}>Không tìm thấy ca làm việc phù hợp.</td></tr>
                                       )}
                                    </tbody>
                                 </table>
                             </div>
+
+                            {/* PHÂN TRANG TAB A */}
+                            {totalGenTaskPages > 1 && (
+                                 <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '20px' }}>
+                                     <button onClick={() => setGenTaskPage(p => Math.max(1, p - 1))} disabled={genTaskPage === 1} style={styles.pageBtn}>Trước</button>
+                                     <span style={{ alignSelf: 'center', fontSize: '0.9rem', color:'#4b5563', fontWeight:'500' }}>Trang {genTaskPage} / {totalGenTaskPages}</span>
+                                     <button onClick={() => setGenTaskPage(p => Math.min(totalGenTaskPages, p + 1))} disabled={genTaskPage === totalGenTaskPages} style={styles.pageBtn}>Sau</button>
+                                 </div>
+                            )}
                         </div>
                     )}
 
@@ -966,13 +1013,19 @@ const TaskManager = () => {
                                 </td>
                                 <td style={{padding:'12px'}}>{s.assigneeName} ({s.assignedRole})</td>
                                 <td style={{padding:'12px'}}>{s.repeatWeeks} tuần</td>
+                                
+                                {/* CẬP NHẬT HIỂN THỊ NGÀY THÁNG TRONG CÁC NGÀY LẶP */}
                                 <td style={{padding:'12px'}}>
-                                    <div style={{display:'flex', gap:'4px', flexWrap: 'wrap'}}>
+                                    <div style={{display:'flex', gap:'6px', flexWrap: 'wrap'}}>
                                         {s.repeatDays && s.repeatDays.map(d => (
-                                            <span key={d} style={{fontSize:'0.7rem', background:'#e5e7eb', padding:'2px 6px', borderRadius:'4px'}}>{d}</span>
+                                            <div key={d} style={{ background: '#f3f4f6', padding: '4px 8px', borderRadius: '6px', textAlign: 'center', border: '1px solid #e5e7eb' }}>
+                                                <div style={{fontSize:'0.75rem', fontWeight:'bold', color: '#374151'}}>{d}</div>
+                                                <div style={{fontSize:'0.65rem', color:'#6b7280', marginTop:'2px'}}>{getSpecificDate(s.startTime, d)}</div>
+                                            </div>
                                         ))}
                                     </div>
                                 </td>
+                                
                                 <td style={{padding:'12px'}}>
                                     {!s.request ? (
                                         <button onClick={() => handleRequestAdjustmentClick(s)} style={{color:'#003366', border:'1px solid #003366', background:'white', cursor:'pointer', fontWeight:'600', padding:'4px 8px', borderRadius:'6px', fontSize:'0.8rem', whiteSpace: 'nowrap'}}>
@@ -1012,7 +1065,8 @@ const styles = {
     cardTitle: { margin: 0, fontSize: '1rem', fontWeight: '600', color: '#1f2937' },
     accessBtn: { marginTop: 'auto', background: '#003366', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background 0.2s' },
     backBtn: { background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' },
-    tabBtn: { padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s', whiteSpace: 'nowrap' }
+    tabBtn: { padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s', whiteSpace: 'nowrap' },
+    pageBtn: { padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: '6px', background: 'white', cursor: 'pointer', fontWeight: 'bold', color: '#374151' }
 };
 
 export default TaskManager;
