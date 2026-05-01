@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 
-// --- HELPER QUẢN LÝ THỜI GIAN ---
 const isSameDay = (d1, d2) => d1.toDateString() === d2.toDateString();
 const isSameMonth = (d1, d2) => d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
 const isSameYear = (d1, d2) => d1.getFullYear() === d2.getFullYear();
@@ -15,7 +14,6 @@ const isSameWeek = (d1, d2) => {
     return d1 >= start && d1 <= end;
 };
 
-// Hàm tạo danh sách tháng năm từ 2026 đến 2030
 const generateMonthYearOptions = () => {
     const options = [];
     for (let y = 2026; y <= 2030; y++) {
@@ -30,7 +28,6 @@ const generateMonthYearOptions = () => {
 };
 const monthYearOptions = generateMonthYearOptions();
 
-// --- HELPER LÀM SẠCH VÀ ÉP KIỂU SỐ ---
 const parseAmount = (val) => {
     if (val === undefined || val === null || val === '') return 0;
     const clean = String(val).replace(/,/g, '').replace(/\s/g, '');
@@ -38,14 +35,6 @@ const parseAmount = (val) => {
     return isNaN(num) ? 0 : num;
 };
 
-const getPercent = (val) => {
-    if (val === undefined || val === null || val === '') return 100;
-    const clean = String(val).replace(/,/g, '').replace(/\s/g, '');
-    const num = Number(clean);
-    return isNaN(num) ? 100 : num;
-};
-
-// --- HELPER TÍNH GIỜ LÀM VIỆC (THẬP PHÂN) ---
 const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCheckOut, isAdminEdited = false) => {
     if (!schedStart || !schedEnd || !actualCheckIn || !actualCheckOut) return 0;
     
@@ -83,7 +72,26 @@ const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCh
     return totalMinutes / 60; 
 };
 
-// --- ICONS ---
+// Helper để khớp Rate
+const getMatchedRate = (staffRems, task) => {
+    if (!staffRems || !Array.isArray(staffRems)) return 0;
+    const matched = staffRems.find(rem => {
+        if (rem.position && String(rem.position).trim() !== '') {
+            if (String(rem.position).trim().toLowerCase() !== String(task.assignedRole || '').trim().toLowerCase()) return false;
+        }
+        const rCode = String(rem.jobCode !== undefined ? rem.jobCode : (rem.keywords || '')).trim();
+        if (rCode !== '') {
+            const codes = rCode.split(',').map(c => c.trim().toLowerCase()).filter(c => c);
+            const tCode = String(task.jobCode || '').trim().toLowerCase();
+            const tTitle = String(task.title || '').trim().toLowerCase();
+            const isMatch = codes.some(c => tCode === c || tTitle.includes(c));
+            if (!isMatch) return false;
+        }
+        return true;
+    });
+    return matched ? parseAmount(matched.amount) : 0;
+};
+
 const Icons = {
   Money: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#059669" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>),
   Trend: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#2563eb" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>),
@@ -98,7 +106,6 @@ const Performance = () => {
   const [activeTab, setActiveTab] = useState('income');
   const [timeFilter, setTimeFilter] = useState('month');
   
-  // State quản lý bộ lọc Tháng/Năm cho phần Thu Nhập
   const [incomeMonthFilter, setIncomeMonthFilter] = useState(() => {
       const d = new Date();
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -107,24 +114,10 @@ const Performance = () => {
   const currentUserData = staffList.find(s => s.id === user?.id) || {};
 
   // ==========================================
-  // LOGIC 1: TÍNH TOÁN THU NHẬP ƯỚC TÍNH (ÁP DỤNG CÔNG THỨC MỚI)
+  // LOGIC 1: TÍNH TOÁN THU NHẬP ƯỚC TÍNH
   // ==========================================
-  
-  const baseUbi = currentUserData.ubiBase !== undefined ? parseAmount(currentUserData.ubiBase) : (parseAmount(currentUserData.ubi1Base) * (parseAmount(currentUserData.ubi1Percent)/100 || 1));
-  
-  let secUbiTotal = 0;
-  if (currentUserData.secondaryUBIs && currentUserData.secondaryUBIs.length > 0) {
-      secUbiTotal = currentUserData.secondaryUBIs.reduce((sum, u) => sum + (parseAmount(u.amount) * (parseAmount(u.loadFactor)/100 || 1)), 0);
-  } else if (currentUserData.ubi2Base !== undefined) {
-      secUbiTotal = parseAmount(currentUserData.ubi2Base) * (parseAmount(currentUserData.ubi2Percent)/100 || 1);
-  }
-  
-  const allowance = parseAmount(currentUserData.specificAllowance);
-  const totalFixedSalary = baseUbi + secUbiTotal + allowance;
-
   const myScheduleTasks = tasks.filter(t => String(t.assigneeId) === String(user?.id) && t.fromScheduleId);
 
-  // Lọc Task theo Dropbox Tháng/Năm
   const filteredIncomeTasks = myScheduleTasks.filter(t => {
       if (incomeMonthFilter === 'all') return true;
       if (!t.startTime) return false;
@@ -133,57 +126,59 @@ const Performance = () => {
       return taskMonthStr === incomeMonthFilter;
   });
 
-  let taskRemuneration = 0;
-  let totalWorkedHours = 0;
-  let allTasksList = []; 
+  let hoursUBI1 = 0;
+  let ubi1Tasks = [];
+  const secHoursMap = {};
 
   filteredIncomeTasks.forEach(task => {
       if (!task.checkInTime || !task.checkOutTime) return; 
-      
       const workedHours = calculateWorkHoursDecimal(task.startTime, task.endTime, task.checkInTime, task.checkOutTime, task.adminEdited);
-      totalWorkedHours += workedHours;
 
-      let taskRate = 0;
+      let taskRate = getMatchedRate(currentUserData.remunerations, task);
 
-      if (currentUserData.remunerations && Array.isArray(currentUserData.remunerations)) {
-          const matchedRule = currentUserData.remunerations.find(rem => {
-              if (!rem) return false; 
-              
-              if (rem.position && String(rem.position).trim() !== '') {
-                  const rulePos = String(rem.position).trim().toLowerCase();
-                  const taskPos = String(task.assignedRole || '').trim().toLowerCase();
-                  if (rulePos !== taskPos) return false;
-              }
-              
-              if (rem.keywords && String(rem.keywords).trim() !== '') {
-                  const keywords = String(rem.keywords).split(',').map(k => k.trim().toLowerCase()).filter(k => k);
-                  const titleLower = String(task.title || '').toLowerCase();
-                  const isMatch = keywords.some(k => titleLower.includes(k));
-                  if (!isMatch) return false;
-              }
-              return true;
-          });
-
-          if (matchedRule) {
-              taskRate = parseAmount(matchedRule.amount);
-          }
+      if (task.assignedRole === currentUserData.primaryRole) {
+          hoursUBI1 += workedHours;
+          ubi1Tasks.push({ hours: workedHours, rate: taskRate });
+      } else {
+          secHoursMap[task.assignedRole] = (secHoursMap[task.assignedRole] || 0) + workedHours;
       }
-
-      allTasksList.push({
-          title: task.title,
-          date: task.startTime,
-          hours: workedHours,
-          rate: taskRate
-      });
   });
 
+  let secUbiTotal = 0;
+  const ubiRoles = [];
+  if (currentUserData.secondaryUBIs && currentUserData.secondaryUBIs.length > 0) {
+      currentUserData.secondaryUBIs.forEach(ubi => {
+          if (!ubi.type || ubi.type === 'ubi') {
+              const lf = Number(ubi.loadFactor);
+              const actualLf = lf > 1 ? lf / 100 : lf;
+              secUbiTotal += parseAmount(ubi.amount) * actualLf;
+              ubiRoles.push(ubi.role);
+          }
+      });
+  } else if (currentUserData.ubi2Base !== undefined) {
+      secUbiTotal = parseAmount(currentUserData.ubi2Base) * (parseAmount(currentUserData.ubi2Percent)/100 || 1);
+  }
+
+  let R_Secondary = 0;
+  let hoursSecondaryPartTime = 0;
+  Object.keys(secHoursMap).forEach(role => {
+      if (!ubiRoles.includes(role)) {
+          const roleHours = secHoursMap[role];
+          hoursSecondaryPartTime += roleHours;
+          const secRem = currentUserData.remunerations?.find(r => r.position === role);
+          if (secRem) {
+              R_Secondary += roleHours * parseAmount(secRem.amount);
+          }
+      }
+  });
+
+  let R_UBI1 = 0;
   const minHours = parseAmount(currentUserData.minWorkHours);
-  
-  if (totalWorkedHours >= minHours) {
-      allTasksList.sort((a, b) => a.rate - b.rate);
+  if (hoursUBI1 > minHours) {
+      ubi1Tasks.sort((a, b) => a.rate - b.rate);
       let hoursToOffset = minHours;
 
-      allTasksList.forEach(t => {
+      ubi1Tasks.forEach(t => {
           if (hoursToOffset > 0) {
               if (t.hours <= hoursToOffset) {
                   hoursToOffset -= t.hours;
@@ -194,14 +189,25 @@ const Performance = () => {
               }
           }
           if (t.hours > 0 && t.rate > 0) {
-              taskRemuneration += t.hours * t.rate;
+              R_UBI1 += t.hours * t.rate;
           }
       });
-  } else {
-      taskRemuneration = 0;
   }
 
-  const totalEstimatedIncome = totalFixedSalary + taskRemuneration;
+  const baseUbi = currentUserData.ubiBase !== undefined ? parseAmount(currentUserData.ubiBase) : (parseAmount(currentUserData.ubi1Base) * (parseAmount(currentUserData.ubi1Percent)/100 || 1));
+  
+  const allowance = parseAmount(currentUserData.specificAllowance);
+  const totalFixedSalary = baseUbi + secUbiTotal + allowance;
+
+  const incomeForBHXH = baseUbi + R_UBI1;
+  const bhxhDeduction = incomeForBHXH * 0.105;
+
+  const grossIncome = totalFixedSalary + R_UBI1 + R_Secondary;
+
+  const taxThreshold = 15500000;
+  const taxDeduction = grossIncome > taxThreshold ? (grossIncome - taxThreshold) * 0.05 : 0;
+
+  const netIncome = grossIncome - bhxhDeduction - taxDeduction;
 
   // ==========================================
   // LOGIC 2: ĐÁNH GIÁ HIỆU SUẤT CÔNG VIỆC
@@ -232,7 +238,6 @@ const Performance = () => {
   return (
     <div style={{ paddingBottom: '40px' }}>
       
-      {/* TABS NAVIGATION */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', borderBottom: '2px solid #e5e7eb', paddingBottom: '10px', overflowX: 'auto' }}>
           <button 
               onClick={() => setActiveTab('income')} 
@@ -254,7 +259,6 @@ const Performance = () => {
                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                      <h3 style={{ margin: 0, color: '#111827', fontSize: '1.2rem', fontWeight: 'bold' }}>Tổng thu nhập ước tính</h3>
                      
-                     {/* DROPBOX LỌC THÁNG NĂM TỪ 2026-2030 */}
                      <select 
                          value={incomeMonthFilter} 
                          onChange={(e) => setIncomeMonthFilter(e.target.value)} 
@@ -269,11 +273,11 @@ const Performance = () => {
 
                  <div style={styles.card}>
                      <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px'}}>
-                         <span style={{color:'#4b5563', fontWeight:'600'}}>UBI Chính (Base):</span>
+                         <span style={{color:'#4b5563', fontWeight:'600'}}>UBI Chính (Base) {currentUserData.primaryRole ? `(${currentUserData.primaryRole})` : ''}:</span>
                          <span style={{fontWeight:'bold'}}>{Math.round(baseUbi).toLocaleString()} VNĐ</span>
                      </div>
                      <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px'}}>
-                         <span style={{color:'#4b5563', fontWeight:'600'}}>Tổng UBI Phụ:</span>
+                         <span style={{color:'#4b5563', fontWeight:'600'}}>Tổng UBI Phụ (Cố định):</span>
                          <span style={{fontWeight:'bold'}}>{Math.round(secUbiTotal).toLocaleString()} VNĐ</span>
                      </div>
                      <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px', borderBottom:'1px solid #f3f4f6', paddingBottom:'15px'}}>
@@ -287,25 +291,49 @@ const Performance = () => {
                  </div>
 
                  <div style={styles.card}>
-                     <h4 style={{margin:'0 0 15px 0', color:'#111827'}}>Thù lao phát sinh (Vượt giờ chuẩn)</h4>
+                     <h4 style={{margin:'0 0 15px 0', color:'#111827'}}>Thù lao biến đổi (Remuneration)</h4>
                      <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px', fontSize:'0.9rem'}}>
-                         <span style={{color:'#6b7280'}}>Giờ chuẩn tối thiểu:</span>
+                         <span style={{color:'#6b7280'}}>Giờ chuẩn tối thiểu (UBI 1):</span>
                          <span style={{fontWeight:'bold'}}>{minHours} giờ</span>
                      </div>
-                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px', fontSize:'0.9rem', borderBottom:'1px solid #f3f4f6', paddingBottom:'15px'}}>
-                         <span style={{color:'#6b7280'}}>Giờ thực tế đã làm:</span>
-                         <span style={{fontWeight:'bold', color: totalWorkedHours >= minHours ? '#059669' : '#ef4444'}}>{totalWorkedHours.toFixed(1)} giờ</span>
+                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px', fontSize:'0.9rem'}}>
+                         <span style={{color:'#6b7280'}}>Giờ thực tế UBI 1:</span>
+                         <span style={{fontWeight:'bold', color: hoursUBI1 >= minHours ? '#059669' : '#ef4444'}}>{hoursUBI1.toFixed(1)} giờ</span>
                      </div>
-                     <div style={{display:'flex', justifyContent:'space-between', color:'#003366'}}>
-                         <span style={{fontWeight:'700'}}>Thù lao vượt mức:</span>
-                         <span style={{fontWeight:'800', fontSize:'1.1rem'}}>+ {Math.round(taskRemuneration).toLocaleString()} VNĐ</span>
+                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px', fontSize:'0.9rem', borderBottom:'1px solid #f3f4f6', paddingBottom:'15px'}}>
+                         <span style={{color:'#6b7280'}}>R từ UBI 1:</span>
+                         <span style={{fontWeight:'bold', color: '#003366'}}>+ {Math.round(R_UBI1).toLocaleString()} VNĐ</span>
+                     </div>
+                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px', fontSize:'0.9rem'}}>
+                         <span style={{color:'#6b7280'}}>Giờ thực tế Part-time:</span>
+                         <span style={{fontWeight:'bold'}}>{hoursSecondaryPartTime.toFixed(1)} giờ</span>
+                     </div>
+                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px', fontSize:'0.9rem'}}>
+                         <span style={{color:'#6b7280'}}>R từ Part-time:</span>
+                         <span style={{fontWeight:'bold', color: '#003366'}}>+ {Math.round(R_Secondary).toLocaleString()} VNĐ</span>
+                     </div>
+                     <div style={{display:'flex', justifyContent:'space-between', borderTop:'1px solid #f3f4f6', paddingTop:'15px', color:'#111827'}}>
+                         <span style={{fontWeight:'700'}}>THU NHẬP GỘP (GROSS):</span>
+                         <span style={{fontWeight:'800', fontSize:'1.1rem'}}>{Math.round(grossIncome).toLocaleString()} VNĐ</span>
+                     </div>
+                 </div>
+
+                 <div style={styles.card}>
+                     <h4 style={{margin:'0 0 15px 0', color:'#111827'}}>Khấu trừ Bắt buộc (BHXH & Thuế)</h4>
+                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px', fontSize:'0.9rem'}}>
+                         <span style={{color:'#6b7280'}}>BHXH (10.5% từ Thu nhập UBI 1):</span>
+                         <span style={{color:'#ef4444', fontWeight:'bold'}}>- {Math.round(bhxhDeduction).toLocaleString()} đ</span>
+                     </div>
+                     <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px', fontSize:'0.9rem'}}>
+                         <span style={{color:'#6b7280'}}>Thuế TNCN (Dành cho Gross {'>'} 15.5tr):</span>
+                         <span style={{color:'#ef4444', fontWeight:'bold'}}>- {Math.round(taxDeduction).toLocaleString()} đ</span>
                      </div>
                  </div>
 
                  <div style={{...styles.card, background:'#003366', color:'white'}}>
                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                         <span style={{fontWeight:'600', fontSize:'1.1rem'}}>TỔNG CỘNG DỰ KIẾN:</span>
-                         <span style={{fontWeight:'800', fontSize:'1.5rem', color:'#fcd34d'}}>{Math.round(totalEstimatedIncome).toLocaleString()} đ</span>
+                         <span style={{fontWeight:'600', fontSize:'1.1rem'}}>THỰC NHẬN DỰ KIẾN (NET):</span>
+                         <span style={{fontWeight:'800', fontSize:'1.5rem', color:'#fcd34d'}}>{Math.round(netIncome).toLocaleString()} đ</span>
                      </div>
                  </div>
              </div>
@@ -342,7 +370,6 @@ const Performance = () => {
                                      Hạn chót: {new Date(task.endTime).toLocaleDateString('vi-VN')}
                                  </div>
                                  
-                                 {/* Progress Bar */}
                                  <div style={{width:'100%', height:'8px', background:'#f1f5f9', borderRadius:'4px', marginBottom:'8px', overflow:'hidden'}}>
                                      <div style={{width: `${task.progress}%`, height:'100%', background: evalResult.color, borderRadius:'4px'}}></div>
                                  </div>

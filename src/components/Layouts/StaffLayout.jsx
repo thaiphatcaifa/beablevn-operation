@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
-import bcrypt from 'bcryptjs'; // IMPORT THƯ VIỆN MÃ HÓA
+import bcrypt from 'bcryptjs'; 
 
 // --- BỘ ICON TINH TẾ (MINIMALIST SVG) ---
 const Icons = {
@@ -36,6 +36,12 @@ const Icons = {
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#003366" width="16" height="16">
       <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
     </svg>
+  ),
+  // ICON CHUYỂN ĐỔI GIAO DIỆN (NÉT MẢNH, TỐI GIẢN)
+  Switch: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.2} stroke="currentColor" width="18" height="18">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+    </svg>
   )
 };
 
@@ -49,31 +55,28 @@ const StaffLayout = () => {
 
   if (!user) return <Navigate to="/" />;
 
+  const isAdminRole = ['chief', 'reg', 'op', 'scheduler'].includes(user?.role);
+
   const safeStaffList = Array.isArray(staffList) ? staffList : [];
   const currentUserInfo = safeStaffList.find(s => String(s.id) === String(user.id)) || user;
   const userPositions = Array.isArray(currentUserInfo?.positions) ? currentUserInfo.positions : [];
 
   const isActive = (path) => location.pathname === path;
 
-  // --- HÀM TÍNH TỔNG UBI CẤU HÌNH ---
   const calculateTotalConfiguredUBI = (staff) => {
       const ubi1 = (Number(staff?.ubi1Base) || 0) * (Number(staff?.ubi1Percent) || 100) / 100;
       const ubi2 = (Number(staff?.ubi2Base) || 0) * (Number(staff?.ubi2Percent) || 100) / 100;
       return ubi1 + ubi2;
   };
 
-  // --- LOGIC ĐỔI MẬT KHẨU (CÓ HASH) ---
   const handleChangePassword = (e) => {
     e.preventDefault();
     const currentPassHash = currentUserInfo.password || "";
     
-    // 1. Kiểm tra mật khẩu cũ
     let isMatch = false;
-    // Nếu mật khẩu trong DB bắt đầu bằng $2 (dấu hiệu của bcrypt)
     if (currentPassHash.startsWith('$2')) {
         isMatch = bcrypt.compareSync(pwdForm.current, currentPassHash);
     } else {
-        // Fallback: So sánh chuỗi thường cho tài khoản cũ
         isMatch = String(pwdForm.current) === String(currentPassHash);
     }
 
@@ -81,11 +84,9 @@ const StaffLayout = () => {
         return alert("Mật khẩu hiện tại không đúng!");
     }
     
-    // 2. Kiểm tra mật khẩu mới
     if (pwdForm.new.length < 1) return alert("Vui lòng nhập mật khẩu mới.");
     if (pwdForm.new !== pwdForm.confirm) return alert("Xác nhận mật khẩu mới không khớp!");
     
-    // 3. Mã hóa mật khẩu mới
     const salt = bcrypt.genSaltSync(10);
     const newHashedPassword = bcrypt.hashSync(pwdForm.new, salt);
 
@@ -111,8 +112,33 @@ const StaffLayout = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f9fafb', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
       
+      {/* CSS CHO NÚT CHUYỂN ĐỔI GIAO DIỆN TỐI GIẢN */}
+      <style>{`
+        @media (max-width: 450px) {
+            .hide-on-mobile { display: none; }
+        }
+        .btn-switch-role {
+            text-decoration: none;
+            background: white;
+            color: #003366;
+            border: 1px solid #e5e7eb;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .btn-switch-role:hover {
+            background: #f0f9ff;
+            border-color: #bae6fd;
+        }
+      `}</style>
+
       {/* HEADER */}
-      <header style={{ background: '#ffffff', padding: '0 24px', height: '64px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 1000 }}>
+      <header style={{ background: '#ffffff', padding: '0 20px', height: '64px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 1000 }}>
          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <img src="/BA LOGO.png" alt="Logo" style={{ height: '32px', objectFit: 'contain' }} />
             <div>
@@ -120,7 +146,16 @@ const StaffLayout = () => {
                 <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>Staff Portal</span>
             </div>
          </div>
-         <button onClick={logout} style={{ border: '1px solid #e5e7eb', background: 'white', color: '#374151', padding: '6px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '500', transition: 'background 0.2s' }} onMouseOver={e => e.target.style.background = '#f3f4f6'} onMouseOut={e => e.target.style.background = 'white'}>Đăng xuất</button>
+         
+         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {/* NÚT QUAY LẠI TRANG QUẢN TRỊ (CHỈ HIỆN VỚI ADMIN/SCHEDULER) */}
+            {isAdminRole && (
+               <Link to="/admin" className="btn-switch-role">
+                  <Icons.Switch /> <span className="hide-on-mobile">Trang Quản trị</span>
+               </Link>
+            )}
+            <button onClick={logout} style={{ border: '1px solid #e5e7eb', background: 'white', color: '#374151', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '500', transition: 'background 0.2s' }}>Thoát</button>
+         </div>
       </header>
 
       {/* MAIN CONTENT */}
@@ -176,7 +211,7 @@ const StaffLayout = () => {
       )}
 
       {/* BOTTOM NAVIGATION */}
-      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-around', paddingBottom: 'safe-area-inset-bottom', zIndex: 1000, height: '60px' }}>
+      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-around', paddingBottom: 'env(safe-area-inset-bottom)', zIndex: 1000, height: '60px' }}>
         <Link to="/staff/dashboard" style={navItemStyle('/staff/dashboard')}>
             <Icons.Bell active={isActive('/staff/dashboard')} />
             <span style={{ fontSize: '0.65rem', marginTop: '4px', fontWeight: isActive('/staff/dashboard') ? '600' : '500' }}>Thông báo</span>

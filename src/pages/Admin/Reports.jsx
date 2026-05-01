@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
-// --- HELPER LÀM SẠCH VÀ ÉP KIỂU SỐ ---
 const parseAmount = (val) => {
     if (val === undefined || val === null || val === '') return 0;
     const clean = String(val).replace(/,/g, '').replace(/\s/g, '');
@@ -10,14 +9,6 @@ const parseAmount = (val) => {
     return isNaN(num) ? 0 : num;
 };
 
-const getPercent = (val) => {
-    if (val === undefined || val === null || val === '') return 100;
-    const clean = String(val).replace(/,/g, '').replace(/\s/g, '');
-    const num = Number(clean);
-    return isNaN(num) ? 100 : num;
-};
-
-// --- HELPER THỜI GIAN ---
 const isSameDay = (d1, d2) => d1 && d2 && d1.toDateString() === d2.toDateString();
 const isSameMonth = (d1, d2) => d1 && d2 && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
 const isSameWeek = (d1, d2) => {
@@ -42,47 +33,6 @@ const toDateTimeLocal = (isoString) => {
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 };
 
-// --- LOGIC TÍNH GIỜ HIỂN THỊ TRONG BẢNG (String) ---
-const calculateWorkHours = (schedStart, schedEnd, actualCheckIn, actualCheckOut, isAdminEdited = false) => {
-    if (!schedStart || !schedEnd || !actualCheckIn || !actualCheckOut) return '---';
-    
-    const sStart = new Date(schedStart);
-    const sEnd = new Date(schedEnd);
-    const aIn = new Date(actualCheckIn);
-    const aOut = new Date(actualCheckOut);
-
-    let diffMs = 0;
-
-    if (isAdminEdited) {
-        const scheduledMs = sEnd - sStart;
-        const actualMs = aOut - aIn;
-        diffMs = actualMs > scheduledMs ? scheduledMs : actualMs;
-    } else {
-        let calcStart = aIn > sStart ? aIn : sStart;
-        let calcEnd;
-        if (aOut > sEnd) {
-            calcEnd = sEnd;
-        } else {
-            const diffMinutesEarly = (sEnd - aOut) / 60000;
-            if (diffMinutesEarly <= 10) {
-                calcEnd = sEnd; 
-            } else {
-                calcEnd = aOut;
-            }
-        }
-        diffMs = calcEnd - calcStart;
-    }
-
-    if (diffMs < 0) return '0h 00p';
-
-    const totalMinutes = Math.floor(diffMs / (1000 * 60));
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    return `${hours}h ${minutes < 10 ? '0' + minutes : minutes}p`;
-};
-
-// --- LOGIC TÍNH SỐ GIỜ THỰC TẾ (SỐ THẬP PHÂN) ĐỂ NHÂN LƯƠNG ---
 const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCheckOut, isAdminEdited = false) => {
     if (!schedStart || !schedEnd || !actualCheckIn || !actualCheckOut) return 0;
     
@@ -120,7 +70,34 @@ const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCh
     return totalMinutes / 60; 
 };
 
-// --- ICONS ---
+const calculateWorkHours = (schedStart, schedEnd, actualCheckIn, actualCheckOut, isAdminEdited = false) => {
+    const dec = calculateWorkHoursDecimal(schedStart, schedEnd, actualCheckIn, actualCheckOut, isAdminEdited);
+    if (dec === 0) return '0h 00p';
+    const h = Math.floor(dec);
+    const m = Math.round((dec - h) * 60);
+    return `${h}h ${m < 10 ? '0' + m : m}p`;
+};
+
+// Hàm lấy Mức tiền Thù lao (R) dựa trên Mã công việc (hoặc Vai trò)
+const getMatchedRate = (staffRems, task) => {
+    if (!staffRems || !Array.isArray(staffRems)) return 0;
+    const matched = staffRems.find(rem => {
+        if (rem.position && String(rem.position).trim() !== '') {
+            if (String(rem.position).trim().toLowerCase() !== String(task.assignedRole || '').trim().toLowerCase()) return false;
+        }
+        const rCode = String(rem.jobCode !== undefined ? rem.jobCode : (rem.keywords || '')).trim();
+        if (rCode !== '') {
+            const codes = rCode.split(',').map(c => c.trim().toLowerCase()).filter(c => c);
+            const tCode = String(task.jobCode || '').trim().toLowerCase();
+            const tTitle = String(task.title || '').trim().toLowerCase();
+            const isMatch = codes.some(c => tCode === c || tTitle.includes(c));
+            if (!isMatch) return false;
+        }
+        return true;
+    });
+    return matched ? parseAmount(matched.amount) : 0;
+};
+
 const Icons = {
   Finance: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>),
   Facility: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>),
@@ -138,7 +115,6 @@ const Reports = () => {
   
   const [activeTab, setActiveTab] = useState('overview'); 
 
-  // --- STATE CHẤM CÔNG CẬP NHẬT ---
   const [attendanceFilter, setAttendanceFilter] = useState('all'); 
   const [attendanceStaffFilter, setAttendanceStaffFilter] = useState('all'); 
   const [attendanceDayFilter, setAttendanceDayFilter] = useState('all'); 
@@ -148,7 +124,6 @@ const Reports = () => {
   const [editingAttendanceId, setEditingAttendanceId] = useState(null);
   const [editAttForm, setEditAttForm] = useState({ checkIn: '', checkOut: '', reason: '' });
 
-  // --- STATE TÀI CHÍNH ---
   const [financeStaffFilter, setFinanceStaffFilter] = useState('all'); 
   const [financeMonthFilter, setFinanceMonthFilter] = useState(() => {
     const d = new Date();
@@ -158,13 +133,11 @@ const Reports = () => {
   const [selYear, selMonth] = (financeMonthFilter || '').split('-');
   const selectedFinanceMonth = new Date(selYear, selMonth - 1, 1);
 
-  // --- STATE CSVC ---
   const [facilityAreaFilter, setFacilityAreaFilter] = useState('all'); 
   const [facilityStaffFilter, setFacilityStaffFilter] = useState('all'); 
   const [facilityTimeFilter, setFacilityTimeFilter] = useState('month'); 
   const [facilityMonthFilter, setFacilityMonthFilter] = useState('all'); 
   
-  // --- STATE TIẾN ĐỘ CÔNG VIỆC ---
   const [taskStaffFilter, setTaskStaffFilter] = useState('all');
   const [taskStatusFilter, setTaskStatusFilter] = useState('all');
 
@@ -206,7 +179,7 @@ const Reports = () => {
   const scheduleTasks = safeTasks.filter(t => t.fromScheduleId);
 
   // ==============================================================
-  // 1. LOGIC TÀI CHÍNH (CẬP NHẬT THEO CÔNG THỨC MỚI)
+  // 1. LOGIC TÀI CHÍNH (CẬP NHẬT CÔNG THỨC MỚI NHẤT)
   // ==============================================================
   let totalEstimatedCost = 0;
   let financeRows = [];
@@ -230,66 +203,55 @@ const Reports = () => {
       safeStaffList.forEach(staff => {
           if (financeStaffFilter !== 'all' && String(staff.id) !== String(financeStaffFilter)) return;
 
-          // CÔNG THỨC MỚI: Lương cố định
-          const baseUbi = staff.ubiBase !== undefined ? parseAmount(staff.ubiBase) : (parseAmount(staff.ubi1Base) * (parseAmount(staff.ubi1Percent)/100 || 1));
+          const staffTasks = currentMonthScheduleTasks.filter(t => String(t.assigneeId) === String(staff.id));
+          
+          let hoursUBI1 = 0;
+          let ubi1Tasks = [];
+          
+          let R_Secondary = 0;
+          let hoursSecondaryPartTime = 0;
+
+          // Lấy danh sách Role là UBI Phụ cố định
+          const ubiRoles = [];
           let secUbiTotal = 0;
           if (staff.secondaryUBIs && staff.secondaryUBIs.length > 0) {
-              secUbiTotal = staff.secondaryUBIs.reduce((sum, u) => sum + (parseAmount(u.amount) * (parseAmount(u.loadFactor)/100 || 1)), 0);
+              staff.secondaryUBIs.forEach(ubi => {
+                  if (!ubi.type || ubi.type === 'ubi') {
+                      const lf = Number(ubi.loadFactor);
+                      const actualLf = lf > 1 ? lf / 100 : lf;
+                      secUbiTotal += parseAmount(ubi.amount) * actualLf;
+                      ubiRoles.push(ubi.role);
+                  }
+              });
           } else if (staff.ubi2Base !== undefined) {
               secUbiTotal = parseAmount(staff.ubi2Base) * (parseAmount(staff.ubi2Percent)/100 || 1);
           }
-          const allowance = parseAmount(staff.specificAllowance);
-          
-          const totalFixedSalary = baseUbi + secUbiTotal + allowance;
-
-          const staffTasks = currentMonthScheduleTasks.filter(t => String(t.assigneeId) === String(staff.id));
-          
-          let taskRemuneration = 0;
-          let totalWorkedHours = 0;
-          let allTasksList = [];
 
           staffTasks.forEach(task => {
               if (!task.checkInTime || !task.checkOutTime) return; 
-              
               const workedHours = calculateWorkHoursDecimal(task.startTime, task.endTime, task.checkInTime, task.checkOutTime, task.adminEdited);
-              totalWorkedHours += workedHours;
 
-              let taskRate = 0;
-              if (staff.remunerations && Array.isArray(staff.remunerations)) {
-                  const matchedRule = staff.remunerations.find(rem => {
-                      if (!rem) return false; 
-                      if (rem.position && String(rem.position).trim() !== '') {
-                          const rulePos = String(rem.position).trim().toLowerCase();
-                          const taskPos = String(task.assignedRole || '').trim().toLowerCase();
-                          if (rulePos !== taskPos) return false;
-                      }
-                      if (rem.keywords && String(rem.keywords).trim() !== '') {
-                          const keywords = String(rem.keywords).split(',').map(k => k.trim().toLowerCase()).filter(k => k);
-                          const titleLower = String(task.title || '').toLowerCase();
-                          const isMatch = keywords.some(k => titleLower.includes(k));
-                          if (!isMatch) return false;
-                      }
-                      return true;
-                  });
+              let taskRate = getMatchedRate(staff.remunerations, task);
 
-                  if (matchedRule) {
-                      taskRate = parseAmount(matchedRule.amount);
+              if (task.assignedRole === staff.primaryRole) {
+                  hoursUBI1 += workedHours;
+                  ubi1Tasks.push({ hours: workedHours, rate: taskRate });
+              } else {
+                  if (!ubiRoles.includes(task.assignedRole)) {
+                      R_Secondary += workedHours * taskRate;
+                      hoursSecondaryPartTime += workedHours;
                   }
               }
-
-              allTasksList.push({
-                  hours: workedHours,
-                  rate: taskRate
-              });
           });
 
+          // Xử lý R của UBI 1 (Chỉ tính khi vượt Threshold, ưu tiên dùng giờ có Rate thấp để trừ Threshold)
+          let R_UBI1 = 0;
           const minHours = parseAmount(staff.minWorkHours);
-          
-          if (totalWorkedHours >= minHours) {
-              allTasksList.sort((a, b) => a.rate - b.rate);
+          if (hoursUBI1 > minHours) {
+              ubi1Tasks.sort((a, b) => a.rate - b.rate);
               let hoursToOffset = minHours;
 
-              allTasksList.forEach(t => {
+              ubi1Tasks.forEach(t => {
                   if (hoursToOffset > 0) {
                       if (t.hours <= hoursToOffset) {
                           hoursToOffset -= t.hours;
@@ -300,30 +262,46 @@ const Reports = () => {
                       }
                   }
                   if (t.hours > 0 && t.rate > 0) {
-                      taskRemuneration += t.hours * t.rate;
+                      R_UBI1 += t.hours * t.rate;
                   }
               });
-          } else {
-              taskRemuneration = 0;
           }
 
-          const totalSalary = totalFixedSalary + taskRemuneration;
+          const baseUbi = staff.ubiBase !== undefined ? parseAmount(staff.ubiBase) : (parseAmount(staff.ubi1Base) * (parseAmount(staff.ubi1Percent)/100 || 1));
+          const allowance = parseAmount(staff.specificAllowance);
+          
+          const totalFixedSalary = baseUbi + secUbiTotal + allowance;
 
-          if (totalSalary > 0 || minHours > 0) {
+          // BHXH chỉ tính trên UBI 1 (Base + R của UBI1)
+          const incomeForBHXH = baseUbi + R_UBI1;
+          const bhxhDeduction = incomeForBHXH * 0.105;
+
+          const grossIncome = totalFixedSalary + R_UBI1 + R_Secondary;
+
+          const taxThreshold = 15500000;
+          const taxDeduction = grossIncome > taxThreshold ? (grossIncome - taxThreshold) * 0.05 : 0;
+
+          const netIncome = grossIncome - bhxhDeduction - taxDeduction;
+
+          if (grossIncome > 0 || minHours > 0) {
               financeRows.push({
                   item: staff.name,
-                  type: `Cố định: ${Math.round(totalFixedSalary).toLocaleString()}đ + Vượt mức: ${Math.round(taskRemuneration).toLocaleString()}đ (Làm ${totalWorkedHours.toFixed(1)}/${minHours}h)`,
-                  amount: totalSalary,
+                  type: `Giờ UBI 1: ${hoursUBI1.toFixed(1)}/${minHours}h`,
+                  gross: grossIncome,
+                  bhxh: bhxhDeduction,
+                  tax: taxDeduction,
+                  net: netIncome,
+                  amount: netIncome, 
                   date: new Date().toLocaleDateString('vi-VN')
               });
-              totalEstimatedCost += totalSalary;
+              totalEstimatedCost += netIncome; 
           }
       });
   }
 
   const handleLockPayroll = () => {
       if(!savePayrollRecord) {
-          alert("Lỗi: Hệ thống chưa được cấu hình API savePayrollRecord trong DataContext. Vui lòng xem lại hướng dẫn chèn mã file DataContext ở tin nhắn trước.");
+          alert("Lỗi: Hệ thống chưa được cấu hình API savePayrollRecord trong DataContext.");
           return;
       }
       if(window.confirm(`Bạn có chắc chắn muốn CHỐT BÁO CÁO tháng ${financeMonthFilter} không?\n\nCảnh báo: Dữ liệu này sẽ được lưu thành bản cứng (Snapshot) để ngăn chặn các thay đổi lịch sử lương trong tương lai. Bạn không thể hoàn tác hành động này!`)) {
@@ -338,7 +316,6 @@ const Reports = () => {
       }
   };
 
-  // --- 2. CSVC ---
   const availableAreas = [...new Set(safeFacilityLogs.map(l => l.area).filter(Boolean))];
   const availableReporters = [...new Set(safeFacilityLogs.map(l => l.staffName).filter(Boolean))];
 
@@ -362,7 +339,6 @@ const Reports = () => {
       return true;
   });
 
-  // --- 3. TIẾN ĐỘ CÔNG VIỆC ---
   const filteredOpTasks = opAdminTasks.filter(t => {
       if (taskStaffFilter !== 'all' && String(t.assigneeId) !== String(taskStaffFilter)) return false;
       
@@ -380,7 +356,6 @@ const Reports = () => {
   const completedTasks = filteredOpTasks.filter(t => t.status === 'completed').length;
   const taskProgress = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
-  // --- 4. CHẤM CÔNG ---
   const filteredAttendance = scheduleTasks.filter(t => {
       const taskDate = new Date(t.startTime);
       const now = new Date();
@@ -403,7 +378,6 @@ const Reports = () => {
       return true;
   });
 
-  // --- RENDER FUNCTIONS ---
   const renderDashboard = () => (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
           {user?.role === 'chief' && (
@@ -413,7 +387,7 @@ const Reports = () => {
                       <h3 style={styles.cardTitle}>Tài chính & Thu nhập</h3>
                   </div>
                   <div style={{color:'#6b7280', fontSize:'0.9rem', marginBottom:'20px'}}>
-                      Tổng chi dự kiến (Tháng {Number(selMonth)}/{selYear}): <strong style={{color:'#059669'}}>{Math.round(totalEstimatedCost).toLocaleString()} VNĐ</strong>
+                      Tổng chi (Net) (Tháng {Number(selMonth)}/{selYear}): <strong style={{color:'#059669'}}>{Math.round(totalEstimatedCost).toLocaleString()} VNĐ</strong>
                   </div>
                   <button onClick={() => setActiveTab('finance')} style={styles.accessBtn}>
                       Truy cập <Icons.ArrowRight />
@@ -508,7 +482,6 @@ const Reports = () => {
                           {safeStaffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                       
-                      {/* NÚT CHỐT DỮ LIỆU */}
                       {!isLocked && (
                           <div className="lock-btn-container">
                               <button onClick={handleLockPayroll} style={{...styles.printBtn, background:'#f59e0b', color:'white', border:'none', borderColor:'#f59e0b'}}>
@@ -526,9 +499,11 @@ const Reports = () => {
                       <tr style={styles.tableHeadRow}>
                         <th style={{...styles.th, width: '50px'}}>STT</th>
                         <th style={styles.th}>Nhân sự</th>
-                        <th style={styles.th}>Chi tiết Phân bổ</th>
-                        <th style={styles.th}>Tổng Số Tiền (VNĐ)</th>
-                        <th style={styles.th}>Ngày chốt BC</th>
+                        <th style={styles.th}>Thông tin thêm</th>
+                        <th style={styles.th}>Thu nhập Gộp (Gross)</th>
+                        <th style={styles.th}>BHXH (10.5%)</th>
+                        <th style={styles.th}>Thuế TNCN (5%)</th>
+                        <th style={styles.th}>Thực nhận (Net)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -537,11 +512,13 @@ const Reports = () => {
                             <td style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{idx + 1}</td>
                             <td style={{...styles.td, fontWeight:'600', color:'#111827'}}>{row.item}</td>
                             <td style={{...styles.td, fontSize:'0.8rem', color:'#4b5563'}}>{row.type}</td>
-                            <td style={{...styles.td, fontWeight: 'bold', color: '#059669'}}>{Math.round(row.amount).toLocaleString()}</td>
-                            <td style={styles.td}>{row.date}</td>
+                            <td style={{...styles.td, fontWeight: 'bold'}}>{Math.round(row.gross || 0).toLocaleString()}</td>
+                            <td style={{...styles.td, color: '#ef4444'}}>-{Math.round(row.bhxh || 0).toLocaleString()}</td>
+                            <td style={{...styles.td, color: '#ef4444'}}>-{Math.round(row.tax || 0).toLocaleString()}</td>
+                            <td style={{...styles.td, fontWeight: 'bold', color: '#059669'}}>{Math.round(row.net || row.amount).toLocaleString()}</td>
                         </tr>
                       )) : (
-                        <tr><td colSpan="5" style={styles.emptyTd}>Không có dữ liệu hiển thị.</td></tr>
+                        <tr><td colSpan="7" style={styles.emptyTd}>Không có dữ liệu hiển thị.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -779,7 +756,6 @@ const Reports = () => {
                                       </td>
                                   </>
                               ) : (
-                                  // HIỂN THỊ BÌNH THƯỜNG KHI KHÔNG SỬA
                                   <>
                                       <td style={{ ...styles.td, fontWeight: '600' }}>{t.assigneeName}</td>
                                       <td style={styles.td}>

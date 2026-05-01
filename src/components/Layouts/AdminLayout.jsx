@@ -4,25 +4,21 @@ import { useAuth } from '../../context/AuthContext';
 
 // --- BỘ ICON ADMIN TINH TẾ (MINIMALIST SVG) ---
 const Icons = {
-  // Staff Manager: Users Group
   Staff: ({ active }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke={active ? "#003366" : "#9ca3af"} width="24" height="24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
     </svg>
   ),
-  // Task Manager: Clipboard Document
   Task: ({ active }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke={active ? "#003366" : "#9ca3af"} width="24" height="24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.125 2.25h-4.5c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125v-9M10.125 2.25h.375a9 9 0 019 9v.375M10.125 2.25A3.375 3.375 0 0113.5 5.485m1.5 0v.908l4.5 4.5m-4.5-4.5l4.5 4.5" />
     </svg>
   ),
-  // Discipline: Shield Warning
   Discipline: ({ active }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke={active ? "#003366" : "#9ca3af"} width="24" height="24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
     </svg>
   ),
-  // Reports: Chart Pie
   Report: ({ active }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke={active ? "#003366" : "#9ca3af"} width="24" height="24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
@@ -32,6 +28,12 @@ const Icons = {
   Logout: () => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" width="20" height="20">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+    </svg>
+  ),
+  // ICON CHUYỂN ĐỔI GIAO DIỆN (NÉT MẢNH, TỐI GIẢN)
+  Switch: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.2} stroke="currentColor" width="20" height="20">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
     </svg>
   )
 };
@@ -67,7 +69,6 @@ const AdminLayout = () => {
 
   return (
     <div className="admin-layout" style={{ minHeight: '100vh', background: '#f3f4f6' }}>
-      {/* CSS RESPONSIVE INJECTED TRỰC TIẾP */}
       <style>{`
         /* Mặc định (Desktop): Hiện Sidebar, Ẩn Bottom Nav */
         .admin-container { display: flex; }
@@ -75,15 +76,27 @@ const AdminLayout = () => {
         .admin-content { margin-left: 260px; padding: 24px; flex: 1; }
         .admin-bottom-nav { display: none; }
         .admin-header-mobile { display: none; }
+        
+        /* CSS cho nút chuyển đổi tinh tế */
+        .btn-switch-sidebar {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 16px; text-decoration: none;
+            color: #003366; background: transparent;
+            border-radius: 8px; margin-top: 20px;
+            font-weight: 500; transition: all 0.2s ease;
+            border: 1px solid #e5e7eb;
+        }
+        .btn-switch-sidebar:hover {
+            background: #f0f9ff;
+            border-color: #bae6fd;
+        }
 
         /* Mobile (Màn hình < 768px): Ẩn Sidebar, Hiện Bottom Nav */
         @media (max-width: 768px) {
           .admin-container { display: block; }
           .admin-sidebar { display: none; }
-          .admin-content { margin-left: 0; padding: 16px; padding-bottom: 80px; } /* Padding bottom để tránh bị nav che */
+          .admin-content { margin-left: 0; padding: 16px; padding-bottom: 80px; } 
           .admin-bottom-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid #e5e7eb; height: 60px; z-index: 1000; justify-content: space-around; padding-bottom: env(safe-area-inset-bottom); }
-          
-          /* Header mobile đơn giản */
           .admin-header-mobile { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: white; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 100; }
         }
       `}</style>
@@ -119,6 +132,11 @@ const AdminLayout = () => {
                </Link>
              </>
           )}
+
+          {/* NÚT ĐIỀU HƯỚNG VỀ GIAO DIỆN NHÂN VIÊN */}
+          <Link to="/staff" className="btn-switch-sidebar">
+             <Icons.Switch /> <span style={{fontWeight: '600'}}>Giao diện Cá nhân</span>
+          </Link>
         </nav>
 
         <div style={{ padding: '24px', borderTop: '1px solid #f3f4f6' }}>
@@ -166,6 +184,11 @@ const AdminLayout = () => {
               </Link>
            </>
         )}
+        {/* NÚT CHUYỂN QUA GIAO DIỆN NHÂN VIÊN TRÊN ĐIỆN THOẠI */}
+        <Link to="/staff" style={mobileNavItemStyle('staff')}>
+            <div style={{color: '#003366'}}><Icons.Switch /></div>
+            <span style={{ fontSize: '0.65rem', marginTop: '4px', fontWeight: '600', color: '#003366' }}>Cá nhân</span>
+        </Link>
       </nav>
     </div>
   );

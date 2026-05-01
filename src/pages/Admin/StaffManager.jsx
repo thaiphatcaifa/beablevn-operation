@@ -3,7 +3,6 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import bcrypt from 'bcryptjs';
 
-// --- BỘ ICON MINIMALIST ---
 const Icons = {
   Edit: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>),
   Save: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>),
@@ -14,12 +13,28 @@ const Icons = {
   Trash: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>)
 };
 
-// --- HELPER AN TOÀN SỐ ---
 const safeNumber = (value) => {
     if (value === '' || value === null || value === undefined) return 0;
     const num = Number(value);
     return isNaN(num) ? 0 : num;
 };
+
+// ĐÃ BỔ SUNG CÁC CHỨC DANH ADMIN ĐỂ HỖ TRỢ CHUNG 1 TÀI KHOẢN
+const POSITIONS = [
+  'Chief Admin',
+  'Regulatory Admin',
+  'Operational Admin',
+  'Scheduler',
+  'Senior Teacher',
+  'Tenured Teacher',
+  'Customer Care Specialist',
+  'Customer Care Officer',
+  'Accountant',
+  'Infrastructure Officer / Technician',
+  'Bartender / Chef',
+  'Waiter / Waitress',
+  'Junior Marketing'
+];
 
 const StaffManager = () => {
   const { user } = useAuth();
@@ -30,8 +45,6 @@ const StaffManager = () => {
   const [editForm, setEditForm] = useState({});
   const [filterRole, setFilterRole] = useState('all'); 
   const [searchTerm, setSearchTerm] = useState('');
-
-  const POSITIONS = ['ST','TT','CCS','CCO','CCA','FFM','FFS','FFA'];
 
   const isChief = user?.role === 'chief';
   if (!isChief) return <div style={{padding:'20px', color:'#d32f2f'}}>Bạn không có quyền truy cập quản lý nhân sự cấp cao.</div>;
@@ -68,6 +81,7 @@ const StaffManager = () => {
         role: 'staff', positions: [], 
         minWorkHours: 0,
         ubiBase: 0, 
+        primaryRole: '',
         secondaryUBIs: [], 
         specificAllowance: 0, 
         remunerations: [], 
@@ -93,18 +107,18 @@ const StaffManager = () => {
         remunerations: currentRems,
         secondaryUBIs: currentSecUbis,
         ubiBase: initialUbiBase,
+        primaryRole: staff.primaryRole || '',
         specificAllowance: staff.specificAllowance || 0
     }); 
   };
 
-  // QUẢN LÝ THÙ LAO VƯỢT MỨC
   const handleRemunerationChange = (index, field, value) => {
       const newRems = [...editForm.remunerations];
       newRems[index] = { ...newRems[index], [field]: value };
       setEditForm({ ...editForm, remunerations: newRems });
   };
   const handleAddRemuneration = () => {
-      const newRems = [...(editForm.remunerations || []), { amount: 0, position: '', keywords: '' }];
+      const newRems = [...(editForm.remunerations || []), { amount: 0, position: '', jobCode: '' }];
       setEditForm({ ...editForm, remunerations: newRems });
   };
   const handleRemoveRemuneration = (index) => {
@@ -113,15 +127,13 @@ const StaffManager = () => {
       setEditForm({ ...editForm, remunerations: newRems });
   };
 
-  // QUẢN LÝ UBI PHỤ
   const handleSecUbiChange = (index, field, value) => {
       const newUbis = [...editForm.secondaryUBIs];
       newUbis[index] = { ...newUbis[index], [field]: value };
       setEditForm({ ...editForm, secondaryUBIs: newUbis });
   };
   const handleAddSecUbi = () => {
-      // Mặc định tải 75%, role rỗng
-      const newUbis = [...(editForm.secondaryUBIs || []), { amount: 0, loadFactor: 75, role: '' }];
+      const newUbis = [...(editForm.secondaryUBIs || []), { amount: 0, loadFactor: 0.75, role: '', type: 'ubi' }];
       setEditForm({ ...editForm, secondaryUBIs: newUbis });
   };
   const handleRemoveSecUbi = (index) => {
@@ -143,16 +155,20 @@ const StaffManager = () => {
         updates.minWorkHours = safeNumber(updates.minWorkHours);
         updates.ubiBase = safeNumber(updates.ubiBase);
         updates.specificAllowance = safeNumber(updates.specificAllowance);
+        updates.primaryRole = editForm.primaryRole || '';
         
         if (Array.isArray(updates.secondaryUBIs)) {
             updates.secondaryUBIs = updates.secondaryUBIs.map(u => ({ 
-                ...u, amount: safeNumber(u.amount), loadFactor: safeNumber(u.loadFactor) 
+                ...u, 
+                amount: safeNumber(u.amount), 
+                loadFactor: safeNumber(u.loadFactor),
+                type: u.type || 'ubi'
             }));
         } else { updates.secondaryUBIs = []; }
 
         if (Array.isArray(updates.remunerations)) {
             updates.remunerations = updates.remunerations.map(r => ({ 
-                ...r, amount: safeNumber(r.amount) 
+                ...r, amount: safeNumber(r.amount), jobCode: r.jobCode !== undefined ? r.jobCode : (r.keywords || '') 
             }));
         } else { updates.remunerations = []; }
 
@@ -190,7 +206,14 @@ const StaffManager = () => {
       const base = s.ubiBase !== undefined ? safeNumber(s.ubiBase) : (safeNumber(s.ubi1Base) * (safeNumber(s.ubi1Percent)/100 || 1));
       let secTotal = 0;
       if (s.secondaryUBIs && s.secondaryUBIs.length > 0) {
-          secTotal = s.secondaryUBIs.reduce((sum, u) => sum + (safeNumber(u.amount) * (safeNumber(u.loadFactor)/100 || 1)), 0);
+          secTotal = s.secondaryUBIs.reduce((sum, u) => {
+              if (!u.type || u.type === 'ubi') {
+                  const lf = Number(u.loadFactor);
+                  const actualLf = lf > 1 ? lf / 100 : lf;
+                  return sum + (safeNumber(u.amount) * actualLf);
+              }
+              return sum;
+          }, 0);
       } else if (s.ubi2Base !== undefined) {
           secTotal = safeNumber(s.ubi2Base) * (safeNumber(s.ubi2Percent)/100 || 1);
       }
@@ -253,7 +276,6 @@ const StaffManager = () => {
 
             <div style={{ flex: 1 }}>
               {editMode === staff.id ? (
-                  // --- MODE EDIT ---
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                       <div style={styles.sectionBox}>
                           <div style={styles.sectionTitle}>1. Định danh</div>
@@ -303,17 +325,22 @@ const StaffManager = () => {
                           </select>
                       </div>
 
-                      {/* --- PHẦN 3: TÀI CHÍNH --- */}
                       <div style={styles.sectionBox}>
                           <div style={styles.sectionTitle}>3. Tài chính (Lương Cố Định)</div>
                           
-                          {/* UBI CHÍNH */}
                           <div style={{...styles.financeRow, flexWrap: 'wrap'}}>
-                              <span style={styles.financeLabel}>UBI Chính (Base)</span>
+                              <span style={styles.financeLabel}>Vị trí chính (Tính BHXH)</span>
+                              <select value={editForm.primaryRole || ''} onChange={e => setEditForm({...editForm, primaryRole: e.target.value})} style={{...styles.inputFull, flex: 1, padding: '8px 2px'}}>
+                                  <option value="">-- Chọn vị trí --</option>
+                                  {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                              </select>
+                          </div>
+
+                          <div style={{...styles.financeRow, flexWrap: 'wrap', marginTop: '6px'}}>
+                              <span style={styles.financeLabel}>Lương cứng / UBI 1</span>
                               <input type="number" placeholder="VNĐ" value={editForm.ubiBase} onChange={e => setEditForm({...editForm, ubiBase: e.target.value})} style={{...styles.inputFull, flex: 1}} />
                           </div>
                           
-                          {/* PHỤ CẤP ĐẶC THÙ */}
                           <div style={{...styles.financeRow, flexWrap: 'wrap', marginTop: '6px'}}>
                               <span style={styles.financeLabel}>Phụ cấp đặc thù</span>
                               <input type="number" placeholder="VNĐ" value={editForm.specificAllowance} onChange={e => setEditForm({...editForm, specificAllowance: e.target.value})} style={{...styles.inputFull, flex: 1}} />
@@ -321,7 +348,6 @@ const StaffManager = () => {
                           
                           <div style={{height: '1px', background: '#e5e7eb', margin: '10px 0'}}></div>
                           
-                          {/* DANH SÁCH UBI PHỤ */}
                           <div style={{display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px'}}>
                               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                                   <span style={{fontSize: '0.75rem', fontWeight:'600', color:'#4b5563'}}>UBI Phụ (Thứ cấp)</span>
@@ -345,36 +371,55 @@ const StaffManager = () => {
                                               type="button" 
                                               onClick={() => handleRemoveSecUbi(idx)}
                                               style={{border:'none', background:'none', cursor:'pointer', padding:'4px', color:'#ef4444'}}
-                                              title="Xóa"
                                           >
                                               <Icons.Trash />
                                           </button>
                                       </div>
 
                                       <div style={{display:'flex', gap:'10px', flexWrap: 'wrap'}}>
-                                          <div style={{flex: 1.5, minWidth: '120px'}}>
-                                              <label style={{fontSize:'0.7rem', fontWeight:'bold', color:'#4b5563'}}>Mức UBI phụ (VNĐ)</label>
-                                              <input 
-                                                  type="number" 
-                                                  placeholder="VNĐ" 
-                                                  value={ubi.amount} 
-                                                  onChange={(e) => handleSecUbiChange(idx, 'amount', e.target.value)} 
-                                                  style={{...styles.inputFull, marginTop: '4px'}} 
-                                              />
-                                          </div>
-                                          <div style={{flex: 1, minWidth: '100px'}}>
-                                              <label style={{fontSize:'0.7rem', fontWeight:'bold', color:'#4b5563'}}>Load Factor</label>
+                                          <div style={{flex: 1, minWidth: '110px'}}>
+                                              <label style={styles.label}>Loại hình</label>
                                               <select 
-                                                  value={ubi.loadFactor} 
-                                                  onChange={(e) => handleSecUbiChange(idx, 'loadFactor', e.target.value)} 
+                                                  value={ubi.type || 'ubi'} 
+                                                  onChange={(e) => handleSecUbiChange(idx, 'type', e.target.value)} 
                                                   style={{...styles.inputFull, marginTop: '4px', padding: '8px 2px'}} 
                                               >
-                                                  <option value="75">75%</option>
-                                                  <option value="50">50%</option>
-                                                  <option value="30">30%</option>
-                                                  <option value="15">15%</option>
+                                                  <option value="ubi">UBI Phụ</option>
+                                                  <option value="parttime">Part-time</option>
                                               </select>
                                           </div>
+                                          
+                                          {(!ubi.type || ubi.type === 'ubi') ? (
+                                              <>
+                                                  <div style={{flex: 1.5, minWidth: '120px'}}>
+                                                      <label style={styles.label}>Mức UBI phụ (VNĐ)</label>
+                                                      <input 
+                                                          type="number" 
+                                                          placeholder="VNĐ" 
+                                                          value={ubi.amount} 
+                                                          onChange={(e) => handleSecUbiChange(idx, 'amount', e.target.value)} 
+                                                          style={{...styles.inputFull, marginTop: '4px'}} 
+                                                      />
+                                                  </div>
+                                                  <div style={{flex: 1, minWidth: '100px'}}>
+                                                      <label style={styles.label}>Load Factor</label>
+                                                      <select 
+                                                          value={ubi.loadFactor} 
+                                                          onChange={(e) => handleSecUbiChange(idx, 'loadFactor', e.target.value)} 
+                                                          style={{...styles.inputFull, marginTop: '4px', padding: '8px 2px'}} 
+                                                      >
+                                                          <option value="0.75">0.75 (100%)</option>
+                                                          <option value="0.50">0.50 (75%)</option>
+                                                          <option value="0.30">0.30 (50%)</option>
+                                                          <option value="0.15">0.15 (25%)</option>
+                                                      </select>
+                                                  </div>
+                                              </>
+                                          ) : (
+                                              <div style={{flex: 2.5, display:'flex', alignItems:'center'}}>
+                                                  <span style={{fontSize:'0.75rem', color:'#6b7280', fontStyle:'italic', padding:'8px 0'}}>Lương = Tổng giờ làm thực tế x Mức tiền R</span>
+                                              </div>
+                                          )}
                                       </div>
                                       <div>
                                           <label style={{fontSize:'0.7rem', fontWeight:'bold', color:'#4b5563'}}>Tên vai trò / Vị trí</label>
@@ -384,15 +429,7 @@ const StaffManager = () => {
                                               style={{...styles.inputFull, marginTop: '4px', padding: '8px 2px'}} 
                                           >
                                               <option value="">-- Chọn vai trò --</option>
-                                              <option value="Senior Teacher">Senior Teacher</option>
-                                              <option value="Tenured Teacher">Tenured Teacher</option>
-                                              <option value="Customer Care Specialist">Customer Care Specialist</option>
-                                              <option value="Customer Care Officer">Customer Care Officer</option>
-                                              <option value="Accountant">Accountant</option>
-                                              <option value="Infrastructure Officer / Technician">Infrastructure Officer / Technician</option>
-                                              <option value="Bartender / Chef">Bartender / Chef</option>
-                                              <option value="Waiter / Waitress">Waiter / Waitress</option>
-                                              <option value="Junior Marketing">Junior Marketing</option>
+                                              {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
                                           </select>
                                       </div>
                                   </div>
@@ -405,10 +442,9 @@ const StaffManager = () => {
 
                           <div style={{height: '1px', background: '#e5e7eb', margin: '10px 0'}}></div>
                           
-                          {/* DANH SÁCH REMUNERATION (THÙ LAO VƯỢT GIỜ) */}
                           <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
                               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                                  <span style={{fontSize: '0.75rem', fontWeight:'600', color:'#4b5563'}}>Thù lao vượt mức</span>
+                                  <span style={{fontSize: '0.75rem', fontWeight:'600', color:'#4b5563'}}>Thù lao vượt mức (R)</span>
                                   <button 
                                       type="button" 
                                       onClick={handleAddRemuneration} 
@@ -438,15 +474,15 @@ const StaffManager = () => {
                                               onChange={(e) => handleRemunerationChange(idx, 'position', e.target.value)} 
                                               style={{...styles.inputFull, flex: 1, padding: '8px 2px'}}
                                           >
-                                              <option value="">--</option>
+                                              <option value="">-- Chọn vị trí --</option>
                                               {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
                                           </select>
                                       </div>
                                       
                                       <input 
-                                          placeholder="Keywords" 
-                                          value={rem.keywords} 
-                                          onChange={(e) => handleRemunerationChange(idx, 'keywords', e.target.value)} 
+                                          placeholder="Mã công việc (VD: IELTS, Basic...)" 
+                                          value={rem.jobCode !== undefined ? rem.jobCode : (rem.keywords || '')} 
+                                          onChange={(e) => handleRemunerationChange(idx, 'jobCode', e.target.value)} 
                                           style={{...styles.inputFull, flex: '1 1 100%', minWidth: '100px'}} 
                                       />
 
@@ -454,7 +490,6 @@ const StaffManager = () => {
                                           type="button" 
                                           onClick={() => handleRemoveRemuneration(idx)}
                                           style={{border:'none', background:'none', cursor:'pointer', padding:'4px', color:'#ef4444'}}
-                                          title="Xóa"
                                       >
                                           <Icons.Trash />
                                       </button>
@@ -473,7 +508,6 @@ const StaffManager = () => {
                       </div>
                   </div>
               ) : (
-                  // --- MODE VIEW ---
                   <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
                       <div style={{fontSize: '0.9rem', color: '#4b5563'}}>
                           <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
@@ -488,7 +522,9 @@ const StaffManager = () => {
                           </div>
                           
                           <div style={{marginTop: '15px', padding:'10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #f3f4f6'}}>
-                               <div style={{fontSize: '0.7rem', color:'#6b7280', textTransform:'uppercase', letterSpacing: '0.5px', marginBottom:'4px'}}>Tổng Lương Cố Định</div>
+                               <div style={{fontSize: '0.7rem', color:'#6b7280', textTransform:'uppercase', letterSpacing: '0.5px', marginBottom:'4px'}}>
+                                   Lương cố định {staff.primaryRole ? `(Vị trí chính: ${staff.primaryRole})` : ''}
+                               </div>
                                <div style={{color: '#059669', fontWeight:'700', fontSize:'1.1rem'}}>
                                   {calculateFixedSalary(staff).toLocaleString()} <span style={{fontSize:'0.75rem', color:'#374151', fontWeight: '400'}}>VNĐ</span>
                                </div>
@@ -500,7 +536,7 @@ const StaffManager = () => {
                                            r.amount > 0 && (
                                                <div key={idx} style={{fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between', color: '#374151', marginBottom:'2px'}}>
                                                    <span><b style={{color:'#003366'}}>R{idx+1}:</b> {Number(r.amount).toLocaleString()}/h</span>
-                                                   <span style={{color: '#6b7280', fontStyle: 'italic'}}>{r.position} / {r.keywords || 'All'}</span>
+                                                   <span style={{color: '#6b7280', fontStyle: 'italic'}}>{r.position} / {r.jobCode !== undefined ? r.jobCode : (r.keywords || 'All')}</span>
                                                </div>
                                            )
                                        ))
@@ -532,12 +568,13 @@ const styles = {
     sectionTitle: { fontSize: '0.75rem', fontWeight: '700', color: '#003366', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' },
     checkboxLabel: { fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', background: 'white', padding: '4px 8px', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer' },
     financeRow: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' },
-    financeLabel: { fontSize: '0.8rem', fontWeight: '600', color: '#4b5563', width: '110px' },
+    financeLabel: { fontSize: '0.8rem', fontWeight: '600', color: '#4b5563', width: '130px' },
     btnAdd: { border: 'none', borderRadius: '6px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500' },
     btnSave: { background: '#003366', color: 'white', border: 'none', borderRadius: '5px', padding: '8px', flex: 1, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', fontWeight: '500', fontSize: '0.85rem' },
     btnCancel: { background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '5px', padding: '8px 15px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500' },
     btnEdit: { background: 'white', border: '1px solid #003366', color: '#003366', borderRadius: '6px', padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: '600' },
-    btnDelete: { background: 'white', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '6px', padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: '600' }
+    btnDelete: { background: 'white', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '6px', padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: '600' },
+    label: { fontSize: '0.7rem', fontWeight: 'bold', color: '#4b5563' }
 };
 
 export default StaffManager;

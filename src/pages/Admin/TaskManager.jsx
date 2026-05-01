@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
-// --- HELPER FUNCTIONS ---
 const isSameDay = (d1, d2) => d1.toDateString() === d2.toDateString();
 const isSameMonth = (d1, d2) => d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
 const isSameWeek = (d1, d2) => {
@@ -14,14 +13,12 @@ const isSameWeek = (d1, d2) => {
     return d1 >= start && d1 <= end;
 };
 
-// Chuyển đổi ISO string sang format dùng cho <input type="datetime-local">
 const toDateTimeLocal = (isoString) => {
     if (!isoString) return '';
     const d = new Date(isoString);
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 };
 
-// Hàm tính Ngày/Tháng cụ thể từ Thứ trong tuần (Dành cho Scheduler)
 const getSpecificDate = (startDateStr, dayName) => {
     if (!startDateStr) return '';
     const daysMap = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 0 };
@@ -29,13 +26,12 @@ const getSpecificDate = (startDateStr, dayName) => {
     const dayTarget = daysMap[dayName];
     const dayCurrent = baseDate.getDay();
     let diff = dayTarget - dayCurrent;
-    if (diff < 0) diff += 7; // Tìm ngày đầu tiên thỏa mãn Thứ đó
+    if (diff < 0) diff += 7; 
     const resultDate = new Date(baseDate);
     resultDate.setDate(baseDate.getDate() + diff);
     return resultDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
-// --- ICONS ---
 const Icons = {
     Task: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" /></svg>),
     Schedule: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>),
@@ -44,26 +40,39 @@ const Icons = {
     Trash: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>)
 };
 
+const POSITIONS = [
+    'Chief Admin',
+    'Regulatory Admin',
+    'Operational Admin',
+    'Scheduler',
+    'Senior Teacher',
+    'Tenured Teacher',
+    'Customer Care Specialist',
+    'Customer Care Officer',
+    'Accountant',
+    'Infrastructure Officer / Technician',
+    'Bartender / Chef',
+    'Waiter / Waitress',
+    'Junior Marketing'
+];
+
 const TaskManager = () => {
   const { user } = useAuth();
   const { tasks, addTask, deleteTask, updateTask, staffList, disciplineTypes, schedules, addSchedule, deleteSchedule, updateSchedule } = useData();
   
   const activeDisciplines = disciplineTypes.filter(d => d.status === 'Active');
   
-  // --- PHÂN QUYỀN ---
   const isScheduler = user?.role === 'scheduler';
   const isApprover = ['chief', 'reg', 'op'].includes(user?.role);
 
-  // --- THẺ CON (SUB-TABS CHO ADMIN) ---
   const [activeView, setActiveView] = useState('overview'); 
-  
   const [scheduleTab, setScheduleTab] = useState('instances'); 
 
-  // --- STATE FORM ---
   const [newTask, setNewTask] = useState({ 
       title: '', assigneeId: '', description: '',
       startTime: '', endTime: '', 
-      assignedRole: 'ST',
+      assignedRole: 'Senior Teacher',
+      jobCode: '', 
       paymentType: '', 
       disciplineId: ''
   });
@@ -75,27 +84,21 @@ const TaskManager = () => {
 
   const [editingScheduleId, setEditingScheduleId] = useState(null);
 
-  // --- STATE INLINE EDIT (CHO CA LÀM VIỆC Ở MỤC 4) ---
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editTaskForm, setEditTaskForm] = useState({});
 
-  // --- GET CURRENT YEAR ---
   const currentYear = new Date().getFullYear();
   const availableYears = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
 
-  // --- STATE BỘ LỌC (SCHEDULER VIEW) ---
   const [filterStaff, setFilterStaff] = useState('all');
   const [filterDay, setFilterDay] = useState('all');
 
-  // --- STATE BỘ LỌC TÁCH BIỆT ---
-  // Lọc cho Mục 3 (TASK+)
   const [filterAdhocStaff, setFilterAdhocStaff] = useState('all');
   const [filterAdhocDay, setFilterAdhocDay] = useState('all');
   const [filterAdhocTime, setFilterAdhocTime] = useState('all'); 
   const [filterAdhocMonth, setFilterAdhocMonth] = useState('all');
   const [filterAdhocYear, setFilterAdhocYear] = useState('all');  
 
-  // Lọc cho Mục 4 (Scheduler Tasks)
   const [filterSchedTaskStaff, setFilterSchedTaskStaff] = useState('all');
   const [filterSchedTaskDay, setFilterSchedTaskDay] = useState('all');
   const [filterSchedTaskTime, setFilterSchedTaskTime] = useState('all'); 
@@ -103,11 +106,10 @@ const TaskManager = () => {
   const [filterSchedTaskYear, setFilterSchedTaskYear] = useState('all');   
   const [scheduleSearchTerm, setScheduleSearchTerm] = useState('');
 
-  // --- STATE PHÂN TRANG ---
   const [adhocPage, setAdhocPage] = useState(1);
   const [genTaskPage, setGenTaskPage] = useState(1);
-  const [schedulerPage, setSchedulerPage] = useState(1); // Trang dành cho Scheduler
-  const ITEMS_PER_PAGE = 50; // Thay đổi phân trang thành 50 dòng
+  const [schedulerPage, setSchedulerPage] = useState(1); 
+  const ITEMS_PER_PAGE = 50; 
 
   const daysOfWeek = [
       { key: 'Mon', label: 'T2', val: 1 }, { key: 'Tue', label: 'T3', val: 2 }, { key: 'Wed', label: 'T4', val: 3 },
@@ -115,7 +117,6 @@ const TaskManager = () => {
       { key: 'Sun', label: 'CN', val: 0 }
   ];
 
-  // --- HELPER FORMAT TIME ---
   const formatTaskTime = (start, end) => {
       const s = new Date(start);
       const e = new Date(end);
@@ -135,7 +136,21 @@ const TaskManager = () => {
       return `${s.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - ${e.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
   };
 
-  // --- LOGIC FUNCTIONS ---
+  const getStaffJobCodes = (staffId) => {
+      const codes = [];
+      const st = staffList.find(s => s.id === staffId);
+      if (st && st.remunerations) {
+          st.remunerations.forEach(r => {
+              const codeStr = r.jobCode || r.keywords || '';
+              codeStr.split(',').forEach(c => {
+                  const clean = c.trim();
+                  if (clean && !codes.includes(clean)) codes.push(clean);
+              });
+          });
+      }
+      return codes;
+  };
+
   const generateTasksFromSchedule = (scheduleData, schedId) => {
     const { startTime, endTime, repeatWeeks, repeatDays } = scheduleData;
     const startObj = new Date(startTime);
@@ -159,6 +174,7 @@ const TaskManager = () => {
                     assigneeName: scheduleData.assigneeName,
                     description: scheduleData.description,
                     assignedRole: scheduleData.assignedRole,
+                    jobCode: scheduleData.jobCode || '', 
                     startTime: taskStart.toISOString(),
                     endTime: taskEnd.toISOString(),
                     paymentType: 'Theo lịch', 
@@ -202,6 +218,7 @@ const TaskManager = () => {
           setNewTask({
               title: sched.title, assigneeId: sched.assigneeId, description: sched.description,
               startTime: sched.startTime, endTime: sched.endTime, assignedRole: sched.assignedRole,
+              jobCode: sched.jobCode || '',
               paymentType: '', disciplineId: ''
           });
           setScheduleConfig({ repeatWeeks: sched.repeatWeeks, days: sched.repeatDays || [] });
@@ -212,7 +229,6 @@ const TaskManager = () => {
       }
   };
 
-  // Xử lý tạo Task lẻ (Mục 1)
   const handleAddTaskAdhoc = (e) => {
       e.preventDefault();
       if (!newTask.title || !newTask.assigneeId || !newTask.endTime) return alert("Vui lòng điền đủ thông tin!");
@@ -228,11 +244,10 @@ const TaskManager = () => {
           paymentType: newTask.paymentType ? `${newTask.paymentType} VNĐ` : 'Chưa nhập'
       });
       
-      setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: 'ST', paymentType: '', disciplineId: '' });
+      setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: 'Senior Teacher', jobCode: '', paymentType: '', disciplineId: '' });
       alert("Đã giao nhiệm vụ thành công!");
   };
 
-  // Xử lý tạo Lịch định kỳ (Mục 2)
   const handleAddScheduleSubmit = (e) => {
       e.preventDefault();
       if (!newTask.title || !newTask.assigneeId || !newTask.endTime) return alert("Vui lòng điền đủ thông tin!");
@@ -265,7 +280,7 @@ const TaskManager = () => {
           alert(`Đã lên lịch và tạo tasks cho ${scheduleData.assigneeName}!`);
       }
 
-      setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: 'ST', paymentType: '', disciplineId: '' });
+      setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: 'Senior Teacher', jobCode: '', paymentType: '', disciplineId: '' });
       setScheduleConfig({ repeatWeeks: 1, days: [] });
       setEditingScheduleId(null);
   };
@@ -308,6 +323,7 @@ const TaskManager = () => {
       setNewTask({
           title: sched.title, assigneeId: sched.assigneeId, description: sched.description,
           startTime: sched.startTime, endTime: sched.endTime, assignedRole: sched.assignedRole,
+          jobCode: sched.jobCode || '',
           paymentType: '', disciplineId: ''
       });
       setScheduleConfig({ repeatWeeks: sched.repeatWeeks, days: sched.repeatDays || [] });
@@ -322,13 +338,13 @@ const TaskManager = () => {
       }
   };
 
-  // Xử lý Sửa Inline Task (Mục 4)
   const startEditTask = (task) => {
       setEditingTaskId(task.id);
       setEditTaskForm({
           title: task.title,
           assigneeId: task.assigneeId,
-          assignedRole: task.assignedRole || 'ST',
+          assignedRole: task.assignedRole || 'Senior Teacher',
+          jobCode: task.jobCode || '',
           startTime: task.startTime,
           endTime: task.endTime
       });
@@ -345,6 +361,7 @@ const TaskManager = () => {
           assigneeId: editTaskForm.assigneeId,
           assigneeName: staff ? staff.name : 'Unknown',
           assignedRole: editTaskForm.assignedRole,
+          jobCode: editTaskForm.jobCode || '',
           startTime: new Date(editTaskForm.startTime).toISOString(),
           endTime: new Date(editTaskForm.endTime).toISOString(),
       });
@@ -352,20 +369,15 @@ const TaskManager = () => {
       setEditingTaskId(null);
   };
 
-  // --- LỌC DATA CHO CÁC VIEW ---
-
-  // Lọc Schedules (Góc nhìn Scheduler)
   const filteredSchedules = schedules.filter(s => {
       const matchStaff = filterStaff === 'all' || s.assigneeId === filterStaff;
       const matchDay = filterDay === 'all' || (s.repeatDays && s.repeatDays.includes(filterDay));
       return matchStaff && matchDay;
   });
 
-  // Áp dụng Phân trang cho Scheduler
   const totalSchedulerPages = Math.ceil(filteredSchedules.length / ITEMS_PER_PAGE);
   const paginatedSchedules = filteredSchedules.slice((schedulerPage - 1) * ITEMS_PER_PAGE, schedulerPage * ITEMS_PER_PAGE);
 
-  // Lọc Mục 3: Task Ad-hoc (Giao lẻ)
   const opAdminTasks = tasks.filter(t => !t.fromScheduleId);
   const filteredAdhocTasks = opAdminTasks.filter(t => {
       const taskDate = new Date(t.startTime);
@@ -390,11 +402,9 @@ const TaskManager = () => {
       return matchStaff && matchDay && matchTime && matchMonth && matchYear;
   });
 
-  // Áp dụng Phân trang (Pagination) cho Mục 3
   const totalAdhocPages = Math.ceil(filteredAdhocTasks.length / ITEMS_PER_PAGE);
   const paginatedAdhocTasks = filteredAdhocTasks.slice((adhocPage - 1) * ITEMS_PER_PAGE, adhocPage * ITEMS_PER_PAGE);
 
-  // Lọc Mục 4: Lịch gốc
   const searchedAdminSchedules = schedules.filter(s => {
       if (!scheduleSearchTerm.trim()) return true;
       const term = scheduleSearchTerm.toLowerCase();
@@ -403,7 +413,6 @@ const TaskManager = () => {
       return matchTitle || matchName;
   });
 
-  // Lọc Mục 4: Task từ Scheduler 
   const generatedTasks = tasks.filter(t => t.fromScheduleId);
   const filteredGeneratedTasks = generatedTasks.filter(t => {
       const taskDate = new Date(t.startTime);
@@ -428,7 +437,6 @@ const TaskManager = () => {
       return matchStaff && matchDay && matchTime && matchMonth && matchYear;
   });
 
-  // Áp dụng Phân trang (Pagination) cho Mục 4
   const totalGenTaskPages = Math.ceil(filteredGeneratedTasks.length / ITEMS_PER_PAGE);
   const paginatedGeneratedTasks = filteredGeneratedTasks.slice((genTaskPage - 1) * ITEMS_PER_PAGE, genTaskPage * ITEMS_PER_PAGE);
 
@@ -439,7 +447,6 @@ const TaskManager = () => {
           {isScheduler ? 'LÊN LỊCH CÔNG TÁC (SCHEDULER)' : 'QUẢN LÝ NHIỆM VỤ - OPERATIONS'}
       </h2>
 
-      {/* --- DUYỆT YÊU CẦU (HIỂN THỊ CHUNG) --- */}
       {isApprover && schedules.some(s => s.request) && (
           <div style={{ background: '#fff7ed', padding: '20px', borderRadius: '16px', border: '1px solid #fed7aa', marginBottom: '24px' }}>
               <h4 style={{ color: '#c2410c', marginTop: 0 }}>⚠️ Yêu cầu điều chỉnh từ Scheduler</h4>
@@ -481,12 +488,8 @@ const TaskManager = () => {
           </div>
       )}
 
-      {/* ==============================================================
-          GIAO DIỆN ADMIN / OP ADMIN (4 THẺ CON)
-      ============================================================== */}
       {!isScheduler ? (
           <>
-             {/* MENU TỔNG QUAN */}
              {activeView === 'overview' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
                     <div style={styles.menuCard}>
@@ -495,7 +498,7 @@ const TaskManager = () => {
                             <h3 style={styles.cardTitle}>1. Giao nhiệm vụ (TASK+)</h3>
                         </div>
                         <div style={{color:'#6b7280', fontSize:'0.9rem', marginBottom:'20px'}}>Thiết lập việc mới & Mức kỷ luật.</div>
-                        <button onClick={() => { setActiveView('create_task'); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: 'ST', paymentType: '', disciplineId: '' }); }} style={styles.accessBtn}>
+                        <button onClick={() => { setActiveView('create_task'); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: 'Senior Teacher', jobCode: '', paymentType: '', disciplineId: '' }); }} style={styles.accessBtn}>
                             Truy cập <Icons.ArrowRight />
                         </button>
                     </div>
@@ -506,7 +509,7 @@ const TaskManager = () => {
                             <h3 style={styles.cardTitle}>2. Lên lịch công tác định kỳ</h3>
                         </div>
                         <div style={{color:'#6b7280', fontSize:'0.9rem', marginBottom:'20px'}}>Khởi tạo lịch làm việc lặp lại.</div>
-                        <button onClick={() => { setActiveView('create_schedule'); setEditingScheduleId(null); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: 'ST', paymentType: '', disciplineId: '' }); setScheduleConfig({ repeatWeeks: 1, days: [] }); }} style={styles.accessBtn}>
+                        <button onClick={() => { setActiveView('create_schedule'); setEditingScheduleId(null); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: 'Senior Teacher', jobCode: '', paymentType: '', disciplineId: '' }); setScheduleConfig({ repeatWeeks: 1, days: [] }); }} style={styles.accessBtn}>
                             Truy cập <Icons.ArrowRight />
                         </button>
                     </div>
@@ -535,7 +538,6 @@ const TaskManager = () => {
                 </div>
              )}
 
-             {/* MỤC 1: GIAO NHIỆM VỤ LẺ */}
              {activeView === 'create_task' && (
                  <div style={styles.formContainer}>
                     <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px'}}>
@@ -557,7 +559,16 @@ const TaskManager = () => {
                         <div>
                             <label style={styles.label}>Vai trò thực hiện</label>
                             <select value={newTask.assignedRole} onChange={e => setNewTask({...newTask, assignedRole: e.target.value})} style={styles.select}>
-                                {['ST','TT','CCS','CCO','CCA','FFM','FFS','FFA'].map(r => <option key={r} value={r}>{r}</option>)}
+                                {POSITIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label style={styles.label}>Mã công việc (Tính R)</label>
+                            <select value={newTask.jobCode || ''} onChange={e => setNewTask({...newTask, jobCode: e.target.value})} style={styles.select}>
+                                <option value="">-- Tự do / Không có mã --</option>
+                                {getStaffJobCodes(newTask.assigneeId).map(code => (
+                                    <option key={code} value={code}>{code}</option>
+                                ))}
                             </select>
                         </div>
                         <div>
@@ -588,7 +599,6 @@ const TaskManager = () => {
                  </div>
              )}
 
-             {/* MỤC 2: LÊN LỊCH ĐỊNH KỲ */}
              {activeView === 'create_schedule' && (
                  <div style={styles.formContainer}>
                     <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px'}}>
@@ -612,7 +622,16 @@ const TaskManager = () => {
                         <div>
                             <label style={styles.label}>Vai trò thực hiện</label>
                             <select value={newTask.assignedRole} onChange={e => setNewTask({...newTask, assignedRole: e.target.value})} style={styles.select}>
-                                {['ST','TT','CCS','CCO','CCA','FFM','FFS','FFA'].map(r => <option key={r} value={r}>{r}</option>)}
+                                {POSITIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label style={styles.label}>Mã công việc (Tính R)</label>
+                            <select value={newTask.jobCode || ''} onChange={e => setNewTask({...newTask, jobCode: e.target.value})} style={styles.select}>
+                                <option value="">-- Tự do / Không có mã --</option>
+                                {getStaffJobCodes(newTask.assigneeId).map(code => (
+                                    <option key={code} value={code}>{code}</option>
+                                ))}
                             </select>
                         </div>
                         <div>
@@ -651,7 +670,6 @@ const TaskManager = () => {
                  </div>
              )}
 
-             {/* MỤC 3: QUẢN LÝ TASK+ (CHỈ AD-HOC TASKS) */}
              {activeView === 'manage_tasks' && (
                  <div style={{ background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'10px', marginBottom:'20px'}}>
@@ -694,7 +712,7 @@ const TaskManager = () => {
                                  <th style={{padding:'12px', width: '50px'}}>STT</th>
                                  <th style={{padding:'12px'}}>Nhiệm vụ</th>
                                  <th style={{padding:'12px'}}>Người làm</th>
-                                 <th style={{padding:'12px'}}>Vai trò</th>
+                                 <th style={{padding:'12px'}}>Vai trò / Mã CV</th>
                                  <th style={{padding:'12px'}}>Thời gian</th>
                                  <th style={{padding:'12px'}}>Tiến độ</th>
                                  <th style={{padding:'12px'}}>Xóa</th>
@@ -709,7 +727,10 @@ const TaskManager = () => {
                                         <span style={{fontSize:'0.75rem', color:'#059669', fontWeight:'600'}}>{t.paymentType}</span>
                                     </td>
                                     <td style={{padding:'12px'}}>{t.assigneeName}</td>
-                                    <td style={{padding:'12px'}}>{t.assignedRole}</td>
+                                    <td style={{padding:'12px'}}>
+                                        <div>{t.assignedRole}</div>
+                                        {t.jobCode && <div style={{fontSize:'0.75rem', color:'#059669', fontWeight:'bold'}}>Mã: {t.jobCode}</div>}
+                                    </td>
                                     <td style={{padding:'12px'}}>{formatTaskTime(t.startTime, t.endTime)}</td>
                                     <td style={{padding:'12px'}}>{t.progress}%</td>
                                     <td style={{padding:'12px'}}>
@@ -724,7 +745,6 @@ const TaskManager = () => {
                          </table>
                      </div>
 
-                     {/* PHÂN TRANG MỤC 3 */}
                      {totalAdhocPages > 1 && (
                          <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '20px' }}>
                              <button onClick={() => setAdhocPage(p => Math.max(1, p - 1))} disabled={adhocPage === 1} style={styles.pageBtn}>Trước</button>
@@ -735,7 +755,6 @@ const TaskManager = () => {
                  </div>
              )}
 
-             {/* MỤC 4: QUẢN LÝ CÔNG TÁC ĐỊNH KỲ (ĐÃ ĐƯỢC TỐI ƯU HÓA BẰNG TABS) */}
              {activeView === 'manage_schedules' && (
                  <div style={{ background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
                     <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'10px', marginBottom:'15px'}}>
@@ -746,7 +765,6 @@ const TaskManager = () => {
                         <button onClick={() => setActiveView('overview')} style={styles.backBtn}><Icons.Back /> Ẩn</button>
                     </div>
 
-                    {/* MENU TABS CHUYỂN ĐỔI GÓC NHÌN */}
                     <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #f3f4f6', paddingBottom: '10px', overflowX: 'auto' }}>
                         <button 
                             onClick={() => { setScheduleTab('instances'); setGenTaskPage(1); }} 
@@ -762,7 +780,6 @@ const TaskManager = () => {
                         </button>
                     </div>
 
-                    {/* TAB A: CÁC CA LÀM VIỆC TỪ SCHEDULER (CÓ INLINE EDIT VÀ PHÂN TRANG) */}
                     {scheduleTab === 'instances' && (
                         <div>
                             <div style={{display:'flex', gap:'10px', flexWrap:'wrap', marginBottom:'15px'}}>
@@ -796,7 +813,7 @@ const TaskManager = () => {
                                         <th style={{padding:'12px', width: '50px'}}>STT</th>
                                         <th style={{padding:'12px'}}>Nhiệm vụ</th>
                                         <th style={{padding:'12px'}}>Người làm</th>
-                                        <th style={{padding:'12px'}}>Vai trò</th>
+                                        <th style={{padding:'12px'}}>Vai trò / Mã CV</th>
                                         <th style={{padding:'12px'}}>Thời gian (Checkin-Checkout)</th>
                                         <th style={{padding:'12px'}}>Tiến độ</th>
                                         <th style={{padding:'12px'}}>Hành động</th>
@@ -817,9 +834,15 @@ const TaskManager = () => {
                                                           {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                                       </select>
                                                   </td>
-                                                  <td style={{padding:'8px'}}>
+                                                  <td style={{padding:'8px', display:'flex', flexDirection:'column', gap:'4px'}}>
                                                       <select value={editTaskForm.assignedRole} onChange={e => setEditTaskForm({...editTaskForm, assignedRole: e.target.value})} style={{...styles.select, padding:'6px', marginTop:0}}>
-                                                          {['ST','TT','CCS','CCO','CCA','FFM','FFS','FFA'].map(r => <option key={r} value={r}>{r}</option>)}
+                                                          {POSITIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                                                      </select>
+                                                      <select value={editTaskForm.jobCode || ''} onChange={e => setEditTaskForm({...editTaskForm, jobCode: e.target.value})} style={{...styles.select, padding:'6px', marginTop:0}}>
+                                                          <option value="">-- Không mã --</option>
+                                                          {getStaffJobCodes(editTaskForm.assigneeId).map(code => (
+                                                              <option key={code} value={code}>{code}</option>
+                                                          ))}
                                                       </select>
                                                   </td>
                                                   <td style={{padding:'8px', display:'flex', flexDirection:'column', gap:'4px'}}>
@@ -836,7 +859,10 @@ const TaskManager = () => {
                                                <>
                                                   <td style={{padding:'12px'}}><strong>{t.title}</strong></td>
                                                   <td style={{padding:'12px'}}>{t.assigneeName}</td>
-                                                  <td style={{padding:'12px'}}>{t.assignedRole}</td>
+                                                  <td style={{padding:'12px'}}>
+                                                      <div>{t.assignedRole}</div>
+                                                      {t.jobCode && <div style={{fontSize:'0.75rem', color:'#059669', fontWeight:'bold'}}>Mã: {t.jobCode}</div>}
+                                                  </td>
                                                   <td style={{padding:'12px'}}>{formatTaskTime(t.startTime, t.endTime)}</td>
                                                   <td style={{padding:'12px'}}>{t.progress}%</td>
                                                   <td style={{padding:'12px'}}>
@@ -854,7 +880,6 @@ const TaskManager = () => {
                                 </table>
                             </div>
 
-                            {/* PHÂN TRANG TAB A */}
                             {totalGenTaskPages > 1 && (
                                  <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '20px' }}>
                                      <button onClick={() => setGenTaskPage(p => Math.max(1, p - 1))} disabled={genTaskPage === 1} style={styles.pageBtn}>Trước</button>
@@ -865,7 +890,6 @@ const TaskManager = () => {
                         </div>
                     )}
 
-                    {/* TAB B: LỊCH GỐC (TEMPLATES) */}
                     {scheduleTab === 'templates' && (
                         <div style={{padding:'15px', border:'1px solid #e5e7eb', borderRadius:'12px', background:'#f9fafb'}}>
                             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'10px', marginBottom:'15px'}}>
@@ -907,9 +931,6 @@ const TaskManager = () => {
              )}
           </>
       ) : (
-          // ==============================================================
-          // GIAO DIỆN SCHEDULER (GIỮ NGUYÊN VÀ CÓ PHÂN TRANG)
-          // ==============================================================
           <>
               <div style={styles.formContainer}>
                 <h4 style={{ margin: '0 0 15px 0', color: '#003366', fontWeight: '600' }}>
@@ -930,7 +951,16 @@ const TaskManager = () => {
                     <div>
                         <label style={styles.label}>Vai trò thực hiện</label>
                         <select value={newTask.assignedRole} onChange={e => setNewTask({...newTask, assignedRole: e.target.value})} style={styles.select}>
-                            {['ST','TT','CCS','CCO','CCA','FFM','FFS','FFA'].map(r => <option key={r} value={r}>{r}</option>)}
+                            {POSITIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label style={styles.label}>Mã công việc (Tính R)</label>
+                        <select value={newTask.jobCode || ''} onChange={e => setNewTask({...newTask, jobCode: e.target.value})} style={styles.select}>
+                            <option value="">-- Tự do / Không có mã --</option>
+                            {getStaffJobCodes(newTask.assigneeId).map(code => (
+                                <option key={code} value={code}>{code}</option>
+                            ))}
                         </select>
                     </div>
                     <div>
@@ -968,7 +998,7 @@ const TaskManager = () => {
                         {editingScheduleId ? 'Gửi yêu cầu điều chỉnh' : 'Lưu lịch & Tạo Tasks'}
                     </button>
                     {editingScheduleId && (
-                        <button type="button" onClick={() => { setEditingScheduleId(null); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: 'ST', paymentType: '', disciplineId: '' }); setScheduleConfig({ repeatWeeks: 1, days: [] }); }} style={{ ...styles.btnSubmit, background: '#9ca3af', marginTop: '-10px' }}>
+                        <button type="button" onClick={() => { setEditingScheduleId(null); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: 'Senior Teacher', jobCode: '', paymentType: '', disciplineId: '' }); setScheduleConfig({ repeatWeeks: 1, days: [] }); }} style={{ ...styles.btnSubmit, background: '#9ca3af', marginTop: '-10px' }}>
                             Hủy thao tác
                         </button>
                     )}
@@ -1018,7 +1048,6 @@ const TaskManager = () => {
                                 <td style={{padding:'12px'}}>{s.assigneeName} ({s.assignedRole})</td>
                                 <td style={{padding:'12px'}}>{s.repeatWeeks} tuần</td>
                                 
-                                {/* CẬP NHẬT HIỂN THỊ NGÀY THÁNG TRONG CÁC NGÀY LẶP */}
                                 <td style={{padding:'12px'}}>
                                     <div style={{display:'flex', gap:'6px', flexWrap: 'wrap'}}>
                                         {s.repeatDays && s.repeatDays.map(d => (
@@ -1048,7 +1077,6 @@ const TaskManager = () => {
                      </table>
                  </div>
 
-                 {/* PHÂN TRANG CHO TÀI KHOẢN SCHEDULER */}
                  {totalSchedulerPages > 1 && (
                      <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '20px' }}>
                          <button onClick={() => setSchedulerPage(p => Math.max(1, p - 1))} disabled={schedulerPage === 1} style={styles.pageBtn}>Trước</button>
@@ -1071,8 +1099,6 @@ const styles = {
     filterSelect: { padding: '6px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#374151', cursor: 'pointer', background:'white' },
     label: { fontSize: '0.8rem', fontWeight: 'bold', color: '#555' },
     btnSubmit: { gridColumn: '1 / -1', padding: '12px', background: '#003366', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' },
-    
-    // UI của Tab Container
     menuCard: { background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '160px' },
     iconBox: { width: '36px', height: '36px', background: '#e0f2fe', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#003366' },
     cardTitle: { margin: 0, fontSize: '1rem', fontWeight: '600', color: '#1f2937' },
