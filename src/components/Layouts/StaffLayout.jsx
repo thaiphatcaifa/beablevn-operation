@@ -91,7 +91,7 @@ const StaffLayout = () => {
 
   if (!user) return <Navigate to="/" />;
 
-  const isAdminRole = ['chief', 'reg', 'op', 'scheduler'].includes(user?.role);
+  const isAdminRole = ['admin', 'chief', 'reg', 'op', 'scheduler'].includes(user?.role);
 
   const safeStaffList = Array.isArray(staffList) ? staffList : [];
   const currentUserInfo = safeStaffList.find(s => String(s.id) === String(user.id)) || user;

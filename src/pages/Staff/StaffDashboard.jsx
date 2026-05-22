@@ -32,6 +32,9 @@ const StaffDashboard = () => {
   const { tasks, schedules } = useData();
   const [notifications, setNotifications] = useState([]);
   
+  // State quản lý việc bung rộng nội dung mô tả (Xem thêm / Thu gọn) cho từng item thông báo
+  const [expandedNotifIds, setExpandedNotifIds] = useState([]);
+
   // State lưu danh sách ID đã đọc (lấy từ localStorage)
   const [readNotiIds, setReadNotiIds] = useState(() => {
       const saved = localStorage.getItem('readNotifications');
@@ -77,14 +80,13 @@ const StaffDashboard = () => {
               isNew: (new Date() - new Date(t.adminEditTime)) < 259200000
           }));
 
-      // 4. Gộp và lọc bỏ các thông báo đã đọc
+      // 4. ĐÃ ĐIỀU CHỈNH: Gộp và sắp xếp thông báo theo thời gian (Không dùng .filter loại bỏ phần tử đã đọc nữa)
       const combined = [...recentTasks, ...recentSchedules, ...adminEdits]
-          .filter(n => !readNotiIds.includes(n.id)) // Lọc bỏ đã đọc
           .sort((a, b) => new Date(b.time) - new Date(a.time));
 
       setNotifications(combined);
 
-  }, [tasks, schedules, user, readNotiIds]);
+  }, [tasks, schedules, user]);
 
   // Hàm xử lý khi bấm "Đã xem"
   const markAsRead = (id) => {
@@ -93,67 +95,119 @@ const StaffDashboard = () => {
       localStorage.setItem('readNotifications', JSON.stringify(newReadIds));
   };
 
+  // Hàm xử lý việc chuyển đổi trạng thái Xem thêm / Thu gọn
+  const toggleExpand = (id) => {
+      if (expandedNotifIds.includes(id)) {
+          setExpandedNotifIds(expandedNotifIds.filter(item => item !== id));
+      } else {
+          setExpandedNotifIds([...expandedNotifIds, id]);
+      }
+  };
+
   return (
-    <div style={{ paddingBottom: '20px' }}>
+    <div style={{ paddingBottom: '20px', boxSizing: 'border-box' }}>
         <h3 style={{ margin: '0 0 20px 0', color: '#111827', fontSize: '1.2rem', fontWeight: 'bold' }}>Thông báo</h3>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            {notifications.map(notif => (
-                <div key={notif.id} style={{
-                    background: 'white', padding: '16px', borderRadius: '12px',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                    borderLeft: notif.type === 'schedule' ? '4px solid #f59e0b' : (notif.type === 'admin_edit' ? '4px solid #059669' : '4px solid #003366'),
-                    position: 'relative'
-                }}>
-                    {notif.isNew && (
-                        <span style={{
-                            position: 'absolute', top: '12px', right: '12px',
-                            background: '#ef4444', color: 'white', fontSize: '0.65rem', fontWeight: 'bold',
-                            padding: '2px 6px', borderRadius: '4px'
-                        }}>Mới</span>
-                    )}
-                    
-                    <div style={{display:'flex', gap:'12px', alignItems: 'flex-start'}}>
-                        <div style={{
-                            minWidth:'40px', height:'40px', borderRadius:'50%', 
-                            background: notif.type === 'schedule' ? '#fffbeb' : (notif.type === 'admin_edit' ? '#ecfdf5' : '#eff6ff'),
-                            display:'flex', alignItems:'center', justifyContent:'center',
-                            marginTop: '2px'
-                        }}>
-                            {notif.type === 'schedule' ? <Icons.Schedule /> : (notif.type === 'admin_edit' ? <Icons.EditAdmin /> : <Icons.Task />)}
-                        </div>
-                        <div style={{flex:1}}>
-                            <div style={{fontWeight:'700', fontSize:'0.95rem', color:'#1f2937', marginBottom: '4px', paddingRight: '35px'}}>
-                                {notif.title}
+            {notifications.map(notif => {
+                const isRead = readNotiIds.includes(notif.id);
+                const isExpanded = expandedNotifIds.includes(notif.id);
+
+                // CSS Line-clamp tích hợp inline linh hoạt tối ưu cho cả desktop và mobile
+                const lineClampStyle = isExpanded ? {
+                    fontSize: '0.85rem', color: isRead ? '#6b7280' : '#4b5563', marginBottom: '4px', lineHeight: '1.4'
+                } : {
+                    fontSize: '0.85rem', color: isRead ? '#6b7280' : '#4b5563', marginBottom: '4px', lineHeight: '1.4',
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis'
+                };
+
+                return (
+                    <div key={notif.id} style={{
+                        // ĐÃ ĐIỀU CHỈNH: Thay đổi giao diện nền và độ mờ opacity nếu thông báo đã đọc
+                        background: isRead ? '#f9fafb' : 'white', 
+                        opacity: isRead ? 0.65 : 1,
+                        padding: '16px', borderRadius: '12px',
+                        boxShadow: isRead ? 'none' : '0 2px 4px rgba(0,0,0,0.05)',
+                        border: isRead ? '1px solid #e5e7eb' : 'none',
+                        borderLeft: notif.type === 'schedule' ? '4px solid #f59e0b' : (notif.type === 'admin_edit' ? '4px solid #059669' : '4px solid #003366'),
+                        position: 'relative',
+                        transition: 'all 0.2s ease-in-out'
+                    }}>
+                        {!isRead && notif.isNew && (
+                            <span style={{
+                                position: 'absolute', top: '12px', right: '12px',
+                                background: '#ef4444', color: 'white', fontSize: '0.65rem', fontWeight: 'bold',
+                                padding: '2px 6px', borderRadius: '4px'
+                            }}>Mới</span>
+                        )}
+                        
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                            <div style={{
+                                minWidth: '40px', height: '40px', borderRadius: '50%', 
+                                background: notif.type === 'schedule' ? '#fffbeb' : (notif.type === 'admin_edit' ? '#ecfdf5' : '#eff6ff'),
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                marginTop: '2px'
+                            }}>
+                                {notif.type === 'schedule' ? <Icons.Schedule /> : (notif.type === 'admin_edit' ? <Icons.EditAdmin /> : <Icons.Task />)}
                             </div>
-                            <div style={{fontSize:'0.85rem', color:'#4b5563', marginBottom:'8px', lineHeight: '1.4'}}>
-                                {notif.desc}
-                            </div>
-                            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:'8px'}}>
-                                <div style={{display:'flex', alignItems:'center', gap:'4px', fontSize:'0.75rem', color:'#9ca3af'}}>
-                                    <Icons.Clock /> {formatNotiTime(notif.time)}
+                            <div style={{ flex: 1, minWidth: 0 }}> {/* Khắc phục lỗi tràn layout text trên mobile với minWidth: 0 */}
+                                <div style={{ fontWeight: '700', fontSize: '0.95rem', color: isRead ? '#4b5563' : '#1f2937', marginBottom: '4px', paddingRight: '35px', wordBreak: 'break-word' }}>
+                                    {notif.title}
                                 </div>
-                                {/* NÚT ĐÃ XEM */}
-                                <button 
-                                    onClick={() => markAsRead(notif.id)}
-                                    style={{
-                                        border: '1px solid #d1d5db', background: 'white', color: '#4b5563',
-                                        padding: '4px 8px', borderRadius: '6px', cursor: 'pointer',
-                                        fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px'
-                                    }}
-                                >
-                                    <Icons.Check /> Đã xem
-                                </button>
+                                
+                                {/* Khối text nội dung áp dụng line-clamp */}
+                                <div style={lineClampStyle}>
+                                    {notif.desc}
+                                </div>
+
+                                {/* ĐÃ BỔ SUNG: Nút "Xem thêm / Thu gọn" khi chuỗi text dài quá 2 dòng hoặc đang được bung ra */}
+                                {(notif.desc && notif.desc.length > 60) && (
+                                    <button 
+                                        type="button"
+                                        onClick={() => toggleExpand(notif.id)}
+                                        style={{
+                                            background: 'none', border: 'none', padding: '0',
+                                            color: '#2563eb', fontSize: '0.8rem', fontWeight: '600',
+                                            cursor: 'pointer', marginBottom: '8px', display: 'block',
+                                            outline: 'none', WebkitTapHighlightColor: 'transparent'
+                                        }}
+                                    >
+                                        {isExpanded ? 'Thu gọn' : 'Xem thêm'}
+                                    </button>
+                                )}
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', gap: '10px', flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#9ca3af' }}>
+                                        <Icons.Clock /> {formatNotiTime(notif.time)}
+                                    </div>
+                                    
+                                    {/* ĐÃ ĐIỀU CHỈNH: Cập nhật cơ chế hiển thị button sang Đã đọc & vô hiệu hóa (disabled) */}
+                                    <button 
+                                        onClick={() => !isRead && markAsRead(notif.id)}
+                                        disabled={isRead}
+                                        style={{
+                                            border: '1px solid #d1d5db', 
+                                            background: isRead ? '#f3f4f6' : 'white', 
+                                            color: isRead ? '#9ca3af' : '#4b5563',
+                                            padding: '4px 8px', borderRadius: '6px', 
+                                            cursor: isRead ? 'not-allowed' : 'pointer',
+                                            fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px',
+                                            WebkitTapHighlightColor: 'transparent'
+                                        }}
+                                    >
+                                        <Icons.Check /> {isRead ? 'Đã đọc' : 'Đã xem'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            ))}
+                );
+            })}
 
             {notifications.length === 0 && (
-                <div style={{textAlign:'center', color:'#9ca3af', marginTop:'60px', fontStyle: 'italic', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'}}>
-                    <div style={{fontSize: '3rem'}}>🎉</div>
-                    <div>Bạn đã xem hết các thông báo mới!</div>
+                <div style={{ textAlign: 'center', color: '#9ca3af', marginTop: '60px', fontStyle: 'italic', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ fontSize: '3rem' }}>🎉</div>
+                    <div>Bạn không có thông báo nào!</div>
                 </div>
             )}
         </div>

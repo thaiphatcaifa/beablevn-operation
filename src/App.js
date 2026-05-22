@@ -28,8 +28,11 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
     return <Navigate to="/" replace />;
   }
 
-  // 2. Nếu route yêu cầu quyền admin mà user không phải admin, chuyển hướng về /staff
-  if (requireAdmin && user.role !== 'admin') {
+  // DANH SÁCH CÁC ROLE CÓ QUYỀN TRUY CẬP TRANG QUẢN TRỊ (ADMIN PORTAL)
+  const adminRoles = ['admin', 'chief', 'reg', 'op', 'scheduler'];
+
+  // 2. Nếu route yêu cầu quyền admin mà user không nằm trong danh sách phân quyền admin, chuyển hướng về /staff
+  if (requireAdmin && !adminRoles.includes(user.role)) {
     return <Navigate to="/staff" replace />;
   }
 
