@@ -1,0 +1,49 @@
+{
+  "staff": [
+    {
+      "id": 1,
+      "username": "chief",
+      "password": "123",
+      "name": "Tổng Giám đốc",
+      "role": "chief",
+      "status": "active",
+      "phone": "0909111222",
+      "email": "ceo@company.com",
+      "department": "Board",
+      "title": "CEO"
+    },
+    {
+      "id": 2,
+      "username": "reg",
+      "password": "123",
+      "name": "Giám đốc Cấp cao",
+      "role": "reg",
+      "status": "active",
+      "department": "Legal & Compliance",
+      "title": "Head of Legal"
+    },
+    {
+      "id": 3,
+      "username": "op",
+      "password": "123",
+      "name": "Quản lý Vận Hành",
+      "role": "op",
+      "status": "active",
+      "department": "Operations",
+      "title": "COO"
+    },
+    {
+      "id": 4,
+      "username": "nv1",
+      "password": "123",
+      "name": "Bì Ấy Bồ",
+      "role": "staff",
+      "status": "active",
+      "phone": "0912345678",
+      "email": "nva@company.com",
+      "department": "Sales",
+      "title": "Salesman"
+    }
+  ],
+  "tasks": []
+}

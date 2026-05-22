@@ -1,0 +1,51 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "staff": {
+      ".read": true,
+      ".write": true
+    },
+    
+    "tasks": {
+      ".read": true,
+      ".write": true
+    },
+    
+    "schedules": {
+      ".read": true,
+      ".write": true
+    },
+    
+    "shifts": {
+      ".read": true,
+      ".write": true
+    },
+    
+    "attendance": {
+      ".read": true,
+      ".write": true
+    },
+    
+    "facilityLogs": {
+      ".read": true,
+      ".write": true
+    },
+    
+    "disciplineTypes": {
+      ".read": true,
+      ".write": true
+    },
+
+    "disciplineRecords": {
+      ".read": true,
+      ".write": true
+    },
+
+    "payrollRecords": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}

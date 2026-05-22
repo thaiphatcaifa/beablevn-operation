@@ -1,0 +1,223 @@
+/* Tổng thể ứng dụng */
+.App {
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #fffaf5; /* Màu nền nhẹ nhàng giúp sản phẩm nổi bật */
+  min-height: 100vh;
+}
+
+/* Thanh điều hướng */
+.nav-list {
+  background-color: #fff;
+  padding: 15px;
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.nav-list a {
+  text-decoration: none;
+  color: #d35400; /* Màu nâu bánh nướng */
+  font-weight: bold;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  padding: 5px 10px;
+  border-radius: 5px;
+}
+
+.nav-list a:hover {
+  background-color: #fff4e6;
+  color: #e67e22;
+}
+
+/* --- GIAO DIỆN SẢN PHẨM --- */
+/* Thẻ card sản phẩm */
+.card {
+  border: 1px solid #eee;
+  padding: 20px;
+  border-radius: 20px;
+  text-align: center;
+  background-color: #ffffff;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  margin: 10px;
+  position: relative;
+}
+
+/* Hiệu ứng nổi bật khi rê chuột vào card */
+.card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+}
+
+/* CONTAINER BAO QUANH ẢNH ĐỂ TẠO VIỀN KIM TUYẾN */
+.img-container {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  margin-bottom: 20px;
+  border-radius: 15px;
+  overflow: hidden; /* Cắt bớt phần thừa của hiệu ứng xoay */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f1f1f1;
+}
+
+/* Hiệu ứng luồng sáng chạy quanh (Kim tuyến xoay vòng) */
+.img-container::before {
+  content: '';
+  position: absolute;
+  width: 150%;
+  height: 150%;
+  background-image: conic-gradient(
+    transparent, 
+    #ffccbc, 
+    #e67e22, 
+    #fff, 
+    #ffd700, 
+    transparent 30%
+  );
+  animation: rotate-glitter 4s linear infinite;
+  z-index: 1;
+}
+
+/* Lớp đè để tạo độ dày cho viền */
+.img-container::after {
+  content: '';
+  position: absolute;
+  inset: 4px; /* Độ dày của viền sáng */
+  background: white;
+  border-radius: 12px;
+  z-index: 2;
+}
+
+/* Định dạng hình ảnh chính */
+.card img {
+  position: relative;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  object-fit: cover;
+  border-radius: 10px;
+  z-index: 3; /* Hiển thị trên cùng các lớp hiệu ứng */
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+/* Hiệu ứng khi hover vào card: luồng sáng chạy nhanh hơn và đổi màu */
+.card:hover .img-container::before {
+  background-image: conic-gradient(
+    transparent, 
+    #ff4757, 
+    #ffd700, 
+    #ffffff, 
+    #ff4757, 
+    transparent 40%
+  );
+  animation-duration: 2s;
+}
+
+/* Animation xoay vòng cho viền sáng */
+@keyframes rotate-glitter {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.card h3 {
+  color: #2d3436;
+  font-size: 1.4rem;
+  margin: 10px 0;
+}
+
+.card p {
+  color: #d35400;
+  font-weight: bold;
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+}
+
+/* Trang trí nút Mua ngay khối nổi (3D Effect) */
+.card button {
+  background-color: #e67e22;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  font-size: 1rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 5px 0 #d35400; 
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.card button:hover {
+  background-color: #f39c12;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 0 #e67e22;
+}
+
+.card button:active {
+  box-shadow: 0 2px 0 #d35400;
+  transform: translateY(3px);
+}
+
+/* --- BỘ SƯU TẬP (GALLERY) --- */
+.gallery-section {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.gallery-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.gallery-item {
+  width: 300px;
+  height: 300px;
+  object-fit: cover;
+  border-radius: 15px;
+  border: 8px solid #ffffff; 
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  transition: all 0.4s ease;
+}
+
+.gallery-item:hover {
+  transform: scale(1.05) rotate(2deg);
+  border-color: #ff4757;
+  box-shadow: 0 10px 25px rgba(255, 71, 87, 0.4);
+}
+
+/* --- TRANG ABOUT (GIỚI THIỆU) --- */
+.about-container {
+  padding: 60px 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.about-logo {
+  width: 250px;
+  height: auto;
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+  margin-bottom: 30px;
+  filter: drop-shadow(0 5px 15px rgba(0,0,0,0.1));
+}
+
+.about-image img {
+  width: 100%;
+  max-width: 700px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  margin-top: 30px;
+  border: 10px solid white;
+}
