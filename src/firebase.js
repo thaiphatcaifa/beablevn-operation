@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getDatabase } from "firebase/database"; 
+import { getDatabase, ref, update } from "firebase/database"; 
 import { getAuth } from "firebase/auth";
 import { getMessaging, getToken, onMessage } from "firebase/messaging"; // Import thêm các hàm FCM
 
@@ -20,15 +20,25 @@ export const auth = getAuth(app);
 export const messaging = getMessaging(app); // Khởi tạo Messaging
 
 // Hàm yêu cầu cấp quyền và lấy FCM Token
-export const requestForToken = async () => {
+export const requestForToken = async (userId) => {
   try {
     const currentToken = await getToken(messaging, { 
       vapidKey: 'BPgCtTrlZjXsoVco8xzaHzlub-jt4nLFZZVprTLiXpQDqSt6gkVLiLIH_mEEiiy0EEyd88Y0zVpfTn-BzgV7wjs' 
     });
     if (currentToken) {
       console.log('FCM Token:', currentToken);
-      // TODO: Bạn có thể lưu currentToken này lên database (Realtime Database)
-      // gắn với tài khoản Staff hiện tại để backend biết phải gửi thông báo cho ai.
+      
+      // Tự động ghi đè/cập nhật token này vào đường dẫn staff/' + userId + '/fcmToken trên Realtime Database
+      if (userId) {
+        const tokenRef = ref(db, 'staff/' + userId);
+        await update(tokenRef, {
+          fcmToken: currentToken
+        });
+        console.log('Đã cập nhật FCM Token lên Realtime Database thành công cho user:', userId);
+      } else {
+        console.log('Không có userId được cung cấp, bỏ qua cập nhật Database.');
+      }
+
       return currentToken;
     } else {
       console.log('Không thể lấy được token. Người dùng chưa cấp quyền.');

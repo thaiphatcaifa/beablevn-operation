@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
 
 import LoginForm from './components/LoginForm';
@@ -13,11 +13,28 @@ import DisciplineManager from './pages/Admin/DisciplineManager';
 import Reports from './pages/Admin/Reports';
 
 // --- IMPORT STAFF PAGES ---
-import StaffDashboard from './pages/Staff/StaffDashboard'; // <--- 1. IMPORT MỚI
+import StaffDashboard from './pages/Staff/StaffDashboard';
 import Attendance from './pages/Staff/Attendance';
 import MyTasks from './pages/Staff/MyTasks';
 import FacilityCheck from './pages/Staff/FacilityCheck';
 import Performance from './pages/Staff/Performance';
+
+// --- THÊM MỚI: COMPONENT BỌC BẢO VỆ ĐỊNH TUYẾN (PROTECTED ROUTE) ---
+const ProtectedRoute = ({ children, requireAdmin = false }) => {
+  const { user } = useAuth();
+
+  // 1. Nếu không có user (chưa đăng nhập), điều hướng ngay về trang Login (/)
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  // 2. Nếu route yêu cầu quyền admin mà user không phải admin, chuyển hướng về /staff
+  if (requireAdmin && user.role !== 'admin') {
+    return <Navigate to="/staff" replace />;
+  }
+
+  return children;
+};
 
 function App() {
   return (
@@ -26,8 +43,15 @@ function App() {
         <Routes>
           <Route path="/" element={<LoginForm />} />
           
-          {/* --- ADMIN ROUTES --- */}
-          <Route path="/admin" element={<AdminLayout />}>
+          {/* --- ADMIN ROUTES (Đã được bọc bảo vệ nghiêm ngặt yêu cầu quyền admin) --- */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<Navigate to="staff-manager" />} />
             <Route path="staff-manager" element={<StaffManager />} />
             <Route path="task-manager" element={<TaskManager />} />
@@ -35,14 +59,18 @@ function App() {
             <Route path="reports" element={<Reports />} />
           </Route>
 
-          {/* --- STAFF ROUTES --- */}
-          <Route path="/staff" element={<StaffLayout />}>
+          {/* --- STAFF ROUTES (Đã được bọc bảo vệ yêu cầu đăng nhập thành viên) --- */}
+          <Route 
+            path="/staff" 
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <StaffLayout />
+              </ProtectedRoute>
+            }
+          >
             {/* Khi vào /staff sẽ tự chuyển hướng vào Dashboard */}
             <Route index element={<Navigate to="dashboard" />} /> 
-            
-            {/* <--- 2. THÊM ROUTE CHO DASHBOARD TẠI ĐÂY */}
             <Route path="dashboard" element={<StaffDashboard />} />
-            
             <Route path="attendance" element={<Attendance />} />
             <Route path="my-tasks" element={<MyTasks />} />
             <Route path="facility-check" element={<FacilityCheck />} />
@@ -50,7 +78,7 @@ function App() {
           </Route>
 
           {/* Catch-all: Chuyển về Login nếu không tìm thấy trang */}
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </DataProvider>
     </AuthProvider>

@@ -4,48 +4,48 @@
     ".write": false,
 
     "staff": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
     
     "tasks": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
     
     "schedules": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
     
     "shifts": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
     
     "attendance": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
     
     "facilityLogs": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
     
     "disciplineTypes": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
 
     "disciplineRecords": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
 
     "payrollRecords": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null && root.child('staff').child(auth.uid).child('role').val() == 'admin'",
+      ".write": "auth != null && root.child('staff').child(auth.uid).child('role').val() == 'admin'"
     }
   }
 }
