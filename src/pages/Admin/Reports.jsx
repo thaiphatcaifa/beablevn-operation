@@ -1,7 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
+// --- BỘ ICON MINIMALIST (ĐÃ FIX LỖI TÊN ICON) ---
+const Icons = {
+  Report: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" /><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" /></svg>),
+  Finance: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#0369a1" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>),
+  Task: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#059669" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>),
+  Warning: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#ea580c" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>),
+  Facility: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>),
+  Schedule: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>),
+  Print: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" /></svg>),
+  ArrowRight: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>),
+  Back: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>),
+  Lock: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>)
+};
+
+// --- HELPER FUNCTIONS ---
 const parseAmount = (val) => {
     if (val === undefined || val === null || val === '') return 0;
     const clean = String(val).replace(/,/g, '').replace(/\s/g, '');
@@ -24,7 +39,7 @@ const isSameWeek = (d1, d2) => {
 const formatDateTime = (isoString) => {
     if (!isoString) return '---';
     const d = new Date(isoString);
-    return `${d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} ${d.getDate()}/${d.getMonth()+1}`;
+    return `${d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}`;
 };
 
 const toDateTimeLocal = (isoString) => {
@@ -35,14 +50,11 @@ const toDateTimeLocal = (isoString) => {
 
 const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCheckOut, isAdminEdited = false) => {
     if (!schedStart || !schedEnd || !actualCheckIn || !actualCheckOut) return 0;
-    
     const sStart = new Date(schedStart);
     const sEnd = new Date(schedEnd);
     const aIn = new Date(actualCheckIn);
     const aOut = new Date(actualCheckOut);
-
     let diffMs = 0;
-
     if (isAdminEdited) {
         const scheduledMs = sEnd - sStart;
         const actualMs = aOut - aIn;
@@ -50,24 +62,15 @@ const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCh
     } else {
         let calcStart = aIn > sStart ? aIn : sStart;
         let calcEnd;
-        
-        if (aOut > sEnd) {
-            calcEnd = sEnd;
-        } else {
+        if (aOut > sEnd) calcEnd = sEnd;
+        else {
             const diffMinutesEarly = (sEnd - aOut) / 60000;
-            if (diffMinutesEarly <= 10) {
-                calcEnd = sEnd; 
-            } else {
-                calcEnd = aOut;
-            }
+            calcEnd = diffMinutesEarly <= 10 ? sEnd : aOut;
         }
         diffMs = calcEnd - calcStart;
     }
-
     if (diffMs < 0) return 0;
-
-    const totalMinutes = Math.floor(diffMs / (1000 * 60));
-    return totalMinutes / 60; 
+    return Math.floor(diffMs / 60000) / 60; 
 };
 
 const calculateWorkHours = (schedStart, schedEnd, actualCheckIn, actualCheckOut, isAdminEdited = false) => {
@@ -78,7 +81,6 @@ const calculateWorkHours = (schedStart, schedEnd, actualCheckIn, actualCheckOut,
     return `${h}h ${m < 10 ? '0' + m : m}p`;
 };
 
-// Hàm lấy Mức tiền Thù lao (R) dựa trên Mã công việc (hoặc Vai trò)
 const getMatchedRate = (staffRems, task) => {
     if (!staffRems || !Array.isArray(staffRems)) return 0;
     const matched = staffRems.find(rem => {
@@ -98,16 +100,18 @@ const getMatchedRate = (staffRems, task) => {
     return matched ? parseAmount(matched.amount) : 0;
 };
 
-const Icons = {
-  Finance: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>),
-  Facility: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>),
-  Task: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" /></svg>),
-  Schedule: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>),
-  Print: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" /></svg>),
-  ArrowRight: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>),
-  Back: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>),
-  Lock: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>)
+const generateMonthYearOptions = () => {
+    const options = [];
+    const d = new Date();
+    for (let i = 0; i < 12; i++) {
+        const month = d.getMonth() + 1;
+        const year = d.getFullYear();
+        options.push({ value: `${year}-${String(month).padStart(2, '0')}`, label: `Tháng ${month}/${year}` });
+        d.setMonth(d.getMonth() - 1);
+    }
+    return options;
 };
+const monthYearOptions = generateMonthYearOptions();
 
 const Reports = () => {
   const { user } = useAuth();
@@ -115,6 +119,7 @@ const Reports = () => {
   
   const [activeTab, setActiveTab] = useState('overview'); 
 
+  // Filters
   const [attendanceFilter, setAttendanceFilter] = useState('all'); 
   const [attendanceStaffFilter, setAttendanceStaffFilter] = useState('all'); 
   const [attendanceDayFilter, setAttendanceDayFilter] = useState('all'); 
@@ -150,6 +155,8 @@ const Reports = () => {
       { key: 'Sun', label: 'Chủ Nhật', val: 0 }
   ];
 
+  const isChief = user?.role === 'chief';
+
   const handlePrint = () => { window.print(); };
 
   const handleSaveAttendanceEdit = (taskId) => {
@@ -179,7 +186,7 @@ const Reports = () => {
   const scheduleTasks = safeTasks.filter(t => t.fromScheduleId);
 
   // ==============================================================
-  // 1. LOGIC TÀI CHÍNH (CẬP NHẬT CÔNG THỨC MỚI NHẤT)
+  // 1. LOGIC TÀI CHÍNH
   // ==============================================================
   let totalEstimatedCost = 0;
   let financeRows = [];
@@ -211,7 +218,6 @@ const Reports = () => {
           let R_Secondary = 0;
           let hoursSecondaryPartTime = 0;
 
-          // Lấy danh sách Role là UBI Phụ cố định
           const ubiRoles = [];
           let secUbiTotal = 0;
           if (staff.secondaryUBIs && staff.secondaryUBIs.length > 0) {
@@ -244,7 +250,6 @@ const Reports = () => {
               }
           });
 
-          // Xử lý R của UBI 1 (Chỉ tính khi vượt Threshold, ưu tiên dùng giờ có Rate thấp để trừ Threshold)
           let R_UBI1 = 0;
           const minHours = parseAmount(staff.minWorkHours);
           if (hoursUBI1 > minHours) {
@@ -272,7 +277,6 @@ const Reports = () => {
           
           const totalFixedSalary = baseUbi + secUbiTotal + allowance;
 
-          // BHXH chỉ tính trên UBI 1 (Base + R của UBI1)
           const incomeForBHXH = baseUbi + R_UBI1;
           const bhxhDeduction = incomeForBHXH * 0.105;
 
@@ -316,6 +320,9 @@ const Reports = () => {
       }
   };
 
+  // ==============================================================
+  // 2. LOGIC FACILITY
+  // ==============================================================
   const availableAreas = [...new Set(safeFacilityLogs.map(l => l.area).filter(Boolean))];
   const availableReporters = [...new Set(safeFacilityLogs.map(l => l.staffName).filter(Boolean))];
 
@@ -335,10 +342,12 @@ const Reports = () => {
               return false;
           }
       }
-
       return true;
   });
 
+  // ==============================================================
+  // 3. LOGIC TASKS (OP ADMIN)
+  // ==============================================================
   const filteredOpTasks = opAdminTasks.filter(t => {
       if (taskStaffFilter !== 'all' && String(t.assigneeId) !== String(taskStaffFilter)) return false;
       
@@ -356,6 +365,9 @@ const Reports = () => {
   const completedTasks = filteredOpTasks.filter(t => t.status === 'completed').length;
   const taskProgress = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
+  // ==============================================================
+  // 4. LOGIC ATTENDANCE
+  // ==============================================================
   const filteredAttendance = scheduleTasks.filter(t => {
       const taskDate = new Date(t.startTime);
       const now = new Date();
@@ -379,57 +391,57 @@ const Reports = () => {
   });
 
   const renderDashboard = () => (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-          {user?.role === 'chief' && (
-              <div style={styles.menuCard}>
-                  <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'15px'}}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+          {isChief && (
+              <div className="menu-card" style={styles.menuCard} onClick={() => setActiveTab('finance')}>
+                  <div style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:'16px'}}>
                       <div style={styles.iconBox}><Icons.Finance /></div>
                       <h3 style={styles.cardTitle}>Tài chính & Thu nhập</h3>
                   </div>
-                  <div style={{color:'#6b7280', fontSize:'0.9rem', marginBottom:'20px'}}>
-                      Tổng chi (Net) (Tháng {Number(selMonth)}/{selYear}): <strong style={{color:'#059669'}}>{Math.round(totalEstimatedCost).toLocaleString()} VNĐ</strong>
+                  <div style={{color:'#6b7280', fontSize:'0.95rem', marginBottom:'24px', lineHeight: '1.5'}}>
+                      Tổng chi (Net) (Tháng {Number(selMonth)}/{selYear}): <br/><strong style={{color:'#059669', fontSize: '1.15rem'}}>{Math.round(totalEstimatedCost).toLocaleString()} VNĐ</strong>
                   </div>
-                  <button onClick={() => setActiveTab('finance')} style={styles.accessBtn}>
+                  <button style={styles.accessBtn}>
                       Truy cập <Icons.ArrowRight />
                   </button>
               </div>
           )}
 
-          <div style={styles.menuCard}>
-              <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'15px'}}>
-                  <div style={styles.iconBox}><Icons.Facility /></div>
-                  <h3 style={styles.cardTitle}>Tình trạng Cơ sở vật chất</h3>
+          <div className="menu-card" style={styles.menuCard} onClick={() => setActiveTab('facility')}>
+              <div style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:'16px'}}>
+                  <div style={{...styles.iconBox, background: '#fffbeb', color: '#d97706'}}><Icons.Facility /></div>
+                  <h3 style={styles.cardTitle}>Cơ sở vật chất</h3>
               </div>
-              <div style={{color:'#6b7280', fontSize:'0.9rem', marginBottom:'20px'}}>
-                  Báo cáo mới: <strong>{filteredFacilityLogs.length}</strong>
+              <div style={{color:'#6b7280', fontSize:'0.95rem', marginBottom:'24px', lineHeight: '1.5'}}>
+                  Báo cáo mới ghi nhận: <strong style={{color: '#111827'}}>{filteredFacilityLogs.length}</strong>
               </div>
-              <button onClick={() => setActiveTab('facility')} style={styles.accessBtn}>
+              <button style={{...styles.accessBtn, background: '#fffbeb', color: '#d97706'}}>
                   Truy cập <Icons.ArrowRight />
               </button>
           </div>
 
-          <div style={styles.menuCard}>
-              <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'15px'}}>
-                  <div style={styles.iconBox}><Icons.Schedule /></div>
+          <div className="menu-card" style={styles.menuCard} onClick={() => setActiveTab('attendance')}>
+              <div style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:'16px'}}>
+                  <div style={{...styles.iconBox, background: '#ecfdf5', color: '#059669'}}><Icons.Schedule /></div>
                   <h3 style={styles.cardTitle}>Báo cáo Chấm công</h3>
               </div>
-              <div style={{color:'#6b7280', fontSize:'0.9rem', marginBottom:'20px'}}>
-                  Dữ liệu chấm công theo lịch Scheduler.
+              <div style={{color:'#6b7280', fontSize:'0.95rem', marginBottom:'24px', lineHeight: '1.5'}}>
+                  Dữ liệu chấm công theo lịch (Scheduler).
               </div>
-              <button onClick={() => setActiveTab('attendance')} style={styles.accessBtn}>
+              <button style={{...styles.accessBtn, background: '#ecfdf5', color: '#059669'}}>
                   Truy cập <Icons.ArrowRight />
               </button>
           </div>
 
-          <div style={styles.menuCard}>
-              <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'15px'}}>
-                  <div style={styles.iconBox}><Icons.Task /></div>
-                  <h3 style={styles.cardTitle}>Tiến độ Công việc (Op Admin)</h3>
+          <div className="menu-card" style={styles.menuCard} onClick={() => setActiveTab('tasks')}>
+              <div style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:'16px'}}>
+                  <div style={{...styles.iconBox, background: '#fdf2f8', color: '#be185d'}}><Icons.Task /></div>
+                  <h3 style={styles.cardTitle}>Tiến độ Nhiệm vụ</h3>
               </div>
-              <div style={{color:'#6b7280', fontSize:'0.9rem', marginBottom:'20px'}}>
-                  Tổng: <strong>{totalTasks}</strong> | Xong: <strong>{completedTasks}</strong>
+              <div style={{color:'#6b7280', fontSize:'0.95rem', marginBottom:'24px', lineHeight: '1.5'}}>
+                  Tổng: <strong style={{color: '#111827'}}>{totalTasks}</strong> | Xong: <strong style={{color: '#111827'}}>{completedTasks}</strong>
               </div>
-              <button onClick={() => setActiveTab('tasks')} style={styles.accessBtn}>
+              <button style={{...styles.accessBtn, background: '#fdf2f8', color: '#be185d'}}>
                   Truy cập <Icons.ArrowRight />
               </button>
           </div>
@@ -437,20 +449,61 @@ const Reports = () => {
   );
 
   return (
-    <div style={{ paddingBottom: '40px' }} className="reports-page">
+    <div style={{ paddingBottom: '40px', boxSizing: 'border-box' }} className="reports-page">
       <style>{`
         @media print {
-          .admin-sidebar, .admin-header-mobile, .admin-bottom-nav, .btn-print, .filter-select, .nav-back-btn, .action-col, .lock-btn-container { display: none !important; }
+          .admin-sidebar, .admin-header-mobile, .admin-bottom-nav, .btn-print, .filter-modern, .nav-back-btn, .action-col, .lock-btn-container { display: none !important; }
           .admin-content { margin: 0 !important; padding: 20px !important; width: 100% !important; }
           body { background: white; -webkit-print-color-adjust: exact; }
           .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
         }
-        .filter-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        
+        .filter-group { display: flex; gap: 12px; flex-wrap: wrap; }
+        .filter-modern {
+            padding: 12px 16px; border-radius: 12px; border: 1px solid #e2e8f0; outline: none;
+            font-weight: 600; color: #334155; background: #ffffff; cursor: pointer; font-size: 0.95rem;
+            transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.02); appearance: none; -webkit-appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%239ca3af" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat; background-position: right 12px center; padding-right: 40px; min-width: 150px;
+        }
+        .filter-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+        .input-modern {
+            padding: 12px 14px; border-radius: 10px; border: 1px solid #e2e8f0; outline: none; font-size: 0.95rem; width: 100%; box-sizing: border-box; transition: all 0.2s; background: white;
+        }
+        .input-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+        
+        .menu-card { transition: all 0.25s ease; cursor: pointer; }
+        .menu-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -8px rgba(0,0,0,0.1) !important; border-color: #bae6fd !important; }
+        .table-row { transition: background 0.2s; }
+        .table-row:hover { background: #f8fafc !important; }
+        
+        /* Chống tràn cho bảng */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 8px;
+        }
+        
+        /* Chống tràn cho nội dung text dính liền */
+        .text-wrap-title { 
+            word-break: break-all;
+            overflow-wrap: break-word; 
+            white-space: normal; 
+            min-width: 250px; 
+            line-height: 1.5; 
+        }
+        .text-wrap-name {
+            word-break: break-word; 
+            white-space: normal; 
+            min-width: 150px; 
+            line-height: 1.5;
+        }
       `}</style>
 
       {/* HEADER + NÚT IN */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e5e7eb', paddingBottom: '15px', marginBottom: '20px' }}>
-         <h2 style={{ color: '#003366', margin: 0, fontWeight: 'bold', fontSize: '1.5rem' }}>BÁO CÁO QUẢN TRỊ</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e5e7eb', paddingBottom: '16px', marginBottom: '32px' }}>
+         <h2 style={{ color: '#111827', margin: 0, fontWeight: '800', fontSize: '1.5rem', letterSpacing: '-0.02em' }}>BÁO CÁO QUẢN TRỊ</h2>
          <button onClick={handlePrint} className="btn-print" style={styles.printBtn}>
             <Icons.Print /> Xuất Báo cáo
          </button>
@@ -459,14 +512,14 @@ const Reports = () => {
       {activeTab === 'overview' && renderDashboard()}
 
       {/* VIEW: CHI TIẾT TÀI CHÍNH */}
-      {activeTab === 'finance' && user?.role === 'chief' && (
+      {activeTab === 'finance' && isChief && (
           <div style={styles.card} className="card">
                <div style={{...styles.cardHeader, justifyContent: 'space-between', flexWrap: 'wrap'}}>
                   <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                       <div style={styles.iconBox}><Icons.Finance /></div>
                       <div>
                           <h3 style={styles.cardTitle}>Tài chính & Thu nhập (Tháng {Number(selMonth)}/{selYear})</h3>
-                          {isLocked && <div style={{fontSize:'0.75rem', color:'#d97706', fontWeight:'bold', marginTop:'4px'}}>🔒 Đã chốt sổ bởi {lockedInfo?.by} ({new Date(lockedInfo?.at).toLocaleDateString('vi-VN')})</div>}
+                          {isLocked && <div style={{fontSize:'0.8rem', color:'#d97706', fontWeight:'700', marginTop:'6px', background: '#fffbeb', padding: '2px 8px', borderRadius: '6px', display: 'inline-block'}}>🔒 Đã chốt sổ bởi {lockedInfo?.by} ({new Date(lockedInfo?.at).toLocaleDateString('vi-VN')})</div>}
                       </div>
                   </div>
                   <div style={{display:'flex', gap:'10px', alignItems:'center', flexWrap: 'wrap'}}>
@@ -474,17 +527,17 @@ const Reports = () => {
                           type="month" 
                           value={financeMonthFilter} 
                           onChange={(e) => setFinanceMonthFilter(e.target.value)} 
-                          style={styles.filterSelect}
+                          style={{...styles.filterSelect, padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', background: 'white'}}
                           title="Chọn tháng để lọc"
                       />
-                      <select value={financeStaffFilter} onChange={(e) => setFinanceStaffFilter(e.target.value)} style={styles.filterSelect}>
+                      <select className="filter-modern" value={financeStaffFilter} onChange={(e) => setFinanceStaffFilter(e.target.value)}>
                           <option value="all">Tất cả nhân sự</option>
                           {safeStaffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                       
                       {!isLocked && (
                           <div className="lock-btn-container">
-                              <button onClick={handleLockPayroll} style={{...styles.printBtn, background:'#f59e0b', color:'white', border:'none', borderColor:'#f59e0b'}}>
+                              <button onClick={handleLockPayroll} style={{...styles.printBtn, background:'#f59e0b', color:'white', border:'none', boxShadow: '0 4px 6px rgba(245, 158, 11, 0.2)'}}>
                                   <Icons.Lock /> Chốt Báo Cáo
                               </button>
                           </div>
@@ -493,35 +546,37 @@ const Reports = () => {
                       <button onClick={() => setActiveTab('overview')} style={styles.backBtn} className="nav-back-btn"><Icons.Back /> Ẩn</button>
                   </div>
                </div>
-               <div style={{...styles.cardBody, overflowX: 'auto'}}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr style={styles.tableHeadRow}>
-                        <th style={{...styles.th, width: '50px'}}>STT</th>
-                        <th style={styles.th}>Nhân sự</th>
-                        <th style={styles.th}>Thông tin thêm</th>
-                        <th style={styles.th}>Thu nhập Gộp (Gross)</th>
-                        <th style={styles.th}>BHXH (10.5%)</th>
-                        <th style={styles.th}>Thuế TNCN (5%)</th>
-                        <th style={styles.th}>Thực nhận (Net)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {financeRows.length > 0 ? financeRows.map((row, idx) => (
-                        <tr key={idx} style={styles.tr}>
-                            <td style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{idx + 1}</td>
-                            <td style={{...styles.td, fontWeight:'600', color:'#111827'}}>{row.item}</td>
-                            <td style={{...styles.td, fontSize:'0.8rem', color:'#4b5563'}}>{row.type}</td>
-                            <td style={{...styles.td, fontWeight: 'bold'}}>{Math.round(row.gross || 0).toLocaleString()}</td>
-                            <td style={{...styles.td, color: '#ef4444'}}>-{Math.round(row.bhxh || 0).toLocaleString()}</td>
-                            <td style={{...styles.td, color: '#ef4444'}}>-{Math.round(row.tax || 0).toLocaleString()}</td>
-                            <td style={{...styles.td, fontWeight: 'bold', color: '#059669'}}>{Math.round(row.net || row.amount).toLocaleString()}</td>
+               <div style={styles.cardBody}>
+                  <div className="table-responsive">
+                    <table style={styles.table}>
+                      <thead>
+                        <tr style={styles.tableHeadRow}>
+                          <th style={{...styles.th, width: '50px', textAlign: 'center'}}>STT</th>
+                          <th style={styles.th}>Nhân sự</th>
+                          <th style={styles.th}>Thông tin thêm</th>
+                          <th style={{...styles.th, textAlign: 'right'}}>Thu nhập Gộp (Gross)</th>
+                          <th style={{...styles.th, textAlign: 'right'}}>BHXH (10.5%)</th>
+                          <th style={{...styles.th, textAlign: 'right'}}>Thuế TNCN (5%)</th>
+                          <th style={{...styles.th, textAlign: 'right', paddingRight: '20px'}}>Thực nhận (Net)</th>
                         </tr>
-                      )) : (
-                        <tr><td colSpan="7" style={styles.emptyTd}>Không có dữ liệu hiển thị.</td></tr>
-                      )}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {financeRows.length > 0 ? financeRows.map((row, idx) => (
+                          <tr key={idx} className="table-row">
+                              <td style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{idx + 1}</td>
+                              <td style={{...styles.td, fontWeight:'700', color:'#1f2937'}} className="text-wrap-name">{row.item}</td>
+                              <td style={{...styles.td, fontSize:'0.85rem', color:'#64748b'}}>{row.type}</td>
+                              <td style={{...styles.td, fontWeight: '700', textAlign: 'right'}}>{Math.round(row.gross || 0).toLocaleString()}</td>
+                              <td style={{...styles.td, color: '#ef4444', textAlign: 'right'}}>-{Math.round(row.bhxh || 0).toLocaleString()}</td>
+                              <td style={{...styles.td, color: '#ef4444', textAlign: 'right'}}>-{Math.round(row.tax || 0).toLocaleString()}</td>
+                              <td style={{...styles.td, fontWeight: '800', color: '#059669', textAlign: 'right', paddingRight: '20px', fontSize: '1.05rem'}}>{Math.round(row.net || row.amount).toLocaleString()}</td>
+                          </tr>
+                        )) : (
+                          <tr><td colSpan="7" style={styles.emptyTd}>Không có dữ liệu thu nhập hiển thị.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                </div>
           </div>
       )}
@@ -529,88 +584,72 @@ const Reports = () => {
       {/* VIEW: CHI TIẾT CSVC */}
       {activeTab === 'facility' && (
           <div style={styles.card} className="card">
-             <div style={{...styles.cardHeader, flexDirection: 'column', alignItems: 'flex-start', gap: '10px'}}>
-                <div style={{display:'flex', justifyContent:'space-between', width:'100%', alignItems:'center'}}>
+             <div style={{...styles.cardHeader, flexDirection: 'column', alignItems: 'flex-start', gap: '16px'}}>
+                <div style={{display:'flex', justifyContent:'space-between', width:'100%', alignItems:'center', flexWrap: 'wrap', gap: '12px'}}>
                     <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-                        <div style={styles.iconBox}><Icons.Facility /></div>
+                        <div style={{...styles.iconBox, background: '#fffbeb', color: '#d97706'}}><Icons.Facility /></div>
                         <h3 style={styles.cardTitle}>Tình trạng Cơ sở vật chất</h3>
                     </div>
                     <button onClick={() => setActiveTab('overview')} style={styles.backBtn} className="nav-back-btn"><Icons.Back /> Ẩn</button>
                 </div>
                 <div className="filter-group" style={{width: '100%'}}>
-                    <select value={facilityAreaFilter} onChange={(e) => setFacilityAreaFilter(e.target.value)} style={{...styles.filterSelect, flex: 1}}>
+                    <select className="filter-modern" value={facilityAreaFilter} onChange={(e) => setFacilityAreaFilter(e.target.value)} style={{flex: 1}}>
                         <option value="all">Khu vực: Tất cả</option>
                         {availableAreas.map(area => <option key={area} value={area}>{area}</option>)}
                     </select>
-                    <select value={facilityStaffFilter} onChange={(e) => setFacilityStaffFilter(e.target.value)} style={{...styles.filterSelect, flex: 1}}>
+                    <select className="filter-modern" value={facilityStaffFilter} onChange={(e) => setFacilityStaffFilter(e.target.value)} style={{flex: 1}}>
                         <option value="all">Nhân sự: Tất cả</option>
                         {availableReporters.map(name => <option key={name} value={name}>{name}</option>)}
                     </select>
-
-                    <select 
-                        value={facilityTimeFilter} 
-                        onChange={(e) => {
-                            setFacilityTimeFilter(e.target.value);
-                            if(e.target.value !== 'all') setFacilityMonthFilter('all');
-                        }} 
-                        style={{...styles.filterSelect, flex: 1}}
-                    >
+                    <select className="filter-modern" value={facilityTimeFilter} onChange={(e) => { setFacilityTimeFilter(e.target.value); if(e.target.value !== 'all') setFacilityMonthFilter('all'); }} style={{flex: 1}}>
                         <option value="all">Thời gian: Tất cả</option>
                         <option value="day">Hôm nay</option>
                         <option value="week">Tuần này</option>
                         <option value="month">Tháng này</option>
                     </select>
-
-                    <select 
-                        value={facilityMonthFilter} 
-                        onChange={(e) => {
-                            setFacilityMonthFilter(e.target.value);
-                            if(e.target.value !== 'all') setFacilityTimeFilter('all');
-                        }} 
-                        style={{...styles.filterSelect, flex: 1}}
-                    >
-                        <option value="all">Tháng (Năm 2026): Tất cả</option>
-                        {[...Array(12).keys()].map(i => (
-                            <option key={i+1} value={i+1}>Tháng {i+1}</option>
-                        ))}
+                    <select className="filter-modern" value={facilityMonthFilter} onChange={(e) => { setFacilityMonthFilter(e.target.value); if(e.target.value !== 'all') setFacilityTimeFilter('all'); }} style={{flex: 1}}>
+                        <option value="all">Tháng (2026): Tất cả</option>
+                        {[...Array(12).keys()].map(i => ( <option key={i+1} value={i+1}>Tháng {i+1}</option> ))}
                     </select>
                 </div>
              </div>
-             <div style={{...styles.cardBody, overflowX: 'auto'}}>
-                 <table style={styles.table}>
-                   <thead>
-                     <tr style={styles.tableHeadRow}>
-                       <th style={{...styles.th, width: '50px'}}>STT</th>
-                       <th style={styles.th}>Khu vực</th>
-                       <th style={styles.th}>Tình trạng trước</th>
-                       <th style={styles.th}>Tình trạng sau</th>
-                       <th style={styles.th}>Nhân sự báo cáo</th>
-                     </tr>
-                   </thead>
-                   <tbody>
-                     {filteredFacilityLogs.length > 0 ? (
-                       [...filteredFacilityLogs].reverse().map((log, index) => (
-                         <tr key={index} style={styles.tr}>
-                           <td style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{index + 1}</td>
-                           <td style={{...styles.td, fontWeight: '600'}}>{log.area || '---'}</td>
-                           <td style={styles.td}>
-                               <div style={{fontWeight:'700', fontSize:'0.9rem', marginBottom:'4px', color:'#1f2937'}}>{log.itemName || log.item || log.category || 'Hạng mục'}</div>
-                               <div style={{color:'#4b5563'}}>{log.prevStatus ? log.prevStatus : <span style={{fontStyle:'italic', color:'#9ca3af'}}>---</span>}</div>
-                               <div style={{fontSize:'0.75rem', color:'#9ca3af', marginTop:'2px'}}>{formatDateTime(log.prevTime)}</div>
-                           </td>
-                           <td style={styles.td}>
-                               <div style={{fontWeight:'700', fontSize:'0.9rem', marginBottom:'4px', color:'#1f2937'}}>{log.itemName || log.item || log.category || 'Hạng mục'}</div>
-                               <div style={{color: '#003366', fontWeight:'500'}}>{log.status || log.note || 'Đã kiểm tra'}</div>
-                               <div style={{fontSize:'0.75rem', color:'#6b7280', marginTop:'2px'}}>{formatDateTime(log.timestamp)}</div>
-                           </td>
-                           <td style={styles.td}>{log.staffName || 'Unknown'}</td>
+             <div style={styles.cardBody}>
+                 <div className="table-responsive">
+                     <table style={styles.table}>
+                       <thead>
+                         <tr style={styles.tableHeadRow}>
+                           <th style={{...styles.th, width: '50px', textAlign: 'center'}}>STT</th>
+                           <th style={styles.th}>Khu vực</th>
+                           <th style={styles.th}>Tình trạng trước</th>
+                           <th style={styles.th}>Tình trạng sau</th>
+                           <th style={styles.th}>Nhân sự báo cáo</th>
                          </tr>
-                       ))
-                     ) : (
-                       <tr><td colSpan="5" style={styles.emptyTd}>Chưa có báo cáo kiểm tra phù hợp.</td></tr>
-                     )}
-                   </tbody>
-                 </table>
+                       </thead>
+                       <tbody>
+                         {filteredFacilityLogs.length > 0 ? (
+                           [...filteredFacilityLogs].reverse().map((log, index) => (
+                             <tr key={index} className="table-row">
+                               <td style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{index + 1}</td>
+                               <td style={{...styles.td, fontWeight: '700', color: '#1f2937'}} className="text-wrap-name">{log.area || '---'}</td>
+                               <td style={styles.td}>
+                                   <div style={{fontWeight:'700', fontSize:'0.9rem', marginBottom:'4px', color:'#334155'}}>{log.itemName || log.item || log.category || 'Hạng mục'}</div>
+                                   <div style={{color:'#64748b'}}>{log.prevStatus ? log.prevStatus : <span style={{fontStyle:'italic', color:'#9ca3af'}}>---</span>}</div>
+                                   <div style={{fontSize:'0.75rem', color:'#94a3b8', marginTop:'4px'}}>{formatDateTime(log.prevTime)}</div>
+                               </td>
+                               <td style={styles.td}>
+                                   <div style={{fontWeight:'700', fontSize:'0.9rem', marginBottom:'4px', color:'#334155'}}>{log.itemName || log.item || log.category || 'Hạng mục'}</div>
+                                   <div style={{color: '#0369a1', fontWeight:'600'}}>{log.status || log.note || 'Đã kiểm tra'}</div>
+                                   <div style={{fontSize:'0.75rem', color:'#94a3b8', marginTop:'4px'}}>{formatDateTime(log.timestamp)}</div>
+                               </td>
+                               <td style={{...styles.td, fontWeight: '600'}} className="text-wrap-name">{log.staffName || 'Unknown'}</td>
+                             </tr>
+                           ))
+                         ) : (
+                           <tr><td colSpan="5" style={styles.emptyTd}>Chưa có báo cáo kiểm tra phù hợp.</td></tr>
+                         )}
+                       </tbody>
+                     </table>
+                 </div>
              </div>
           </div>
       )}
@@ -618,206 +657,208 @@ const Reports = () => {
       {/* VIEW: CHI TIẾT CHẤM CÔNG */}
       {activeTab === 'attendance' && (
           <div style={styles.card} className="card">
-            <div style={{ ...styles.cardHeader, flexDirection:'column', alignItems: 'flex-start', gap: '15px' }}>
-               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+            <div style={{ ...styles.cardHeader, flexDirection:'column', alignItems: 'flex-start', gap: '16px' }}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                   <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-                      <div style={styles.iconBox}><Icons.Schedule /></div>
-                      <h3 style={styles.cardTitle}>Báo cáo Chấm công (Theo Lịch Scheduler)</h3>
+                      <div style={{...styles.iconBox, background: '#ecfdf5', color: '#059669'}}><Icons.Schedule /></div>
+                      <h3 style={styles.cardTitle}>Báo cáo Chấm công (Theo Lịch)</h3>
                   </div>
                   <button onClick={() => setActiveTab('overview')} style={styles.backBtn} className="nav-back-btn"><Icons.Back /> Ẩn</button>
                </div>
                
                <div className="filter-group" style={{width: '100%'}}>
-                   <select value={attendanceStaffFilter} onChange={(e) => setAttendanceStaffFilter(e.target.value)} style={{...styles.filterSelect, flex: 1}}>
+                   <select className="filter-modern" value={attendanceStaffFilter} onChange={(e) => setAttendanceStaffFilter(e.target.value)} style={{flex: 1}}>
                         <option value="all">Nhân sự: Tất cả</option>
                         {safeStaffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
-                    <select value={attendanceDayFilter} onChange={(e) => setAttendanceDayFilter(e.target.value)} style={{...styles.filterSelect, flex: 1}}>
+                    <select className="filter-modern" value={attendanceDayFilter} onChange={(e) => setAttendanceDayFilter(e.target.value)} style={{flex: 1}}>
                         <option value="all">Ngày: Tất cả</option>
                         {daysOfWeek.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
                     </select>
-                    <select value={attendanceFilter} onChange={(e) => setAttendanceFilter(e.target.value)} style={{...styles.filterSelect, flex: 1}}>
-                        <option value="all">Thời gian tương đối: Tất cả</option>
+                    <select className="filter-modern" value={attendanceFilter} onChange={(e) => setAttendanceFilter(e.target.value)} style={{flex: 1}}>
+                        <option value="all">T/gian tương đối: Tất cả</option>
                         <option value="day">Hôm nay</option>
                         <option value="week">Tuần này</option>
                         <option value="month">Tháng này</option>
                     </select>
-                    <select value={attendanceMonthFilter} onChange={(e) => setAttendanceMonthFilter(e.target.value)} style={{...styles.filterSelect, flex: 1}}>
+                    <select className="filter-modern" value={attendanceMonthFilter} onChange={(e) => setAttendanceMonthFilter(e.target.value)} style={{flex: 1}}>
                         <option value="all">Tháng: Tất cả</option>
                         {[...Array(12).keys()].map(i => <option key={i+1} value={i+1}>Tháng {i+1}</option>)}
                     </select>
-                    <select value={attendanceYearFilter} onChange={(e) => setAttendanceYearFilter(e.target.value)} style={{...styles.filterSelect, flex: 1}}>
+                    <select className="filter-modern" value={attendanceYearFilter} onChange={(e) => setAttendanceYearFilter(e.target.value)} style={{flex: 1}}>
                         <option value="all">Năm: Tất cả</option>
                         {availableYears.map(y => <option key={y} value={y}>Năm {y}</option>)}
                     </select>
                </div>
             </div>
-            <div style={{...styles.cardBody, overflowX: 'auto'}}>
-               <table style={styles.table}>
-                  <thead>
-                     <tr style={styles.tableHeadRow}>
-                       <th style={{ ...styles.th, borderRadius: '8px 0 0 8px', width: '50px' }}>STT</th>
-                       <th style={styles.th}>Nhân sự</th>
-                       <th style={styles.th}>Ca làm việc</th>
-                       <th style={styles.th}>Thời gian</th>
-                       <th style={styles.th}>Số giờ</th>
-                       <th style={styles.th}>Trạng thái</th>
-                       <th style={styles.th}>Kết quả</th>
-                       <th style={{ ...styles.th, borderRadius: '0 8px 8px 0' }} className="action-col">Hành động</th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                     {filteredAttendance.length > 0 ? filteredAttendance.map((t, index) => {
-                       const isCompleted = t.status === 'completed' || t.progress === 100;
-                       const isOverdue = new Date() > new Date(t.endTime);
-                       
-                       const workedHoursDecimal = calculateWorkHoursDecimal(t.startTime, t.endTime, t.checkInTime, t.checkOutTime, t.adminEdited);
-                       
-                       const isStaffSuccess = isCompleted && !t.adminEdited && workedHoursDecimal > 0;
+            <div style={styles.cardBody}>
+               <div className="table-responsive">
+                   <table style={styles.table}>
+                      <thead>
+                         <tr style={styles.tableHeadRow}>
+                           <th style={{ ...styles.th, width: '50px', textAlign: 'center' }}>STT</th>
+                           <th style={styles.th}>Nhân sự</th>
+                           <th style={styles.th}>Ca làm việc</th>
+                           <th style={styles.th}>Thời gian</th>
+                           <th style={styles.th}>Số giờ</th>
+                           <th style={styles.th}>Trạng thái</th>
+                           <th style={{...styles.th, textAlign: 'center'}}>Tiến độ</th>
+                           <th style={{ ...styles.th, textAlign: 'right' }} className="action-col">Hành động</th>
+                         </tr>
+                      </thead>
+                      <tbody>
+                         {filteredAttendance.length > 0 ? filteredAttendance.map((t, index) => {
+                           const isCompleted = t.status === 'completed' || t.progress === 100;
+                           const isOverdue = new Date() > new Date(t.endTime);
+                           
+                           const workedHoursDecimal = calculateWorkHoursDecimal(t.startTime, t.endTime, t.checkInTime, t.checkOutTime, t.adminEdited);
+                           
+                           const isStaffSuccess = isCompleted && !t.adminEdited && workedHoursDecimal > 0;
+                           const canEdit = isChief && isOverdue && !isStaffSuccess;
 
-                       const canEdit = user?.role === 'chief' && isOverdue && !isStaffSuccess;
+                           const statusDetails = [];
 
-                       const statusDetails = [];
-
-                       if (!t.checkInTime) {
-                           statusDetails.push("Chưa check-in");
-                       } else {
-                           const plannedStart = new Date(t.startTime);
-                           const actualIn = new Date(t.checkInTime);
-                           const diffIn = (actualIn - plannedStart) / 60000; 
-                           if (diffIn > 3 && !t.adminEdited) statusDetails.push(`Check-in trễ ${Math.round(diffIn)}p`);
-
-                           if (!t.checkOutTime) {
-                               statusDetails.push("Chưa check-out");
+                           if (!t.checkInTime) {
+                               statusDetails.push("Chưa check-in");
                            } else {
-                               const plannedEnd = new Date(t.endTime);
-                               const actualOut = new Date(t.checkOutTime);
-                               const diffOut = (actualOut - plannedEnd) / 60000;
-                               if (diffOut > 15 && !t.adminEdited) statusDetails.push(`Check-out trễ ${Math.round(diffOut)}p`);
+                               const plannedStart = new Date(t.startTime);
+                               const actualIn = new Date(t.checkInTime);
+                               const diffIn = (actualIn - plannedStart) / 60000; 
+                               if (diffIn > 3 && !t.adminEdited) statusDetails.push(`Check-in trễ ${Math.round(diffIn)}p`);
+
+                               if (!t.checkOutTime) {
+                                   statusDetails.push("Chưa check-out");
+                               } else {
+                                   const plannedEnd = new Date(t.endTime);
+                                   const actualOut = new Date(t.checkOutTime);
+                                   const diffOut = (actualOut - plannedEnd) / 60000;
+                                   if (diffOut > 15 && !t.adminEdited) statusDetails.push(`Check-out trễ ${Math.round(diffOut)}p`);
+                               }
                            }
-                       }
 
-                       if (t.explanation) {
-                           statusDetails.push(`Giải trình: ${t.explanation}`);
-                       }
+                           if (t.explanation) {
+                               statusDetails.push(`Giải trình: ${t.explanation}`);
+                           }
 
-                       const displayStart = t.adminEdited && t.checkInTime ? t.checkInTime : t.startTime;
-                       const displayEnd = t.adminEdited && t.checkOutTime ? t.checkOutTime : t.endTime;
+                           const displayStart = t.adminEdited && t.checkInTime ? t.checkInTime : t.startTime;
+                           const displayEnd = t.adminEdited && t.checkOutTime ? t.checkOutTime : t.endTime;
 
-                       return (
-                           <tr key={t.id} style={{...styles.tr, background: editingAttendanceId === t.id ? '#f0fdf4' : 'transparent'}}>
-                              <td style={{ ...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af' }}>{index + 1}</td>
-                              
-                              {/* NẾU ĐANG CHỈNH SỬA DÒNG NÀY */}
-                              {editingAttendanceId === t.id ? (
-                                  <>
-                                      <td style={{ ...styles.td, fontWeight: '600' }}>{t.assigneeName}</td>
-                                      <td style={styles.td}>
-                                          <div>{t.title}</div>
-                                          <div style={{fontSize:'0.75rem', color:'#6b7280'}}>{t.assignedRole}</div>
-                                      </td>
-                                      <td colSpan="4" style={{padding: '8px'}}>
-                                          <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
-                                              <div style={{display:'flex', gap:'10px'}}>
-                                                  <div style={{flex:1}}>
-                                                      <label style={{fontSize:'0.75rem', fontWeight:'bold', color:'#374151'}}>Giờ vào (Check-in)</label>
-                                                      <input 
-                                                          type="datetime-local" 
-                                                          value={editAttForm.checkIn} 
-                                                          onChange={e => setEditAttForm({...editAttForm, checkIn: e.target.value})} 
-                                                          style={{...styles.input, padding:'6px', marginTop:'4px'}} 
-                                                      />
+                           return (
+                               <tr key={t.id} className={editingAttendanceId !== t.id ? "table-row" : ""} style={{ background: editingAttendanceId === t.id ? '#f0fdf4' : 'transparent' }}>
+                                  <td style={{ ...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af' }}>{index + 1}</td>
+                                  
+                                  {editingAttendanceId === t.id ? (
+                                      <>
+                                          <td style={{ ...styles.td, fontWeight: '700' }} className="text-wrap-name">{t.assigneeName}</td>
+                                          <td style={styles.td}>
+                                              <div style={{fontWeight: '700', color: '#1f2937'}} className="text-wrap-title">{t.title}</div>
+                                              <div style={{fontSize:'0.8rem', color:'#64748b', marginTop:'4px'}}>{t.assignedRole}</div>
+                                          </td>
+                                          <td colSpan="4" style={{padding: '16px'}}>
+                                              <div style={{display:'flex', flexDirection:'column', gap:'16px'}}>
+                                                  <div style={{display:'flex', gap:'12px', flexWrap: 'wrap'}}>
+                                                      <div style={{flex:1, minWidth: '160px'}}>
+                                                          <label style={{fontSize:'0.85rem', fontWeight:'700', color:'#475569', marginBottom:'6px', display:'block'}}>Giờ vào (Check-in)</label>
+                                                          <input 
+                                                              className="input-modern"
+                                                              type="datetime-local" 
+                                                              value={editAttForm.checkIn} 
+                                                              onChange={e => setEditAttForm({...editAttForm, checkIn: e.target.value})} 
+                                                          />
+                                                      </div>
+                                                      <div style={{flex:1, minWidth: '160px'}}>
+                                                          <label style={{fontSize:'0.85rem', fontWeight:'700', color:'#475569', marginBottom:'6px', display:'block'}}>Giờ ra (Check-out)</label>
+                                                          <input 
+                                                              className="input-modern"
+                                                              type="datetime-local" 
+                                                              value={editAttForm.checkOut} 
+                                                              onChange={e => setEditAttForm({...editAttForm, checkOut: e.target.value})} 
+                                                          />
+                                                      </div>
                                                   </div>
-                                                  <div style={{flex:1}}>
-                                                      <label style={{fontSize:'0.75rem', fontWeight:'bold', color:'#374151'}}>Giờ ra (Check-out)</label>
+                                                  <div>
+                                                      <label style={{fontSize:'0.85rem', fontWeight:'700', color:'#475569', marginBottom:'6px', display:'block'}}>Lý do chỉnh sửa (Bắt buộc)</label>
                                                       <input 
-                                                          type="datetime-local" 
-                                                          value={editAttForm.checkOut} 
-                                                          onChange={e => setEditAttForm({...editAttForm, checkOut: e.target.value})} 
-                                                          style={{...styles.input, padding:'6px', marginTop:'4px'}} 
+                                                          className="input-modern"
+                                                          type="text" 
+                                                          placeholder="Nhập lý do bù giờ..." 
+                                                          value={editAttForm.reason} 
+                                                          onChange={e => setEditAttForm({...editAttForm, reason: e.target.value})} 
                                                       />
                                                   </div>
                                               </div>
-                                              <div>
-                                                  <label style={{fontSize:'0.75rem', fontWeight:'bold', color:'#374151'}}>Lý do chỉnh sửa (Bắt buộc)</label>
-                                                  <input 
-                                                      type="text" 
-                                                      placeholder="Nhập lý do bù giờ..." 
-                                                      value={editAttForm.reason} 
-                                                      onChange={e => setEditAttForm({...editAttForm, reason: e.target.value})} 
-                                                      style={{...styles.input, padding:'6px', marginTop:'4px'}} 
-                                                  />
+                                          </td>
+                                          <td style={{...styles.td, textAlign: 'right'}}>
+                                              <div style={{display:'flex', flexDirection:'column', gap:'8px', alignItems:'flex-end'}}>
+                                                  <button onClick={() => handleSaveAttendanceEdit(t.id)} style={{color:'white', background:'#059669', border:'none', padding:'10px 20px', borderRadius:'10px', cursor:'pointer', fontWeight:'700', width:'90px', transition:'all 0.2s', boxShadow: '0 2px 4px rgba(16,185,129,0.2)'}}>Lưu</button>
+                                                  <button onClick={()=>setEditingAttendanceId(null)} style={{color:'#475569', background:'#f1f5f9', border:'1px solid #cbd5e1', padding:'10px 20px', borderRadius:'10px', cursor:'pointer', fontWeight:'700', width:'90px', transition:'all 0.2s'}}>Hủy</button>
                                               </div>
-                                          </div>
-                                      </td>
-                                      <td style={styles.td}>
-                                          <button onClick={() => handleSaveAttendanceEdit(t.id)} style={{color:'white', background:'#059669', border:'none', padding:'6px 12px', borderRadius:'6px', cursor:'pointer', fontWeight:'bold', width:'100%', marginBottom:'4px'}}>Lưu</button>
-                                          <button onClick={()=>setEditingAttendanceId(null)} style={{color:'#4b5563', background:'#e5e7eb', border:'none', padding:'6px 12px', borderRadius:'6px', cursor:'pointer', fontWeight:'bold', width:'100%'}}>Hủy</button>
-                                      </td>
-                                  </>
-                              ) : (
-                                  <>
-                                      <td style={{ ...styles.td, fontWeight: '600' }}>{t.assigneeName}</td>
-                                      <td style={styles.td}>
-                                          <div>{t.title}</div>
-                                          <div style={{fontSize:'0.75rem', color:'#6b7280'}}>{t.assignedRole}</div>
-                                      </td>
-                                      <td style={styles.td}>
-                                         {new Date(displayStart).toLocaleDateString('vi-VN')} <br/>
-                                         <span style={{fontSize:'0.75rem', color:'#64748b'}}>
-                                           {new Date(displayStart).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - {new Date(displayEnd).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-                                         </span>
-                                      </td>
-                                      <td style={{...styles.td, fontWeight: 'bold', color: '#059669'}}>
-                                          {calculateWorkHours(t.startTime, t.endTime, t.checkInTime, t.checkOutTime, t.adminEdited)}
-                                      </td>
-                                      <td style={styles.td}>
-                                         {isCompleted ? 
-                                           <span style={styles.badgeSuccess}>Đã chấm công</span> : 
-                                           <span style={styles.badgePending}>Chưa hoàn thành</span>
-                                         }
-                                         {statusDetails.length > 0 && !t.adminEdited && (
-                                             <div style={{fontSize: '0.75rem', color: '#6b7280', marginTop: '4px', fontStyle:'italic'}}>
-                                                 {statusDetails.map((detail, idx) => (
-                                                     <div key={idx}>- {detail}</div>
-                                                 ))}
+                                          </td>
+                                      </>
+                                  ) : (
+                                      <>
+                                          <td style={{ ...styles.td, fontWeight: '700' }} className="text-wrap-name">{t.assigneeName}</td>
+                                          <td style={styles.td}>
+                                              <div style={{fontWeight: '700', color: '#1f2937'}} className="text-wrap-title">{t.title}</div>
+                                              <div style={{fontSize:'0.8rem', color:'#64748b', marginTop:'4px'}}>{t.assignedRole}</div>
+                                          </td>
+                                          <td style={styles.td}>
+                                             <div style={{fontWeight: '600', color: '#334155'}}>{new Date(displayStart).toLocaleDateString('vi-VN')}</div>
+                                             <div style={{fontSize:'0.85rem', color:'#64748b', marginTop:'4px'}}>
+                                               {new Date(displayStart).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - {new Date(displayEnd).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                                              </div>
-                                         )}
-                                         {t.adminEdited && (
-                                             <div style={{fontSize: '0.75rem', color: '#c2410c', marginTop: '4px', fontWeight: 'bold'}}>
-                                                 *Sửa bởi Admin: {t.adminEditReason}
-                                             </div>
-                                         )}
-                                      </td>
-                                      <td style={styles.td}>{t.progress}%</td>
-                                      <td style={styles.td} className="action-col">
-                                          {canEdit ? (
-                                              <button 
-                                                  onClick={() => {
-                                                      setEditingAttendanceId(t.id);
-                                                      setEditAttForm({
-                                                          checkIn: t.checkInTime ? toDateTimeLocal(t.checkInTime) : toDateTimeLocal(t.startTime),
-                                                          checkOut: t.checkOutTime ? toDateTimeLocal(t.checkOutTime) : toDateTimeLocal(t.endTime),
-                                                          reason: t.adminEditReason || ''
-                                                      });
-                                                  }} 
-                                                  style={{color:'#003366', border:'1px solid #003366', background:'white', padding:'4px 10px', borderRadius:'6px', cursor:'pointer', fontWeight:'600'}}
-                                              >
-                                                  Sửa
-                                              </button>
-                                          ) : (
-                                              <span style={{fontSize:'0.8rem', color:'#9ca3af'}}>---</span>
-                                          )}
-                                      </td>
-                                  </>
-                              )}
-                           </tr>
-                       );
-                     }) : (
-                       <tr><td colSpan="8" style={styles.emptyTd}>Không có dữ liệu chấm công phù hợp.</td></tr>
-                     )}
-                  </tbody>
-               </table>
+                                          </td>
+                                          <td style={{...styles.td, fontWeight: '800', color: '#059669', whiteSpace: 'nowrap'}}>
+                                              {calculateWorkHours(t.startTime, t.endTime, t.checkInTime, t.checkOutTime, t.adminEdited)}
+                                          </td>
+                                          <td style={styles.td}>
+                                             {isCompleted ? 
+                                               <span style={styles.badgeSuccess}>Đã chấm công</span> : 
+                                               <span style={styles.badgePending}>Chưa hoàn thành</span>
+                                             }
+                                             {statusDetails.length > 0 && !t.adminEdited && (
+                                                 <div style={{fontSize: '0.75rem', color: '#64748b', marginTop: '8px', fontStyle:'italic', display: 'flex', flexDirection: 'column', gap: '2px'}}>
+                                                     {statusDetails.map((detail, idx) => (
+                                                         <div key={idx}>- {detail}</div>
+                                                     ))}
+                                                 </div>
+                                             )}
+                                             {t.adminEdited && (
+                                                 <div style={{fontSize: '0.75rem', color: '#ea580c', marginTop: '8px', fontWeight: '700', background: '#ffedd5', padding: '4px 8px', borderRadius: '6px', display: 'inline-block'}}>
+                                                     *Sửa bởi Admin: {t.adminEditReason}
+                                                 </div>
+                                             )}
+                                          </td>
+                                          <td style={{...styles.td, textAlign: 'center', fontWeight: '800', color: t.progress === 100 ? '#10b981' : '#3b82f6'}}>{t.progress}%</td>
+                                          <td style={{...styles.td, textAlign: 'right'}} className="action-col">
+                                              {canEdit ? (
+                                                  <button 
+                                                      onClick={() => {
+                                                          setEditingAttendanceId(t.id);
+                                                          setEditAttForm({
+                                                              checkIn: t.checkInTime ? toDateTimeLocal(t.checkInTime) : toDateTimeLocal(t.startTime),
+                                                              checkOut: t.checkOutTime ? toDateTimeLocal(t.checkOutTime) : toDateTimeLocal(t.endTime),
+                                                              reason: t.adminEditReason || ''
+                                                          });
+                                                      }} 
+                                                      style={{color:'#0284c7', border:'1px solid #bae6fd', background:'#f0f9ff', padding:'8px 14px', borderRadius:'10px', cursor:'pointer', fontWeight:'700', fontSize: '0.85rem', whiteSpace: 'nowrap', transition: 'all 0.2s'}}
+                                                  >
+                                                      Sửa ca
+                                                  </button>
+                                              ) : (
+                                                  <span style={{fontSize:'0.85rem', color:'#cbd5e1', fontStyle: 'italic'}}>---</span>
+                                              )}
+                                          </td>
+                                      </>
+                                  )}
+                               </tr>
+                           );
+                         }) : (
+                           <tr><td colSpan="8" style={styles.emptyTd}>Không có dữ liệu chấm công phù hợp.</td></tr>
+                         )}
+                      </tbody>
+                   </table>
+               </div>
             </div>
           </div>
       )}
@@ -825,27 +866,29 @@ const Reports = () => {
       {/* VIEW: CHI TIẾT NHIỆM VỤ (TIẾN ĐỘ) */}
       {activeTab === 'tasks' && (
           <div style={styles.card} className="card">
-              <div style={{...styles.cardHeader, flexDirection: 'column', alignItems: 'flex-start', gap: '15px'}}>
-                 <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+              <div style={{...styles.cardHeader, flexDirection: 'column', alignItems: 'flex-start', gap: '16px'}}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                      <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-                         <div style={styles.iconBox}><Icons.Task /></div>
-                         <h3 style={styles.cardTitle}>Tiến độ Công việc (Operational Admin giao)</h3>
+                         <div style={{...styles.iconBox, background: '#fdf2f8', color: '#be185d'}}><Icons.Task /></div>
+                         <h3 style={styles.cardTitle}>Tiến độ Nhiệm vụ (Trách nhiệm Vận hành)</h3>
                      </div>
                      <button onClick={() => setActiveTab('overview')} style={styles.backBtn} className="nav-back-btn"><Icons.Back /> Ẩn</button>
                  </div>
                  <div className="filter-group" style={{width: '100%'}}>
                      <select 
+                          className="filter-modern"
                           value={taskStaffFilter} 
                           onChange={(e) => setTaskStaffFilter(e.target.value)}
-                          style={{...styles.filterSelect, flex: 1}}
+                          style={{flex: 1}}
                       >
                           <option value="all">Nhân sự: Tất cả</option>
                           {safeStaffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                       <select 
+                          className="filter-modern"
                           value={taskStatusFilter} 
                           onChange={(e) => setTaskStatusFilter(e.target.value)}
-                          style={{...styles.filterSelect, flex: 1}}
+                          style={{flex: 1}}
                       >
                           <option value="all">Trạng thái: Tất cả</option>
                           <option value="inprogress">Đang làm</option>
@@ -856,26 +899,27 @@ const Reports = () => {
               </div>
 
               <div style={styles.cardBody}>
-                <div style={{ marginBottom: '20px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                    <div style={styles.statBoxBlue}>
-                        <div style={{fontSize:'0.8rem', color:'#6b7280'}}>Tổng nhiệm vụ</div>
-                        <div style={{fontSize:'1.5rem', fontWeight:'bold', color:'#003366'}}>{totalTasks}</div>
+                {/* 3 Blocks thống kê nhỏ */}
+                <div style={{ marginBottom: '24px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                    <div style={{flex: 1, border: '1px solid #e2e8f0', background: '#f8fafc', padding: '20px', borderRadius: '16px', minWidth: '150px'}}>
+                        <div style={{fontSize:'0.85rem', color:'#64748b', fontWeight:'700', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em'}}>Tổng nhiệm vụ</div>
+                        <div style={{fontSize:'2rem', fontWeight:'800', color:'#1e293b'}}>{totalTasks}</div>
                     </div>
-                    <div style={styles.statBoxGreen}>
-                        <div style={{fontSize:'0.8rem', color:'#6b7280'}}>Hoàn thành</div>
-                        <div style={{fontSize:'1.5rem', fontWeight:'bold', color:'#059669'}}>{completedTasks}</div>
+                    <div style={{flex: 1, border: '1px solid #a7f3d0', background: '#ecfdf5', padding: '20px', borderRadius: '16px', minWidth: '150px'}}>
+                        <div style={{fontSize:'0.85rem', color:'#059669', fontWeight:'700', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em'}}>Hoàn thành</div>
+                        <div style={{fontSize:'2rem', fontWeight:'800', color:'#064e3b'}}>{completedTasks}</div>
                     </div>
-                    <div style={styles.statBoxGray}>
-                        <div style={{fontSize:'0.8rem', color:'#6b7280'}}>Tỷ lệ</div>
-                        <div style={{fontSize:'1.5rem', fontWeight:'bold', color:'#003366'}}>{taskProgress}%</div>
+                    <div style={{flex: 1, border: '1px solid #bae6fd', background: '#f0f9ff', padding: '20px', borderRadius: '16px', minWidth: '150px'}}>
+                        <div style={{fontSize:'0.85rem', color:'#0284c7', fontWeight:'700', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em'}}>Tỷ lệ đạt</div>
+                        <div style={{fontSize:'2rem', fontWeight:'800', color:'#0c4a6e'}}>{taskProgress}%</div>
                     </div>
                 </div>
 
-                <div style={{overflowX: 'auto'}}>
+                <div className="table-responsive">
                   <table style={styles.table}>
                     <thead>
                       <tr style={styles.tableHeadRow}>
-                        <th style={{...styles.th, width: '50px'}}>STT</th>
+                        <th style={{...styles.th, width: '50px', textAlign: 'center'}}>STT</th>
                         <th style={styles.th}>Nhiệm vụ</th>
                         <th style={styles.th}>Phụ trách</th>
                         <th style={styles.th}>Hạn chót</th>
@@ -897,20 +941,22 @@ const Reports = () => {
                           }
 
                           return (
-                            <tr key={task.id} style={styles.tr}>
+                            <tr key={task.id} className="table-row">
                               <td style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{index + 1}</td>
-                              <td style={{ ...styles.td, fontWeight: '500' }}>{task.title}</td>
-                              <td style={styles.td}>{task.assigneeName}</td>
-                              <td style={styles.td}>{new Date(task.endTime).toLocaleDateString('vi-VN')}</td>
+                              <td style={{ ...styles.td, fontWeight: '700', color: '#1f2937' }} className="text-wrap-title">{task.title}</td>
+                              <td style={{...styles.td, fontWeight: '600'}} className="text-wrap-name">{task.assigneeName}</td>
+                              <td style={{...styles.td, color: '#475569'}}>{new Date(task.endTime).toLocaleDateString('vi-VN')}</td>
                               <td style={styles.td}>
-                                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-                                    <div style={{flex:1, height:'6px', background:'#e5e7eb', borderRadius:'3px', minWidth:'60px'}}>
-                                      <div style={{width:`${task.progress}%`, background:'#003366', height:'100%', borderRadius:'3px'}}></div>
+                                <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                                    <div style={{flex:1, height:'8px', background:'#e2e8f0', borderRadius:'4px', minWidth:'80px', overflow:'hidden'}}>
+                                      <div style={{width:`${task.progress}%`, background: task.progress === 100 ? '#10b981' : '#3b82f6', height:'100%', borderRadius:'4px', transition: 'width 0.5s ease'}}></div>
                                     </div>
-                                    <span style={{fontSize:'0.8em', fontWeight:'bold'}}>{task.progress}%</span>
+                                    <span style={{fontSize:'0.85rem', fontWeight:'800', color: task.progress === 100 ? '#10b981' : '#3b82f6'}}>{task.progress}%</span>
                                 </div>
                               </td>
-                              <td style={styles.td}>{statusElement}</td>
+                              <td style={styles.td}>
+                                  <div style={{ display: 'inline-flex' }}>{statusElement}</div>
+                              </td>
                             </tr>
                           );
                         })}
@@ -926,32 +972,26 @@ const Reports = () => {
 };
 
 const styles = {
-  input: { width: '100%', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', outline: 'none' },
-  card: { background: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #f3f4f6', marginBottom: '30px', overflow: 'hidden' },
-  cardHeader: { padding: '16px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '12px', background: '#f9fafb' },
-  iconBox: { width: '36px', height: '36px', background: '#e0f2fe', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#003366' },
-  cardTitle: { margin: 0, fontSize: '1rem', fontWeight: '600', color: '#1f2937' },
-  cardBody: { padding: '20px' },
-  statRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '0.9rem', color: '#4b5563' },
-  filterSelect: { padding: '6px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', outline: 'none', fontWeight: '600', color: '#4b5563', cursor: 'pointer', fontSize: '0.85rem' },
-  printBtn: { display: 'flex', alignItems: 'center', gap: '8px', background: 'white', color: '#003366', border: '1px solid #003366', borderRadius: '8px', padding: '8px 16px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' },
-  table: { width: '100%', borderCollapse: 'separate', borderSpacing: '0' },
+  card: { background: 'white', borderRadius: '20px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9', marginBottom: '32px', overflow: 'hidden' },
+  cardHeader: { padding: '24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '12px', background: '#ffffff' },
+  iconBox: { width: '48px', height: '48px', background: '#f0f9ff', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#003366' },
+  cardTitle: { margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#111827', letterSpacing: '-0.01em' },
+  cardBody: { padding: '24px' },
+  printBtn: { display: 'flex', alignItems: 'center', gap: '8px', background: '#ffffff', color: '#003366', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 20px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', fontSize: '0.95rem' },
+  table: { width: '100%', borderCollapse: 'collapse', minWidth: '900px' },
   tableHeadRow: { background: '#f8fafc' },
-  th: { padding: '12px 16px', textAlign: 'left', color: '#64748b', fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' },
-  tr: { transition: 'background 0.2s' },
-  td: { padding: '12px 16px', borderBottom: '1px solid #f1f5f9', fontSize: '0.9rem', color: '#334155' },
-  emptyTd: { padding: '30px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: '0.9rem' },
-  badgeSuccess: { background: '#ecfdf5', color: '#059669', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700' },
-  badgePending: { background: '#fff7ed', color: '#ea580c', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700' },
-  badgeError: { background: '#fef2f2', color: '#b91c1c', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700' },
-  badgeInfo: { background: '#eff6ff', color: '#1d4ed8', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700' },
-  statBoxBlue: { flex: 1, background: '#f0f9ff', padding: '15px', borderRadius: '12px', border: '1px solid #bae6fd', minWidth: '120px' },
-  statBoxGreen: { flex: 1, background: '#f0fdf4', padding: '15px', borderRadius: '12px', border: '1px solid #bbf7d0', minWidth: '120px' },
-  statBoxGray: { flex: 1, background: '#f9fafb', padding: '15px', borderRadius: '12px', border: '1px solid #e5e7eb', minWidth: '120px' },
-  menuCard: { background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '160px' },
-  accessBtn: { marginTop: 'auto', background: '#003366', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background 0.2s' },
-  backBtn: { background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' },
-  lockBtnContainer: { display: 'flex', gap: '10px' }
+  th: { padding: '16px 20px', textAlign: 'left', color: '#475569', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' },
+  td: { padding: '16px 20px', borderBottom: '1px solid #f1f5f9', fontSize: '0.95rem', color: '#334155', verticalAlign: 'middle' },
+  emptyTd: { padding: '40px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: '0.95rem' },
+  
+  badgeSuccess: { background: '#ecfdf5', color: '#059669', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', border: '1px solid #a7f3d0', display: 'inline-block', whiteSpace: 'nowrap' },
+  badgePending: { background: '#fff7ed', color: '#ea580c', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', border: '1px solid #fed7aa', display: 'inline-block', whiteSpace: 'nowrap' },
+  badgeError: { background: '#fef2f2', color: '#dc2626', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', border: '1px solid #fecaca', display: 'inline-block', whiteSpace: 'nowrap' },
+  badgeInfo: { background: '#eff6ff', color: '#1d4ed8', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', border: '1px solid #bfdbfe', display: 'inline-block', whiteSpace: 'nowrap' },
+  
+  menuCard: { background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '180px' },
+  accessBtn: { marginTop: 'auto', background: '#003366', color: 'white', border: 'none', padding: '12px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', fontSize: '0.95rem' },
+  backBtn: { background: 'white', color: '#64748b', border: '1px solid #cbd5e1', padding: '10px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', transition: 'all 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' },
 };
 
 export default Reports;

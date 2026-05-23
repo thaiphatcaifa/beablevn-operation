@@ -2,6 +2,20 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 
+// --- ICON MINIMALIST ĐỒNG BỘ ---
+const Icons = {
+  Facility: () => (
+    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
+    </svg>
+  ),
+  Check: () => (
+    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+    </svg>
+  )
+};
+
 const FacilityCheck = () => {
   const { user } = useAuth();
   const { addFacilityLog } = useData();
@@ -9,7 +23,7 @@ const FacilityCheck = () => {
   const [checkType, setCheckType] = useState('Đầu giờ'); 
   const [selectedArea, setSelectedArea] = useState('');
 
-  // --- CẤU HÌNH CHECKLIST THEO KHU VỰC (MỚI) ---
+  // --- CẤU HÌNH CHECKLIST THEO KHU VỰC (GIỮ NGUYÊN LOGIC) ---
   const defaultChecklist = [
     { item: 'Máy lạnh', options: ['Mát', 'Chảy nước', 'Không lạnh', 'Hỏng'], goodStatus: 'Mát' },
     { item: 'Máy chiếu', options: ['Tốt', 'Lệch khung', 'Hư hỏng'], goodStatus: 'Tốt' },
@@ -21,7 +35,6 @@ const FacilityCheck = () => {
   ];
 
   const getChecklistForArea = (area) => {
-      // 1. CANTEEN (Đã xóa Máy lạnh, Máy chiếu, Màn hình CC. Thêm Sân, Quạt, Quầy, Kệ)
       if (area === 'Canteen') {
           return [
               { item: 'Đèn chiếu sáng', options: ['Tốt', 'Hư hỏng'], goodStatus: 'Tốt' },
@@ -36,7 +49,6 @@ const FacilityCheck = () => {
           ];
       }
       
-      // 2. KHO TẦNG 3 (Đã xóa Máy chiếu, Màn hình CC. Thêm Sàn, Kệ tủ, Tủ mát, Tủ đông)
       if (area === 'Kho Tầng 3') {
           return [
               { item: 'Máy lạnh', options: ['Mát', 'Chảy nước', 'Không lạnh', 'Hỏng'], goodStatus: 'Mát' },
@@ -52,7 +64,6 @@ const FacilityCheck = () => {
           ];
       }
 
-      // 3. PHÒNG LAB (Đã xóa Máy chiếu, Màn hình CC, Loa. Thêm PC, Tai nghe, Phím)
       if (area === 'Phòng Lab') {
           return [
               { item: 'Máy lạnh', options: ['Mát', 'Chảy nước', 'Không lạnh', 'Hỏng'], goodStatus: 'Mát' },
@@ -116,69 +127,121 @@ const FacilityCheck = () => {
   };
 
   return (
-    <div>
-      <h2 style={{ color: '#003366' }}>Kiểm tra CSVC & Tiện ích</h2>
+    <div style={{ paddingBottom: '40px', boxSizing: 'border-box' }}>
+      {/* STYLE TỐI ƯU GIAO DIỆN & RESPONSIVE */}
+      <style>{`
+          .filter-modern {
+              padding: 12px 16px; border-radius: 12px; border: 1px solid #e2e8f0; outline: none;
+              font-weight: 600; color: #111827; background: #ffffff; width: 100%; box-sizing: border-box;
+              font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+              appearance: none; -webkit-appearance: none;
+              background-image: url('data:image/svg+xml;utf8,<svg fill="%239ca3af" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+              background-repeat: no-repeat; background-position: right 12px center; padding-right: 40px;
+          }
+          .filter-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+          
+          .radio-pill {
+              padding: 10px 16px; border-radius: 12px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+              border: 1px solid #e2e8f0; transition: all 0.2s; background: #f8fafc; color: #475569;
+              display: inline-flex; align-items: center; justify-content: center;
+              user-select: none; -webkit-tap-highlight-color: transparent;
+          }
+          .radio-pill:hover:not(.selected-good):not(.selected-bad) { background: #f1f5f9; border-color: #cbd5e1; }
+          .radio-pill input[type="radio"] { display: none; }
+          
+          .radio-pill.selected-good { background: #10b981; color: white; border-color: #10b981; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2); }
+          .radio-pill.selected-bad { background: #ef4444; color: white; border-color: #ef4444; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2); }
+          
+          .checklist-row { display: flex; flex-direction: column; gap: 12px; padding: 20px 0; border-bottom: 1px dashed #e2e8f0; }
+          .checklist-row:last-child { border-bottom: none; padding-bottom: 0; }
+          
+          @media (min-width: 600px) {
+              .checklist-row { flex-direction: row; justify-content: space-between; align-items: flex-center; }
+              .item-label { width: 35%; flex-shrink: 0; margin-top: 8px; }
+          }
+          
+          .btn-submit { background: #003366; color: white; border: none; padding: 16px; border-radius: 12px; font-size: 1rem; font-weight: 800; cursor: pointer; width: 100%; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0, 51, 102, 0.2); letter-spacing: 0.02em; margin-top: 24px; display: flex; align-items: center; justify-content: center; gap: 8px;}
+          .btn-submit:hover { background: #002244; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0, 51, 102, 0.25); }
+      `}</style>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', borderBottom: '2px solid #e5e7eb', paddingBottom: '16px' }}>
+          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#003366' }}>
+              <Icons.Facility />
+          </div>
+          <div>
+              <h2 style={{ margin: 0, color: '#111827', fontWeight: '800', fontSize: '1.5rem', letterSpacing: '-0.02em' }}>CƠ SỞ VẬT CHẤT</h2>
+              <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: '500' }}>Báo cáo kiểm tra thiết bị định kỳ</span>
+          </div>
+      </div>
       
-      <div style={{ background: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #ddd' }}>
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'inline-block', width: '100px', fontWeight: 'bold' }}>Thời điểm:</label>
-          <select value={checkType} onChange={e => setCheckType(e.target.value)} style={{ padding: '5px' }}>
-            <option value="Đầu giờ">☀️ Đầu giờ</option>
-            <option value="Cuối giờ">🌙 Cuối giờ</option>
-          </select>
-        </div>
-        <div>
-          <label style={{ display: 'inline-block', width: '100px', fontWeight: 'bold' }}>Khu vực:</label>
-          <select value={selectedArea} onChange={e => setSelectedArea(e.target.value)} required style={{ padding: '5px', minWidth: '200px' }}>
-            <option value="">-- Chọn phòng --</option>
-            {areas.map(area => <option key={area} value={area}>{area}</option>)}
-          </select>
+      <div style={{ background: 'white', padding: '24px', borderRadius: '20px', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -2px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+            <div>
+              <label style={{ display: 'block', fontWeight: '700', color: '#475569', marginBottom: '8px', fontSize: '0.9rem' }}>Thời điểm báo cáo</label>
+              <select value={checkType} onChange={e => setCheckType(e.target.value)} className="filter-modern">
+                <option value="Đầu giờ">☀️ Ca sáng / Đầu giờ</option>
+                <option value="Cuối giờ">🌙 Ca tối / Cuối giờ</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: '700', color: '#475569', marginBottom: '8px', fontSize: '0.9rem' }}>Khu vực kiểm tra</label>
+              <select value={selectedArea} onChange={e => setSelectedArea(e.target.value)} required className="filter-modern">
+                <option value="" disabled>-- Vui lòng chọn khu vực --</option>
+                {areas.map(area => <option key={area} value={area}>{area}</option>)}
+              </select>
+            </div>
         </div>
       </div>
 
       {!selectedArea ? (
-        <p style={{ fontStyle: 'italic', color: '#666' }}>Chọn khu vực để hiện danh sách kiểm tra...</p>
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8', background: 'white', borderRadius: '20px', border: '1px dashed #cbd5e1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+            <div style={{ fontSize: '3rem', opacity: 0.8 }}>📋</div>
+            <div style={{ fontWeight: '700', fontSize: '1.05rem', color: '#475569' }}>Chưa chọn khu vực</div>
+            <div style={{ fontSize: '0.9rem' }}>Vui lòng chọn khu vực làm việc ở phía trên để tải danh sách thiết bị.</div>
+        </div>
       ) : (
-        <form onSubmit={handleSubmit}>
-          <table border="1" cellPadding="10" style={{ borderCollapse: 'collapse', width: '100%', marginBottom: '20px', background: 'white' }}>
-            <thead>
-              <tr style={{ background: '#eee', textAlign: 'left' }}>
-                <th style={{ width: '30%' }}>Hạng mục</th>
-                <th>Trạng thái (Bắt buộc chọn hết)</th>
-              </tr>
-            </thead>
-            <tbody>
+        <form onSubmit={handleSubmit} style={{ background: 'white', padding: '28px 24px', borderRadius: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -2px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.15rem', color: '#1e293b', borderBottom: '2px solid #f1f5f9', paddingBottom: '16px', fontWeight: '800' }}>Checklist kiểm tra: <span style={{color: '#0369a1'}}>{selectedArea}</span></h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               {currentChecklist.map((config) => (
-                <tr key={config.item}>
-                  <td style={{ fontWeight: '500' }}>{config.item}</td>
-                  <td>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
+                <div key={config.item} className="checklist-row">
+                  <div className="item-label" style={{ fontWeight: '800', color: '#1e293b', fontSize: '1rem' }}>
+                      {config.item}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                       {config.options.map(option => {
                         const isGood = option === config.goodStatus;
-                        const color = isGood ? 'green' : '#d9534f';
+                        const isSelected = currentStatusMap[config.item] === option;
+                        
+                        let pillClass = "radio-pill";
+                        if (isSelected) {
+                            pillClass += isGood ? " selected-good" : " selected-bad";
+                        }
+
                         return (
-                          <label key={option} style={{ cursor: 'pointer', color: color }}>
+                          <label key={option} className={pillClass}>
                             <input 
                               type="radio" 
                               name={`${currentKey}_${config.item}`} 
                               value={option} 
-                              checked={currentStatusMap[config.item] === option}
+                              checked={isSelected}
                               onChange={() => handleStatusChange(config.item, option)} 
-                              style={{ marginRight: '5px' }}
                             /> 
-                            <span style={{ fontWeight: isGood ? 'bold' : 'normal' }}>{option}</span>
+                            {option}
                           </label>
                         );
                       })}
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-          <button type="submit" style={{ background: '#003366', color: 'white', border: 'none', padding: '12px 30px', borderRadius: '5px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' }}>
-            GỬI BÁO CÁO
-          </button>
+            </div>
+
+            <button type="submit" className="btn-submit">
+               <Icons.Check /> Xác nhận gửi Báo cáo
+            </button>
         </form>
       )}
     </div>

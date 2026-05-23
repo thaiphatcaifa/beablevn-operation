@@ -14,7 +14,6 @@ const isSameWeek = (d1, d2) => {
     return d1 >= start && d1 <= end;
 };
 
-// Hàm tạo danh sách tháng năm từ 2026 đến 2030
 const generateMonthYearOptions = () => {
     const options = [];
     for (let y = 2026; y <= 2030; y++) {
@@ -29,36 +28,36 @@ const generateMonthYearOptions = () => {
 };
 const monthYearOptions = generateMonthYearOptions();
 
-// --- BỘ ICON MINIMALIST (#003366) ---
+// --- BỘ ICON MINIMALIST ĐỒNG BỘ ---
 const Icons = {
   Schedule: () => (
-    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="2">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
     </svg>
   ),
   CheckIn: () => (
-    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="2">
+    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
     </svg>
   ),
-  CheckOut: () => (
-    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="2">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-    </svg>
-  ),
   ButtonIconIn: () => (
-    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
       <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
     </svg>
   ),
   ButtonIconOut: () => (
-    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
     </svg>
   ),
   Exclamation: () => (
-    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#b45309" strokeWidth={2}>
+    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+    </svg>
+  ),
+  Check: () => (
+    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#059669" strokeWidth="2.5">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
     </svg>
   )
 };
@@ -75,7 +74,6 @@ const Attendance = () => {
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
 
-    // Cập nhật ngay lập tức nếu App vừa được lôi từ chạy ngầm (background) lên
     const handleVisibilityChange = () => {
         if (document.visibilityState === 'visible') {
             setNow(new Date());
@@ -89,15 +87,11 @@ const Attendance = () => {
     };
   }, []);
 
-  // Lọc danh sách tasks của nhân viên
   const myScheduleTasks = tasks.filter(t => t.assigneeId === user.id && t.fromScheduleId);
   
   const filteredScheduleTasks = myScheduleTasks.filter(t => {
-      // Fix lỗi parse Date cho các thiết bị Apple đời cũ
       let safeStartStr = t.startTime;
-      if(safeStartStr && safeStartStr.includes('T')) {
-          // Fallback parsing nếu cần
-      }
+      if(safeStartStr && safeStartStr.includes('T')) {}
       const taskDate = new Date(t.startTime);
       const currentTime = new Date();
 
@@ -117,15 +111,14 @@ const Attendance = () => {
   
   filteredScheduleTasks.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
-  // --- 1. XỬ LÝ CHECK-IN (SCHEDULER) ---
+  // --- 1. XỬ LÝ CHECK-IN ---
   const handleSchedulerCheckIn = (task) => {
-      // KHẮC PHỤC: Lấy giờ tức thời (exact now) khi người dùng bấm nút thay vì phụ thuộc state 'now'
       const exactNow = new Date();
       const startTime = new Date(task.startTime);
       const diffMinutes = (exactNow - startTime) / 60000; 
 
       if (diffMinutes < -15) {
-          alert(`Chưa đến giờ! Bạn chỉ có thể check-in từ ${new Date(startTime.getTime() - 15*60000).toLocaleTimeString()}.`);
+          alert(`Chưa đến giờ! Bạn chỉ có thể check-in từ ${new Date(startTime.getTime() - 15*60000).toLocaleTimeString('vi-VN')}.`);
           return;
       }
 
@@ -147,9 +140,8 @@ const Attendance = () => {
       alert(msg);
   };
 
-  // --- 2. XỬ LÝ CHECK-OUT (SCHEDULER) ---
+  // --- 2. XỬ LÝ CHECK-OUT ---
   const handleSchedulerCheckOut = (task) => {
-      // Lấy giờ tức thời
       const exactNow = new Date();
       const endTime = new Date(task.endTime);
       const diffMinutes = (endTime - exactNow) / 60000; 
@@ -174,7 +166,7 @@ const Attendance = () => {
       }
   };
 
-  // --- 3. XỬ LÝ GIẢI TRÌNH (SCHEDULER) ---
+  // --- 3. XỬ LÝ GIẢI TRÌNH ---
   const handleSchedulerExplain = (task) => {
       const exactNow = new Date();
       const reason = window.prompt("Đã quá giờ check-out quy định. Vui lòng nhập lý do:");
@@ -190,6 +182,7 @@ const Attendance = () => {
       }
   };
 
+  // --- CA LÀM VIỆC CỐ ĐỊNH (HỆ CŨ) ---
   const myShifts = shifts.filter(s => s.staffId === user.id);
   const handleCheckInOld = (shiftId) => { 
       if (window.confirm('Xác nhận Check-in?')) {
@@ -207,9 +200,7 @@ const Attendance = () => {
       if (isCompleted) {
           return (
               <div style={styles.checkCircle}>
-                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#10b981" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
+                  <Icons.Check />
               </div>
           );
       }
@@ -217,20 +208,20 @@ const Attendance = () => {
       if (!isCheckedIn) {
           if (diffStart < -15) {
               return (
-                  <button style={{...styles.mainBtn, background: '#e2e8f0', color: '#94a3b8', cursor: 'not-allowed'}}>
-                      Chưa đến giờ
+                  <button disabled style={{...styles.mainBtn, background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', boxShadow: 'none'}}>
+                      Chưa đến ca
                   </button>
               );
           }
           if (diffStart > 3) {
               return (
-                  <button onClick={() => handleSchedulerCheckIn(task)} style={{...styles.mainBtn, background: '#ef4444'}}>
+                  <button className="btn-danger" onClick={() => handleSchedulerCheckIn(task)} style={{...styles.mainBtn, background: '#ef4444'}}>
                       Vào ca (Trễ)
                   </button>
               );
           }
           return (
-              <button onClick={() => handleSchedulerCheckIn(task)} style={styles.mainBtn}>
+              <button className="btn-primary" onClick={() => handleSchedulerCheckIn(task)} style={styles.mainBtn}>
                   Check-in
               </button>
           );
@@ -239,13 +230,13 @@ const Attendance = () => {
       if (isCheckedIn) {
           if (diffEnd < -15) {
               return (
-                  <button onClick={() => handleSchedulerExplain(task)} style={styles.explainBtn}>
+                  <button className="btn-warning" onClick={() => handleSchedulerExplain(task)} style={styles.explainBtn}>
                       <Icons.Exclamation /> Giải trình
                   </button>
               );
           }
           return (
-              <button onClick={() => handleSchedulerCheckOut(task)} style={styles.outBtn}>
+              <button className="btn-danger-outline" onClick={() => handleSchedulerCheckOut(task)} style={styles.outBtn}>
                   Check-out
               </button>
           );
@@ -253,27 +244,59 @@ const Attendance = () => {
   };
 
   return (
-    <div style={{ paddingBottom: '40px' }}>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap: 'wrap', gap: '15px', marginBottom:'20px', borderBottom: '1px solid #e5e7eb', paddingBottom:'15px'}}>
+    <div style={{ paddingBottom: '40px', boxSizing: 'border-box' }}>
+      {/* CSS CHO HOVER EFFECTS & LAYOUT */}
+      <style>{`
+          .attendance-card {
+              transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          .attendance-card:hover {
+              transform: translateY(-4px);
+              box-shadow: 0 12px 20px -8px rgba(0,0,0,0.1) !important;
+          }
+          .btn-primary:hover { background: #002244 !important; transform: translateY(-1px); }
+          .btn-danger:hover { background: #dc2626 !important; transform: translateY(-1px); }
+          .btn-warning:hover { background: #ffedd5 !important; border-color: #ea580c !important; transform: translateY(-1px); }
+          .btn-danger-outline:hover { background: #fef2f2 !important; transform: translateY(-1px); }
+          
+          .filter-modern {
+              padding: 10px 14px; border-radius: 12px; border: 1px solid #e5e7eb; outline: none;
+              font-weight: 600; color: #374151; background: #ffffff; cursor: pointer; font-size: 0.9rem;
+              transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.02); appearance: none; -webkit-appearance: none;
+              background-image: url('data:image/svg+xml;utf8,<svg fill="%239ca3af" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+              background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px;
+          }
+          .filter-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+
+          @media (max-width: 480px) {
+              .filter-container { flex-direction: column; width: 100%; }
+              .filter-modern { width: 100%; box-sizing: border-box; }
+              .card-actions { flex-direction: row !important; width: 100%; justify-content: flex-end; margin-top: 16px; border-top: 1px dashed #e2e8f0; padding-top: 16px;}
+          }
+      `}</style>
+
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap: 'wrap', gap: '16px', marginBottom:'24px', borderBottom: '2px solid #e5e7eb', paddingBottom:'16px'}}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Icons.Schedule />
+              <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#003366' }}>
+                  <Icons.Schedule />
+              </div>
               <div>
-                  <h2 style={{ color: '#003366', margin: 0, fontWeight: '700' }}>Chấm công cá nhân</h2>
-                  <p style={{fontSize:'0.85rem', color:'#6b7280', margin:'4px 0 0 0'}}>Theo lịch công tác (Scheduler)</p>
+                  <h2 style={{ color: '#111827', margin: 0, fontWeight: '800', fontSize: '1.5rem', letterSpacing: '-0.02em' }}>CHẤM CÔNG CÁ NHÂN</h2>
+                  <span style={{fontSize:'0.85rem', color:'#6b7280', fontWeight: '500'}}>Theo lịch công tác (Scheduler)</span>
               </div>
           </div>
           
-          {/* BỘ LỌC */}
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          {/* BỘ LỌC HIỆN ĐẠI */}
+          <div className="filter-container" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <select 
                   value={selectedMonthYear} 
                   onChange={(e) => {
                       setSelectedMonthYear(e.target.value);
                       if (e.target.value !== 'all') setTimeFilter('all'); 
                   }} 
-                  style={styles.filterSelect}
+                  className="filter-modern"
               >
-                  <option value="all">Tháng cụ thể: Tất cả</option>
+                  <option value="all">Tháng: Tất cả</option>
                   {monthYearOptions.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
@@ -285,7 +308,7 @@ const Attendance = () => {
                       setTimeFilter(e.target.value);
                       if (e.target.value !== 'all') setSelectedMonthYear('all'); 
                   }} 
-                  style={styles.filterSelect}
+                  className="filter-modern"
               >
                   <option value="all">Thời gian: Tất cả</option>
                   <option value="day">Hôm nay</option>
@@ -295,7 +318,7 @@ const Attendance = () => {
           </div>
       </div>
 
-      <div style={{display: 'grid', gap: '15px', marginBottom: '40px'}}>
+      <div style={{display: 'grid', gap: '20px', marginBottom: '40px'}}>
            {filteredScheduleTasks.length > 0 ? filteredScheduleTasks.map(task => {
                const start = new Date(task.startTime);
                const end = new Date(task.endTime);
@@ -306,64 +329,70 @@ const Attendance = () => {
                const diffEnd = (end - now) / 60000; 
 
                return (
-                   <div key={task.id} style={{ ...styles.scheduleItem, borderLeft: `5px solid ${isCompleted ? '#10b981' : (isCheckedIn ? '#3b82f6' : '#cbd5e1')}` }}>
-                       <div style={{flex: 1}}>
-                           <div style={{fontWeight:'700', color:'#1e293b', fontSize:'1rem'}}>{task.title}</div>
-                           <div style={{fontSize:'0.85rem', color:'#64748b', marginTop:'4px'}}>
-                               📅 {start.toLocaleDateString('vi-VN')} &nbsp;|&nbsp; 
-                               ⏰ {start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                   <div key={task.id} className="attendance-card" style={{ ...styles.scheduleItem, borderLeft: `6px solid ${isCompleted ? '#10b981' : (isCheckedIn ? '#3b82f6' : '#cbd5e1')}` }}>
+                       <div style={{flex: 1, minWidth: 0}}>
+                           <div style={{fontWeight:'800', color:'#1e293b', fontSize:'1.1rem', marginBottom: '8px', letterSpacing: '-0.01em'}}>{task.title}</div>
+                           <div style={{fontSize:'0.85rem', color:'#475569', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap'}}>
+                               <span style={{background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', fontWeight: '600', border: '1px solid #e2e8f0'}}>📅 {start.toLocaleDateString('vi-VN')}</span>
+                               <span style={{background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', fontWeight: '600', border: '1px solid #e2e8f0'}}>⏰ {start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                            </div>
-                           <div style={{marginTop:'8px', display:'flex', gap:'8px', flexWrap:'wrap', alignItems: 'center'}}>
+                           <div style={{marginTop:'16px', display:'flex', gap:'8px', flexWrap:'wrap', alignItems: 'center'}}>
                                <span style={styles.roleBadge}>{task.assignedRole}</span>
                                {task.checkInStatus === 'Late' && <span style={styles.lateBadge}>⚠️ Trễ giờ</span>}
-                               {isCheckedIn && !isCompleted && <span style={styles.workingBadge}>Đang làm việc</span>}
+                               {isCheckedIn && !isCompleted && <span style={styles.workingBadge}>Đang trong ca</span>}
                                
                                {task.adminEdited && (
-                                   <span style={{fontSize:'0.75rem', fontStyle:'italic', color:'#c2410c', fontWeight:'bold'}}>
-                                       (Được sửa bởi Admin: {task.adminEditReason})
+                                   <span style={{fontSize:'0.8rem', background: '#ffedd5', color:'#c2410c', fontWeight:'700', padding: '2px 8px', borderRadius: '6px'}}>
+                                       *Sửa bởi Admin: {task.adminEditReason}
                                    </span>
                                )}
                            </div>
                        </div>
-                       <div style={{display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'5px'}}>
+                       <div className="card-actions" style={{display:'flex', flexDirection:'column', alignItems:'flex-end', justifyContent: 'center', minWidth: '120px'}}>
                            {renderActionButton(task, diffStart, diffEnd, isCheckedIn, isCompleted)}
                        </div>
                    </div>
                )
            }) : (
-               <div style={styles.emptyState}>Không có lịch làm việc phù hợp với bộ lọc.</div>
+               <div style={styles.emptyState}>
+                   <div style={{fontSize: '3rem', marginBottom: '12px', opacity: 0.8}}>📅</div>
+                   <div style={{fontWeight: '700', color: '#475569', fontSize: '1.05rem'}}>Không có lịch làm việc!</div>
+                   <div style={{fontSize: '0.9rem', color: '#94a3b8', marginTop: '6px'}}>Chưa có dữ liệu nào phù hợp với bộ lọc hiện tại.</div>
+                </div>
            )}
       </div>
 
       {myShifts.length > 0 && (
-        <div style={{borderTop: '1px solid #e5e7eb', paddingTop: '25px'}}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-              <Icons.CheckIn />
-              <h3 style={{ color: '#003366', fontSize:'1.1rem', margin: 0, fontWeight: '700' }}>Ca làm việc đăng ký (Cũ)</h3>
+        <div style={{borderTop: '2px solid #e5e7eb', paddingTop: '24px'}}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '12px', display: 'flex', color: '#475569' }}>
+                  <Icons.CheckIn />
+              </div>
+              <h3 style={{ color: '#111827', fontSize:'1.25rem', margin: 0, fontWeight: '800', letterSpacing: '-0.02em' }}>Ca làm việc cố định (Hệ cũ)</h3>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
             {myShifts.map(shift => {
               const todayLog = attendanceLogs.find(l => l.shiftId === shift.id && new Date(l.date).toDateString() === new Date().toDateString());
               return (
-                <div key={shift.id} style={styles.shiftCard}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <span style={{ fontWeight: '700', color: '#1e293b' }}>{shift.shiftName}</span>
-                      <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{shift.timeRange}</span>
+                <div key={shift.id} className="attendance-card" style={styles.shiftCard}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                      <span style={{ fontWeight: '800', color: '#1e293b', fontSize: '1.1rem' }}>{shift.shiftName}</span>
+                      <span style={{ fontSize: '0.8rem', color: '#475569', background: '#f1f5f9', padding: '4px 10px', borderRadius: '8px', fontWeight: '700' }}>{shift.timeRange}</span>
                   </div>
-                  <div style={{ marginTop: '15px' }}>
+                  <div style={{ marginTop: '16px' }}>
                       {!todayLog ? (
-                          <button onClick={() => handleCheckInOld(shift.id)} style={styles.mainBtn}>
-                              <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
-                                  <Icons.ButtonIconIn /> Check-in
+                          <button className="btn-primary" onClick={() => handleCheckInOld(shift.id)} style={{...styles.mainBtn, width: '100%'}}>
+                              <div style={{display:'flex', alignItems:'center', justifyContent: 'center', gap:'8px'}}>
+                                  <Icons.ButtonIconIn /> Check-in vào ca
                               </div>
                           </button>
                       ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
                               <span style={todayLog.checkOut ? styles.badgeSuccess : styles.badgeActive}>
                                   {todayLog.checkOut ? 'Đã hoàn thành' : 'Đang làm việc'}
                               </span>
                               {!todayLog.checkOut && (
-                                  <button onClick={() => handleCheckOutOld(todayLog.id)} style={styles.outBtn}>
+                                  <button className="btn-danger-outline" onClick={() => handleCheckOutOld(todayLog.id)} style={styles.outBtn}>
                                       <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
                                           <Icons.ButtonIconOut /> Check-out
                                       </div>
@@ -383,19 +412,18 @@ const Attendance = () => {
 };
 
 const styles = {
-    filterSelect: { padding: '8px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', fontWeight: '600', color: '#003366', cursor: 'pointer', background: 'white' },
-    scheduleItem: { background: 'white', padding: '18px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', transition: 'transform 0.2s', gap: '10px' },
-    shiftCard: { background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', borderLeft: '5px solid #003366' },
-    mainBtn: { background: '#003366', color: 'white', border: 'none', padding: '10px 18px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', boxShadow: '0 4px 6px rgba(0, 51, 102, 0.2)', whiteSpace: 'nowrap' },
-    outBtn: { background: 'white', border: '1px solid #ef4444', color: '#ef4444', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', whiteSpace: 'nowrap' },
-    explainBtn: { background: '#fff7ed', border: '1px solid #f97316', color: '#c2410c', padding: '8px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', display:'flex', alignItems:'center', gap:'5px', whiteSpace: 'nowrap' },
-    roleBadge: { fontSize: '0.75rem', background: '#f1f5f9', padding: '4px 10px', borderRadius: '6px', color: '#475569', fontWeight: '600' },
-    lateBadge: { fontSize: '0.75rem', background: '#fef2f2', padding: '4px 10px', borderRadius: '6px', color: '#dc2626', fontWeight: '700' },
-    workingBadge: { fontSize: '0.75rem', background: '#eff6ff', padding: '4px 10px', borderRadius: '6px', color: '#2563eb', fontWeight: '700' },
-    checkCircle: { width: '36px', height: '36px', background: '#ecfdf5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-    badgeSuccess: { background: '#ecfdf5', color: '#059669', padding: '5px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800' },
-    badgeActive: { background: '#e0f2fe', color: '#003366', padding: '5px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800' },
-    emptyState: { textAlign: 'center', padding: '50px', color: '#94a3b8', fontStyle: 'italic', background: 'white', borderRadius: '16px', border: '1px dashed #e2e8f0' }
+    scheduleItem: { background: 'white', padding: '24px', borderRadius: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', gap: '16px', border: '1px solid #f1f5f9' },
+    shiftCard: { background: 'white', padding: '24px', borderRadius: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9', borderTop: '5px solid #003366' },
+    mainBtn: { background: '#003366', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem', boxShadow: '0 4px 6px rgba(0, 51, 102, 0.2)', whiteSpace: 'nowrap', transition: 'all 0.2s' },
+    outBtn: { background: 'white', border: '1px solid #ef4444', color: '#ef4444', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', whiteSpace: 'nowrap', transition: 'all 0.2s' },
+    explainBtn: { background: '#fff7ed', border: '1px solid #fed7aa', color: '#ea580c', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', display:'flex', alignItems:'center', gap:'6px', whiteSpace: 'nowrap', transition: 'all 0.2s' },
+    roleBadge: { fontSize: '0.75rem', background: '#f1f5f9', padding: '6px 12px', borderRadius: '8px', color: '#334155', fontWeight: '700', letterSpacing: '0.01em' },
+    lateBadge: { fontSize: '0.75rem', background: '#fef2f2', padding: '6px 12px', borderRadius: '8px', color: '#dc2626', fontWeight: '700', border: '1px solid #fecaca' },
+    workingBadge: { fontSize: '0.75rem', background: '#eff6ff', padding: '6px 12px', borderRadius: '8px', color: '#2563eb', fontWeight: '700', border: '1px solid #bfdbfe' },
+    checkCircle: { width: '48px', height: '48px', background: '#ecfdf5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #a7f3d0' },
+    badgeSuccess: { background: '#ecfdf5', color: '#059669', padding: '8px 16px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '800', border: '1px solid #a7f3d0', whiteSpace: 'nowrap' },
+    badgeActive: { background: '#eff6ff', color: '#2563eb', padding: '8px 16px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '800', border: '1px solid #bfdbfe', whiteSpace: 'nowrap' },
+    emptyState: { textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '20px', border: '1px dashed #cbd5e1', display: 'flex', flexDirection: 'column', alignItems: 'center' }
 };
 
 export default Attendance;

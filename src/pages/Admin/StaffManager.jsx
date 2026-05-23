@@ -3,16 +3,22 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import bcrypt from 'bcryptjs';
 
+// --- BỘ ICON ĐÃ BỔ SUNG ĐẦY ĐỦ ---
 const Icons = {
-  Edit: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>),
-  Save: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>),
-  Delete: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>),
-  Add: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>),
-  Key: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>),
-  Search: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#6b7280" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>),
-  Trash: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>),
-  Close: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>),
-  Warning: () => (<svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>)
+  Staff: ({ active }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" width="22" height="22">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+    </svg>
+  ),
+  Edit: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>),
+  Save: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>),
+  Delete: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>),
+  Add: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>),
+  Key: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>),
+  Search: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#64748b" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>),
+  Trash: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>),
+  Close: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#64748b" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>),
+  Warning: () => (<svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>)
 };
 
 const safeNumber = (value) => {
@@ -42,16 +48,15 @@ const StaffManager = () => {
   const { staffList, addStaff, deleteStaff, updateStaffInfo } = useData();
 
   const [formData, setFormData] = useState({ name: '', username: '', password: '' });
-  const [editMode, setEditMode] = useState(null); // Lưu ID của staff đang được mở modal chỉnh sửa
+  const [editMode, setEditMode] = useState(null); 
   const [editForm, setEditForm] = useState({});
   const [filterRole, setFilterRole] = useState('all'); 
   const [searchTerm, setSearchTerm] = useState('');
 
-  // State mới phục vụ cho Custom Popup Modal cảnh báo xóa nguy hiểm
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const isChief = user?.role === 'chief';
-  if (!isChief) return <div style={{padding:'20px', color:'#d32f2f'}}>Bạn không có quyền truy cập quản lý nhân sự cấp cao.</div>;
+  if (!isChief) return <div style={{padding:'20px', color:'#ef4444', fontWeight: 'bold'}}>Bạn không có quyền truy cập quản lý nhân sự cấp cao.</div>;
 
   const getLastName = (fullName) => {
       if (!fullName) return '';
@@ -235,170 +240,137 @@ const StaffManager = () => {
 
   return (
     <div style={{ paddingBottom: '40px', boxSizing: 'border-box' }}>
-      {/* KHẮC PHỤC LỖI CSS BỊ TRÀN DO DÙNG CAMELCASE TRONG THẺ <style> BẰNG CÁCH CHUYỂN VỀ CHUẨN KEBAB-CASE CỦA CSS */}
       <style>{`
-        .add-staff-form {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 12px;
-          width: 100%;
-        }
+        .add-staff-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; width: 100%; }
         @media (max-width: 600px) {
-          .add-staff-form {
-            grid-template-columns: 1fr;
-          }
-          .add-staff-btn {
-            width: 100%;
-            justify-content: center;
-          }
+          .add-staff-form { grid-template-columns: 1fr; }
+          .add-staff-btn { width: 100%; justify-content: center; }
         }
         .modal-overlay {
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(15, 23, 42, 0.6);
-          backdrop-filter: blur(4px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 9999;
-          padding: 16px;
-          box-sizing: border-box;
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+          display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; box-sizing: border-box;
         }
         .modal-content {
-          background: white;
-          width: 100%;
-          max-width: 650px;
-          max-height: 90vh;
-          border-radius: 16px;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          animation: modalFadeIn 0.2s ease-out;
+          background: white; width: 100%; max-width: 700px; max-height: 90vh;
+          border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          display: flex; flex-direction: column; overflow: hidden;
+          animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         @keyframes modalFadeIn {
           from { opacity: 0; transform: scale(0.95) translateY(10px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
-        .modal-header {
-          padding: 16px 20px;
-          border-bottom: 1px solid #f1f5f9;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background: #f8fafc;
-        }
-        .modal-body {
-          padding: 20px;
-          overflow-y: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-        .modal-footer {
-          padding: 14px 20px;
-          border-top: 1px solid #f1f5f9;
-          display: flex;
-          gap: 12px;
-          justify-content: flex-end;
-          background: #f8fafc;
-        }
+        .modal-header { padding: 20px 24px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; background: #ffffff; }
+        .modal-body { padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; background: #f8fafc; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; gap: 12px; justify-content: flex-end; background: #ffffff; }
+        
+        .input-modern { padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem; outline: none; background: white; transition: all 0.2s; box-sizing: border-box; width: 100%; }
+        .input-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+        
+        .staff-card { transition: all 0.25s ease; cursor: default; }
+        .staff-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -8px rgba(0,0,0,0.1) !important; border-color: #bae6fd !important; }
       `}</style>
 
-      <h2 style={{ color: '#003366', borderBottom: '2px solid #e5e7eb', paddingBottom: '15px', marginBottom: '20px', fontWeight: 'bold', fontSize: '1.5rem' }}>
-        QUẢN LÝ NHÂN SỰ - CHIEF
-      </h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', borderBottom: '2px solid #e5e7eb', paddingBottom: '16px' }}>
+          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#003366' }}>
+              <Icons.Staff active={true} />
+          </div>
+          <div>
+              <h2 style={{ margin: 0, color: '#111827', fontWeight: '800', fontSize: '1.5rem', letterSpacing: '-0.02em' }}>QUẢN LÝ NHÂN SỰ</h2>
+              <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: '500' }}>Quyền hạn cấp cao (Chief Admin)</span>
+          </div>
+      </div>
 
       {/* FORM TẠO MỚI RESPONSIVE */}
-      <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', border: '1px solid #f0f0f0' }}>
-        <h4 style={{ margin: '0 0 15px 0', color: '#003366', fontWeight: '600' }}>Khởi tạo tài khoản mới</h4>
+      <div style={{ background: '#ffffff', padding: '28px', borderRadius: '20px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.03)', marginBottom: '32px', border: '1px solid rgba(0,0,0,0.05)' }}>
+        <h4 style={{ margin: '0 0 20px 0', color: '#111827', fontWeight: '800', fontSize: '1.15rem' }}>Khởi tạo tài khoản mới</h4>
         <form onSubmit={handleAdd} className="add-staff-form">
-          <input placeholder="Họ và Tên" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required style={styles.input} />
-          <input placeholder="ID Đăng nhập" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} required style={styles.input} />
-          <input placeholder="Mật khẩu" type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required style={styles.input} />
-          <button type="submit" className="add-staff-btn" style={{...styles.btnAdd, background: '#003366', color: 'white'}}><Icons.Add /> Tạo mới</button>
+          <input className="input-modern" placeholder="Họ và Tên" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
+          <input className="input-modern" placeholder="ID Đăng nhập" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} required />
+          <input className="input-modern" placeholder="Mật khẩu" type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required />
+          <button type="submit" className="add-staff-btn" style={{...styles.btnAdd, background: '#003366', color: 'white'}}><Icons.Add /> <span>Tạo mới</span></button>
         </form>
       </div>
 
       {/* CÔNG CỤ LỌC */}
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} style={{...styles.filterSelect, flex: '1 1 200px'}}>
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <select className="input-modern" value={filterRole} onChange={(e) => setFilterRole(e.target.value)} style={{flex: '1 1 200px', cursor: 'pointer', appearance: 'none', backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="%2364748b" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center'}}>
               <option value="all">Tất cả tài khoản</option>
               <option value="admin">Nhóm Admin (Quản trị)</option>
               <option value="staff">Nhóm Staff (Nhân viên)</option>
           </select>
           <div style={{ position: 'relative', flex: '1 1 200px', minWidth: '200px' }}>
-              <input type="text" placeholder="Tìm theo tên (vd: Lan, Viet...)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ ...styles.input, width: '100%', paddingLeft: '38px', boxSizing: 'border-box' }} />
-              <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}><Icons.Search /></div>
+              <input className="input-modern" type="text" placeholder="Tìm kiếm theo tên (vd: Lan, Viet...)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ paddingLeft: '44px' }} />
+              <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }}><Icons.Search /></div>
           </div>
       </div>
 
       {/* DANH SÁCH NHÂN SỰ KẾT HỢP GIAO DIỆN THẺ (CARD UI) MỚI */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
         {filteredStaffList.map(staff => (
-          <div key={staff.id} style={{ 
-              background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '20px', 
-              border: editMode === staff.id ? '2px solid #003366' : '1px solid #f0f0f0',
-              opacity: (staff.status === 'suspended' && editMode !== staff.id) ? 0.6 : 1, transition: 'all 0.2s ease',
+          <div className="staff-card" key={staff.id} style={{ 
+              background: '#ffffff', borderRadius: '20px', padding: '24px', 
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -2px rgba(0,0,0,0.03)',
+              border: editMode === staff.id ? '2px solid #0284c7' : '1px solid rgba(0,0,0,0.05)',
+              opacity: (staff.status === 'suspended' && editMode !== staff.id) ? 0.6 : 1,
               display: 'flex', flexDirection: 'column'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', borderBottom: '1px solid #f5f5f5', paddingBottom: '10px' }}>
-               <div style={{display:'flex', alignItems:'center', gap: '10px'}}>
-                  <div style={{width:'40px', height:'40px', background:'#e6f7ff', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'#003366', fontWeight:'bold', fontSize:'1rem'}}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', borderBottom: '1px dashed #e2e8f0', paddingBottom: '16px' }}>
+               <div style={{display:'flex', alignItems:'center', gap: '12px'}}>
+                  <div style={{width:'48px', height:'48px', background:'#f0f9ff', borderRadius:'14px', display:'flex', alignItems:'center', justifyContent:'center', color:'#0369a1', fontWeight:'800', fontSize:'1.2rem'}}>
                     {staff.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <div style={{fontWeight:'600', color:'#111827'}}>{staff.name}</div>
-                    <div style={{fontSize:'0.8rem', color:'#6b7280'}}>@{staff.username}</div>
+                    <div style={{fontWeight:'800', color:'#111827', fontSize: '1.05rem', letterSpacing: '-0.01em'}}>{staff.name}</div>
+                    <div style={{fontSize:'0.85rem', color:'#64748b', fontWeight: '500'}}>@{staff.username}</div>
                   </div>
                </div>
-               <span style={{ background: '#f9fafb', color: '#4b5563', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', height: 'fit-content', fontWeight: '500', border: '1px solid #e5e7eb' }}>
+               <span style={{ background: '#f8fafc', color: '#475569', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', height: 'fit-content', fontWeight: '700', border: '1px solid #e2e8f0' }}>
                   {roleName(staff.role)}
                </span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <div style={{fontSize: '0.9rem', color: '#4b5563'}}>
-                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
-                        <div style={{display:'flex', flexWrap:'wrap', gap:'5px', minHeight: '24px'}}>
-                            {staff.positions && staff.positions.length > 0 ? staff.positions.map(p => (
-                                <span key={p} style={{fontSize:'0.75rem', background:'#f3f4f6', color:'#1f2937', padding:'3px 8px', borderRadius:'4px', border:'1px solid #e5e7eb'}}>{p}</span>
-                            )) : <span style={{fontSize:'0.75rem', color:'#9ca3af', fontStyle:'italic'}}>Chưa xét vị trí</span>}
-                        </div>
-                        <div style={{fontSize:'0.75rem', background:'#fffbeb', color:'#d97706', padding:'3px 8px', borderRadius:'4px', border:'1px solid #fde68a', fontWeight:'600'}}>
-                            Min: {staff.minWorkHours || 0}h
-                        </div>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom: '16px'}}>
+                    <div style={{display:'flex', flexWrap:'wrap', gap:'6px', minHeight: '24px'}}>
+                        {staff.positions && staff.positions.length > 0 ? staff.positions.map(p => (
+                            <span key={p} style={{fontSize:'0.75rem', background:'#f1f5f9', color:'#334155', padding: '4px 8px', borderRadius:'6px', fontWeight: '600'}}>{p}</span>
+                        )) : <span style={{fontSize:'0.75rem', color:'#94a3b8', fontStyle:'italic'}}>Chưa xét vị trí</span>}
                     </div>
-                    
-                    <div style={{marginTop: '15px', padding:'10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #f3f4f6'}}>
-                         <div style={{fontSize: '0.7rem', color:'#6b7280', textTransform:'uppercase', letterSpacing: '0.5px', marginBottom:'4px'}}>
-                             Lương cố định {staff.primaryRole ? `(Vị trí chính: ${staff.primaryRole})` : ''}
-                         </div>
-                         <div style={{color: '#059669', fontWeight:'700', fontSize:'1.1rem'}}>
-                            {calculateFixedSalary(staff).toLocaleString()} <span style={{fontSize:'0.75rem', color:'#374151', fontWeight: '400'}}>VNĐ</span>
-                         </div>
-                         
-                         <div style={{marginTop: '10px', borderTop: '1px dashed #e5e7eb', paddingTop: '8px'}}>
-                             <div style={{fontSize: '0.7rem', color:'#6b7280', marginBottom:'4px'}}>Thù lao vượt mức:</div>
-                             {staff.remunerations && staff.remunerations.length > 0 ? (
-                                 staff.remunerations.map((r, idx) => (
-                                     r.amount > 0 && (
-                                         <div key={idx} style={{fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between', color: '#374151', marginBottom:'2px'}}>
-                                             <span><b style={{color:'#003366'}}>R{idx+1}:</b> {Number(r.amount).toLocaleString()}/h</span>
-                                             <span style={{color: '#6b7280', fontStyle: 'italic'}}>{r.position} / {r.jobCode !== undefined ? r.jobCode : (r.keywords || 'All')}</span>
-                                         </div>
-                                     )
-                                 ))
-                             ) : ( <div style={{fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic'}}>Chưa cấu hình mức thù lao</div> )}
-                         </div>
+                    <div style={{fontSize:'0.75rem', background:'#fffbeb', color:'#d97706', padding:'4px 8px', borderRadius:'6px', fontWeight:'700'}}>
+                        Min: {staff.minWorkHours || 0}h
                     </div>
+                </div>
+                
+                <div style={{padding:'16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9'}}>
+                     <div style={{fontSize: '0.75rem', color:'#64748b', fontWeight: '600', textTransform:'uppercase', letterSpacing: '0.05em', marginBottom:'6px'}}>
+                         Lương cố định {staff.primaryRole ? `(${staff.primaryRole})` : ''}
+                     </div>
+                     <div style={{color: '#059669', fontWeight:'800', fontSize:'1.25rem', letterSpacing: '-0.02em'}}>
+                        {calculateFixedSalary(staff).toLocaleString()} <span style={{fontSize:'0.85rem', color:'#64748b', fontWeight: '600'}}>đ</span>
+                     </div>
+                     
+                     <div style={{marginTop: '16px', borderTop: '1px dashed #cbd5e1', paddingTop: '12px'}}>
+                         <div style={{fontSize: '0.75rem', color:'#64748b', fontWeight: '600', marginBottom:'8px'}}>Thù lao vượt mức (R):</div>
+                         {staff.remunerations && staff.remunerations.length > 0 ? (
+                             staff.remunerations.map((r, idx) => (
+                                 r.amount > 0 && (
+                                     <div key={idx} style={{fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#334155', marginBottom:'6px'}}>
+                                         <span><b style={{color:'#0369a1'}}>R{idx+1}:</b> {Number(r.amount).toLocaleString()}/h</span>
+                                         <span style={{color: '#64748b', fontWeight: '500'}}>{r.position} / {r.jobCode !== undefined ? r.jobCode : (r.keywords || 'All')}</span>
+                                     </div>
+                                 )
+                             ))
+                         ) : ( <div style={{fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic'}}>Chưa cấu hình mức thù lao</div> )}
+                     </div>
                 </div>
             </div>
 
             {/* ACTION BUTTONS */}
             <div style={styles.cardActions}>
                 <button onClick={() => startEdit(staff)} style={styles.btnEdit}>
-                    <Icons.Edit/> <span>Điều chỉnh</span>
+                    <Icons.Edit/> <span>Sửa đổi</span>
                 </button>
                 <button onClick={() => setDeleteTarget(staff.id)} style={styles.btnDelete}>
                     <Icons.Delete/> <span>Xóa</span>
@@ -407,7 +379,7 @@ const StaffManager = () => {
 
           </div>
         ))}
-        {filteredStaffList.length === 0 && <div style={{textAlign: 'center', gridColumn: '1/-1', color: '#9ca3af', padding: '20px'}}>Không tìm thấy nhân sự phù hợp.</div>}
+        {filteredStaffList.length === 0 && <div style={{textAlign: 'center', gridColumn: '1/-1', color: '#94a3b8', padding: '40px', fontSize: '1rem', fontStyle: 'italic'}}>Không tìm thấy nhân sự phù hợp với điều kiện tìm kiếm.</div>}
       </div>
 
       {/* MODAL PHỦ MỜ CHỈNH SỬA THÔNG TIN (EDIT MODE) */}
@@ -415,20 +387,20 @@ const StaffManager = () => {
         <div className="modal-overlay" onClick={() => setEditMode(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 style={{ margin: 0, color: '#003366', fontWeight: 'bold', fontSize: '1.2rem' }}>ĐIỀU CHỈNH THÔNG SỐ NHÂN SỰ</h3>
+              <h3 style={{ margin: 0, color: '#111827', fontWeight: '800', fontSize: '1.25rem', letterSpacing: '-0.01em' }}>Điều chỉnh Thông số Nhân sự</h3>
               <button onClick={() => setEditMode(null)} style={styles.closeBtn}><Icons.Close /></button>
             </div>
             
             <div className="modal-body">
               <div style={styles.sectionBox}>
                   <div style={styles.sectionTitle}>1. Định danh</div>
-                  <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
-                      <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Tên hiển thị" style={styles.inputFull} />
-                      <div style={{display:'flex', gap: '8px', flexWrap: 'wrap'}}>
-                          <input value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} placeholder="ID Account" style={{...styles.inputFull, flex: 1, minWidth: '120px'}} />
+                  <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
+                      <input className="input-modern" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Tên hiển thị" style={{marginTop: 0}} />
+                      <div style={{display:'flex', gap: '12px', flexWrap: 'wrap'}}>
+                          <input className="input-modern" value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} placeholder="ID Account" style={{flex: 1, minWidth: '150px', marginTop: 0}} />
                           <div style={{position:'relative', width: '100%', flex: 1, minWidth: '150px'}}>
-                              <input value={editForm.newPassword} onChange={e => setEditForm({...editForm, newPassword: e.target.value})} placeholder="Reset mật khẩu..." style={{...styles.inputFull, paddingLeft: '28px'}} />
-                              <div style={{position:'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)'}}><Icons.Key /></div>
+                              <input className="input-modern" value={editForm.newPassword} onChange={e => setEditForm({...editForm, newPassword: e.target.value})} placeholder="Reset mật khẩu..." style={{paddingLeft: '40px', marginTop: 0}} />
+                              <div style={{position:'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)'}}><Icons.Key /></div>
                           </div>
                       </div>
                   </div>
@@ -436,33 +408,34 @@ const StaffManager = () => {
 
               <div style={styles.sectionBox}>
                   <div style={styles.sectionTitle}>2. Quyền & Vị trí</div>
-                  <select value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})} style={styles.inputFull}>
+                  <select className="input-modern" value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})} style={{marginTop: 0}}>
                       <option value="staff">Staff (Nhân viên)</option>
                       <option value="op">Operational Admin</option>
                       <option value="reg">Regulatory Admin</option>
                       <option value="chief">Chief Admin</option>
                       <option value="scheduler">Scheduler (Lên lịch)</option>
                   </select>
-                  <div style={{display:'flex', flexWrap:'wrap', gap:'6px', marginTop:'8px'}}>
+                  <div style={{display:'flex', flexWrap:'wrap', gap:'8px', marginTop:'16px'}}>
                       {POSITIONS.map(r => (
                           <label key={r} style={styles.checkboxLabel}>
-                              <input type="checkbox" checked={editForm.positions?.includes(r)} onChange={() => handlePositionToggle(r)} /> {r}
+                              <input type="checkbox" checked={editForm.positions?.includes(r)} onChange={() => handlePositionToggle(r)} style={{accentColor: '#003366'}} /> {r}
                           </label>
                       ))}
                   </div>
                   
-                  <div style={{marginTop: '12px', display:'flex', alignItems:'center', justifyContent:'space-between', borderTop:'1px dashed #e5e7eb', paddingTop:'10px'}}>
-                      <span style={{fontSize:'0.8rem', fontWeight:'600', color:'#4b5563'}}>Số giờ làm tối thiểu/tháng:</span>
+                  <div style={{marginTop: '20px', display:'flex', alignItems:'center', justifyContent:'space-between', borderTop:'1px dashed #cbd5e1', paddingTop:'16px'}}>
+                      <span style={{fontSize:'0.9rem', fontWeight:'600', color:'#334155'}}>Số giờ làm tối thiểu/tháng:</span>
                       <input 
+                          className="input-modern"
                           type="number" 
                           placeholder="0" 
                           value={editForm.minWorkHours || 0} 
                           onChange={e => setEditForm({...editForm, minWorkHours: e.target.value})} 
-                          style={{...styles.inputFull, width: '80px', textAlign:'center'}} 
+                          style={{width: '90px', textAlign:'center', marginTop: 0, fontWeight: '700'}} 
                       />
                   </div>
 
-                  <select value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})} style={{marginTop: '12px', ...styles.inputFull, borderColor: editForm.status==='suspended'?'red':'#d1d5db', color: editForm.status==='suspended'?'red':'inherit'}}>
+                  <select className="input-modern" value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})} style={{marginTop: '16px', borderColor: editForm.status==='suspended'?'#fca5a5':'#e2e8f0', color: editForm.status==='suspended'?'#ef4444':'inherit', fontWeight: '600'}}>
                       <option value="active">Active (Hoạt động)</option>
                       <option value="suspended">Suspended (Đình chỉ)</option>
                   </select>
@@ -472,61 +445,50 @@ const StaffManager = () => {
                   <div style={styles.sectionTitle}>3. Tài chính (Lương Cố Định)</div>
                   
                   <div style={{...styles.financeRow, flexWrap: 'wrap'}}>
-                      <span style={styles.financeLabel}>Vị trí chính (Tính BHXH)</span>
-                      <select value={editForm.primaryRole || ''} onChange={e => setEditForm({...editForm, primaryRole: e.target.value})} style={{...styles.inputFull, flex: 1, padding: '8px 2px'}}>
+                      <span style={styles.financeLabel}>Vị trí chính</span>
+                      <select className="input-modern" value={editForm.primaryRole || ''} onChange={e => setEditForm({...editForm, primaryRole: e.target.value})} style={{flex: 1, marginTop: 0}}>
                           <option value="">-- Chọn vị trí --</option>
                           {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
                   </div>
 
-                  <div style={{...styles.financeRow, flexWrap: 'wrap', marginTop: '6px'}}>
+                  <div style={{...styles.financeRow, flexWrap: 'wrap'}}>
                       <span style={styles.financeLabel}>Lương cứng / UBI 1</span>
-                      <input type="number" placeholder="VNĐ" value={editForm.ubiBase} onChange={e => setEditForm({...editForm, ubiBase: e.target.value})} style={{...styles.inputFull, flex: 1}} />
+                      <input className="input-modern" type="number" placeholder="VNĐ" value={editForm.ubiBase} onChange={e => setEditForm({...editForm, ubiBase: e.target.value})} style={{flex: 1, marginTop: 0, fontWeight: '600'}} />
                   </div>
                   
-                  <div style={{...styles.financeRow, flexWrap: 'wrap', marginTop: '6px'}}>
+                  <div style={{...styles.financeRow, flexWrap: 'wrap'}}>
                       <span style={styles.financeLabel}>Phụ cấp đặc thù</span>
-                      <input type="number" placeholder="VNĐ" value={editForm.specificAllowance} onChange={e => setEditForm({...editForm, specificAllowance: e.target.value})} style={{...styles.inputFull, flex: 1}} />
+                      <input className="input-modern" type="number" placeholder="VNĐ" value={editForm.specificAllowance} onChange={e => setEditForm({...editForm, specificAllowance: e.target.value})} style={{flex: 1, marginTop: 0, fontWeight: '600'}} />
                   </div>
                   
-                  <div style={{height: '1px', background: '#e5e7eb', margin: '10px 0'}}></div>
+                  <div style={{height: '1px', background: '#e2e8f0', margin: '20px 0'}}></div>
                   
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px'}}>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '16px'}}>
                       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                          <span style={{fontSize: '0.75rem', fontWeight:'600', color:'#4b5563'}}>UBI Phụ (Thứ cấp)</span>
+                          <span style={{fontSize: '0.9rem', fontWeight:'700', color:'#1e293b'}}>UBI Phụ (Thứ cấp)</span>
                           <button 
                               type="button" 
                               onClick={handleAddSecUbi} 
-                              style={{fontSize:'0.7rem', color:'#003366', background:'white', border:'1px solid #003366', borderRadius:'4px', padding:'4px 8px', cursor:'pointer', fontWeight:'bold'}}
+                              style={{fontSize:'0.75rem', color:'#0369a1', background:'#f0f9ff', border:'1px solid #bae6fd', borderRadius:'8px', padding:'6px 12px', cursor:'pointer', fontWeight:'700', transition: 'all 0.2s'}}
                           >
-                              + THÊM UBI PHỤ
+                              + Thêm UBI Phụ
                           </button>
                       </div>
                       
                       {editForm.secondaryUBIs && editForm.secondaryUBIs.map((ubi, idx) => (
-                          <div key={idx} style={{
-                              display: 'flex', flexDirection: 'column', gap: '8px', 
-                              background:'white', padding:'10px', borderRadius:'6px', border:'1px solid #e5e7eb'
-                          }}>
+                          <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '12px', background:'white', padding:'16px', borderRadius:'12px', border:'1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                                  <span style={{fontSize: '0.8rem', color: '#003366', fontWeight:'bold'}}>UBI phụ thứ {idx+1}</span>
-                                  <button 
-                                      type="button" 
-                                      onClick={() => handleRemoveSecUbi(idx)}
-                                      style={{border:'none', background:'none', cursor:'pointer', padding:'4px', color:'#ef4444'}}
-                                  >
+                                  <span style={{fontSize: '0.85rem', color: '#0369a1', fontWeight:'800'}}>UBI phụ thứ {idx+1}</span>
+                                  <button type="button" onClick={() => handleRemoveSecUbi(idx)} style={{border:'none', background:'#fef2f2', cursor:'pointer', padding:'6px', borderRadius: '6px', color:'#ef4444', transition: 'all 0.2s'}}>
                                       <Icons.Trash />
                                   </button>
                               </div>
 
-                              <div style={{display:'flex', gap:'10px', flexWrap: 'wrap'}}>
-                                  <div style={{flex: 1, minWidth: '110px'}}>
+                              <div style={{display:'flex', gap:'12px', flexWrap: 'wrap'}}>
+                                  <div style={{flex: 1, minWidth: '120px'}}>
                                       <label style={styles.label}>Loại hình</label>
-                                      <select 
-                                          value={ubi.type || 'ubi'} 
-                                          onChange={(e) => handleSecUbiChange(idx, 'type', e.target.value)} 
-                                          style={{...styles.inputFull, marginTop: '4px', padding: '8px 2px'}} 
-                                      >
+                                      <select className="input-modern" value={ubi.type || 'ubi'} onChange={(e) => handleSecUbiChange(idx, 'type', e.target.value)}>
                                           <option value="ubi">UBI Phụ</option>
                                           <option value="parttime">Part-time</option>
                                       </select>
@@ -534,23 +496,13 @@ const StaffManager = () => {
                                   
                                   {(!ubi.type || ubi.type === 'ubi') ? (
                                       <>
-                                          <div style={{flex: 1.5, minWidth: '120px'}}>
-                                              <label style={styles.label}>Mức UBI phụ (VNĐ)</label>
-                                              <input 
-                                                  type="number" 
-                                                  placeholder="VNĐ" 
-                                                  value={ubi.amount} 
-                                                  onChange={(e) => handleSecUbiChange(idx, 'amount', e.target.value)} 
-                                                  style={{...styles.inputFull, marginTop: '4px'}} 
-                                              />
+                                          <div style={{flex: 1.5, minWidth: '140px'}}>
+                                              <label style={styles.label}>Mức tiền (VNĐ)</label>
+                                              <input className="input-modern" type="number" placeholder="VNĐ" value={ubi.amount} onChange={(e) => handleSecUbiChange(idx, 'amount', e.target.value)} style={{fontWeight: '600'}} />
                                           </div>
-                                          <div style={{flex: 1, minWidth: '100px'}}>
-                                              <label style={styles.label}>Load Factor</label>
-                                              <select 
-                                                  value={ubi.loadFactor} 
-                                                  onChange={(e) => handleSecUbiChange(idx, 'loadFactor', e.target.value)} 
-                                                  style={{...styles.inputFull, marginTop: '4px', padding: '8px 2px'}} 
-                                              >
+                                          <div style={{flex: 1, minWidth: '120px'}}>
+                                              <label style={styles.label}>Hệ số (Load)</label>
+                                              <select className="input-modern" value={ubi.loadFactor} onChange={(e) => handleSecUbiChange(idx, 'loadFactor', e.target.value)}>
                                                   <option value="0.75">0.75 (100%)</option>
                                                   <option value="0.50">0.50 (75%)</option>
                                                   <option value="0.30">0.30 (50%)</option>
@@ -559,18 +511,14 @@ const StaffManager = () => {
                                           </div>
                                       </>
                                   ) : (
-                                      <div style={{flex: 2.5, display:'flex', alignItems:'center'}}>
-                                          <span style={{fontSize:'0.75rem', color:'#6b7280', fontStyle:'italic', padding:'8px 0'}}>Lương = Tổng giờ làm thực tế x Mức tiền R</span>
+                                      <div style={{flex: 2.5, display:'flex', alignItems:'center', background: '#f8fafc', padding: '0 12px', borderRadius: '10px', border: '1px dashed #cbd5e1', marginTop: '6px'}}>
+                                          <span style={{fontSize:'0.8rem', color:'#64748b', fontStyle:'italic', fontWeight: '500'}}>Lương = Tổng giờ làm thực tế x Mức thù lao R</span>
                                       </div>
                                   )}
                               </div>
                               <div>
-                                  <label style={{fontSize:'0.7rem', fontWeight:'bold', color:'#4b5563'}}>Tên vai trò / Vị trí</label>
-                                  <select 
-                                      value={ubi.role} 
-                                      onChange={(e) => handleSecUbiChange(idx, 'role', e.target.value)} 
-                                      style={{...styles.inputFull, marginTop: '4px', padding: '8px 2px'}} 
-                                  >
+                                  <label style={styles.label}>Tên vai trò / Vị trí</label>
+                                  <select className="input-modern" value={ubi.role} onChange={(e) => handleSecUbiChange(idx, 'role', e.target.value)}>
                                       <option value="">-- Chọn vai trò --</option>
                                       {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
                                   </select>
@@ -579,68 +527,46 @@ const StaffManager = () => {
                       ))}
                       
                       {(!editForm.secondaryUBIs || editForm.secondaryUBIs.length === 0) && (
-                          <div style={{fontSize:'0.8rem', color:'#9ca3af', fontStyle:'italic', textAlign:'center', padding:'5px'}}>Chưa có UBI phụ.</div>
+                          <div style={{fontSize:'0.85rem', color:'#94a3b8', fontStyle:'italic', textAlign:'center', padding:'10px'}}>Chưa thiết lập UBI phụ.</div>
                       )}
                   </div>
 
-                  <div style={{height: '1px', background: '#e5e7eb', margin: '10px 0'}}></div>
+                  <div style={{height: '1px', background: '#e2e8f0', margin: '20px 0'}}></div>
                   
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
                       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                          <span style={{fontSize: '0.75rem', fontWeight:'600', color:'#4b5563'}}>Thù lao vượt mức (R)</span>
+                          <span style={{fontSize: '0.9rem', fontWeight:'700', color:'#1e293b'}}>Thù lao vượt mức (R)</span>
                           <button 
                               type="button" 
                               onClick={handleAddRemuneration} 
-                              style={{fontSize:'0.7rem', color:'#003366', background:'white', border:'1px solid #003366', borderRadius:'4px', padding:'4px 8px', cursor:'pointer', fontWeight:'bold'}}
+                              style={{fontSize:'0.75rem', color:'#0369a1', background:'#f0f9ff', border:'1px solid #bae6fd', borderRadius:'8px', padding:'6px 12px', cursor:'pointer', fontWeight:'700', transition: 'all 0.2s'}}
                           >
-                              + THÊM R
+                              + Thêm R
                           </button>
                       </div>
                       
                       {editForm.remunerations && editForm.remunerations.map((rem, idx) => (
-                          <div key={idx} style={{
-                              display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center', 
-                              background:'white', padding:'8px', borderRadius:'6px', border:'1px solid #e5e7eb'
-                          }}>
-                              <span style={{fontSize: '0.75rem', color: '#6b7280', fontWeight:'bold', minWidth: '20px'}}>R{idx+1}</span>
+                          <div key={idx} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', background:'white', padding:'12px', borderRadius:'12px', border:'1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                              <span style={{fontSize: '0.9rem', color: '#64748b', fontWeight:'800', minWidth: '24px'}}>R{idx+1}</span>
                               
-                              <div style={{display:'flex', gap:'5px', flex: '1 1 140px'}}>
-                                  <input 
-                                      type="number" 
-                                      placeholder="VNĐ/Giờ" 
-                                      value={rem.amount} 
-                                      onChange={(e) => handleRemunerationChange(idx, 'amount', e.target.value)} 
-                                      style={{...styles.inputFull, flex: 1.5}} 
-                              />
-                                  <select 
-                                      value={rem.position} 
-                                      onChange={(e) => handleRemunerationChange(idx, 'position', e.target.value)} 
-                                      style={{...styles.inputFull, flex: 1, padding: '8px 2px'}}
-                                  >
+                              <div style={{display:'flex', gap:'10px', flex: '1 1 180px'}}>
+                                  <input className="input-modern" type="number" placeholder="VNĐ/Giờ" value={rem.amount} onChange={(e) => handleRemunerationChange(idx, 'amount', e.target.value)} style={{flex: 1.5, marginTop: 0, fontWeight: '600'}} />
+                                  <select className="input-modern" value={rem.position} onChange={(e) => handleRemunerationChange(idx, 'position', e.target.value)} style={{flex: 1, marginTop: 0}}>
                                       <option value="">-- Chọn vị trí --</option>
                                       {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
                                   </select>
                               </div>
                               
-                              <input 
-                                  placeholder="Mã công việc (VD: IELTS, Basic...)" 
-                                  value={rem.jobCode !== undefined ? rem.jobCode : (rem.keywords || '')} 
-                                  onChange={(e) => handleRemunerationChange(idx, 'jobCode', e.target.value)} 
-                                  style={{...styles.inputFull, flex: '1 1 100%', minWidth: '100px'}} 
-                              />
+                              <input className="input-modern" placeholder="Mã công việc (VD: IELTS, Basic...)" value={rem.jobCode !== undefined ? rem.jobCode : (rem.keywords || '')} onChange={(e) => handleRemunerationChange(idx, 'jobCode', e.target.value)} style={{flex: '1 1 100%', minWidth: '120px', marginTop: 0}} />
 
-                              <button 
-                                  type="button" 
-                                  onClick={() => handleRemoveRemuneration(idx)}
-                                  style={{border:'none', background:'none', cursor:'pointer', padding:'4px', color:'#ef4444'}}
-                              >
+                              <button type="button" onClick={() => handleRemoveRemuneration(idx)} style={{border:'none', background:'#fef2f2', cursor:'pointer', padding:'8px', borderRadius: '8px', color:'#ef4444', transition: 'all 0.2s'}}>
                                   <Icons.Trash />
                               </button>
                           </div>
                       ))}
                       
                       {(!editForm.remunerations || editForm.remunerations.length === 0) && (
-                          <div style={{fontSize:'0.8rem', color:'#9ca3af', fontStyle:'italic', textAlign:'center', padding:'10px'}}>Chưa có cấu hình Remuneration.</div>
+                          <div style={{fontSize:'0.85rem', color:'#94a3b8', fontStyle:'italic', textAlign:'center', padding:'16px'}}>Chưa cấu hình mức thù lao R.</div>
                       )}
                   </div>
               </div>
@@ -648,7 +574,7 @@ const StaffManager = () => {
             
             <div className="modal-footer">
               <button onClick={() => setEditMode(null)} style={styles.btnModalCancel}>Hủy bỏ</button>
-              <button onClick={() => saveEdit(editForm.id)} style={styles.btnModalSave}><Icons.Save/> Lưu thay đổi</button>
+              <button onClick={() => saveEdit(editForm.id)} style={styles.btnModalSave}><Icons.Save/> <span>Lưu thay đổi</span></button>
             </div>
           </div>
         </div>
@@ -657,17 +583,19 @@ const StaffManager = () => {
       {/* CUSTOM POPUP MODAL CẢNH BÁO NGUY HIỂM KHI XÓA */}
       {deleteTarget && (
         <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
-          <div className="modal-content" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ padding: '24px 20px 16px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-              <Icons.Warning />
-              <h3 style={{ margin: 0, color: '#dc2626', fontWeight: '700', fontSize: '1.25rem' }}>XÁC NHẬN XÓA NHÂN SỰ</h3>
-              <p style={{ margin: 0, fontSize: '0.9rem', color: '#4b5563', lineHeight: '1.5' }}>
+          <div className="modal-content" style={{ maxWidth: '420px', borderRadius: '24px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: '32px 24px 24px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <div style={{ background: '#fef2f2', padding: '16px', borderRadius: '50%' }}>
+                  <Icons.Warning />
+              </div>
+              <h3 style={{ margin: 0, color: '#111827', fontWeight: '800', fontSize: '1.35rem' }}>Xác nhận xóa nhân sự</h3>
+              <p style={{ margin: 0, fontSize: '0.95rem', color: '#4b5563', lineHeight: '1.5' }}>
                 Hành động này mang tính chất <b>nguy hiểm</b> và không thể hoàn tác. Bạn có chắc chắn muốn xóa tài khoản nhân sự này khỏi hệ thống quản lý?
               </p>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', padding: '16px 20px', background: '#f8fafc', borderTop: '1px solid #f1f5f9' }}>
-              <button onClick={() => setDeleteTarget(null)} style={styles.btnModalCancel}>Hủy</button>
-              <button onClick={executeDelete} style={styles.btnDangerConfirm}>Xác nhận xóa</button>
+            <div style={{ display: 'flex', gap: '12px', padding: '20px 24px', background: '#f8fafc', borderTop: '1px solid #f1f5f9' }}>
+              <button onClick={() => setDeleteTarget(null)} style={{...styles.btnModalCancel, flex: 1}}>Hủy, quay lại</button>
+              <button onClick={executeDelete} style={{...styles.btnDangerConfirm, flex: 1}}>Xác nhận xóa</button>
             </div>
           </div>
         </div>
@@ -678,69 +606,67 @@ const StaffManager = () => {
 };
 
 const styles = {
-    input: { padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' },
-    filterSelect: { padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.9rem', outline: 'none', background: 'white', color: '#374151', minWidth: '180px' },
-    inputFull: { padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: '5px', width: '100%', boxSizing: 'border-box', fontSize: '0.85rem', outline: 'none' },
-    sectionBox: { background: '#f9fafb', padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb', width: '100%', boxSizing: 'border-box' },
-    sectionTitle: { fontSize: '0.75rem', fontWeight: '700', color: '#003366', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' },
-    checkboxLabel: { fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', background: 'white', padding: '4px 8px', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer' },
-    financeRow: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', width: '100%' },
-    financeLabel: { fontSize: '0.8rem', fontWeight: '600', color: '#4b5563', width: '130px', minWidth: '130px' },
-    btnAdd: { border: 'none', borderRadius: '6px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500', transition: 'background 0.2s' },
-    label: { fontSize: '0.7rem', fontWeight: 'bold', color: '#4b5563' },
-    closeBtn: { background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-    btnModalCancel: { background: 'white', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '8px', padding: '10px 18px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', transition: 'all 0.2s', WebkitTapHighlightColor: 'transparent' },
-    btnModalSave: { background: '#003366', border: 'none', color: 'white', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', WebkitTapHighlightColor: 'transparent' },
-    btnDangerConfirm: { background: '#dc2626', border: 'none', color: 'white', borderRadius: '8px', padding: '10px 18px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', transition: 'all 0.2s', WebkitTapHighlightColor: 'transparent' },
+    sectionBox: { background: '#ffffff', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box' },
+    sectionTitle: { fontSize: '0.85rem', fontWeight: '800', color: '#003366', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' },
+    checkboxLabel: { fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', background: 'white', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: '#334155', transition: 'all 0.2s' },
+    financeRow: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', width: '100%' },
+    financeLabel: { fontSize: '0.85rem', fontWeight: '700', color: '#334155', width: '150px', minWidth: '150px' },
+    btnAdd: { border: 'none', borderRadius: '10px', padding: '12px 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '700', fontSize: '0.95rem', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(0, 51, 102, 0.2)' },
+    label: { fontSize: '0.8rem', fontWeight: '700', color: '#475569', marginBottom: '4px', display: 'block' },
+    closeBtn: { background: '#f1f5f9', border: 'none', color: '#64748b', borderRadius: '50%', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' },
+    btnModalCancel: { background: 'white', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '10px', padding: '12px 20px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '700', transition: 'all 0.2s', WebkitTapHighlightColor: 'transparent' },
+    btnModalSave: { background: '#003366', border: 'none', color: 'white', borderRadius: '10px', padding: '12px 24px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(0, 51, 102, 0.2)', WebkitTapHighlightColor: 'transparent' },
+    btnDangerConfirm: { background: '#dc2626', border: 'none', color: 'white', borderRadius: '10px', padding: '12px 20px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '700', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(220, 38, 38, 0.2)', WebkitTapHighlightColor: 'transparent' },
     
-    // GIAO DIỆN CHỐNG LỖI HIỂN THỊ NÚT ĐIỀU CHỈNH & XÓA BÊN TRONG CARD 
     cardActions: { 
-      marginTop: 'auto', // Tự động đẩy 2 nút xuống cuối thẻ
-      paddingTop: '15px', 
-      borderTop: '1px solid #f3f4f6', 
+      marginTop: 'auto', 
+      paddingTop: '20px', 
+      borderTop: '1px dashed #e2e8f0', 
       display: 'flex', 
-      gap: '10px', 
+      gap: '12px', 
       background: 'transparent',
       boxSizing: 'border-box'
     },
     btnEdit: { 
       flex: 1,
-      background: 'white', 
-      border: '1px solid #cbd5e1', 
-      color: '#003366', 
-      borderRadius: '6px', 
-      padding: '8px 12px', 
+      background: '#f0f9ff', 
+      border: '1px solid #bae6fd', 
+      color: '#0369a1', 
+      borderRadius: '10px', 
+      padding: '10px 14px', 
       cursor: 'pointer', 
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center',
-      gap: '6px', 
-      fontSize: '0.85rem', 
-      fontWeight: '600', 
+      gap: '8px', 
+      fontSize: '0.9rem', 
+      fontWeight: '700', 
       whiteSpace: 'nowrap',
       minWidth: 0,
       flexShrink: 0,
       boxSizing: 'border-box',
+      transition: 'all 0.2s',
       WebkitTapHighlightColor: 'transparent' 
     },
     btnDelete: { 
       flex: 1,
-      background: 'white', 
-      border: '1px solid #ef4444', 
+      background: '#fef2f2', 
+      border: '1px solid #fecaca', 
       color: '#ef4444', 
-      borderRadius: '6px', 
-      padding: '8px 12px', 
+      borderRadius: '10px', 
+      padding: '10px 14px', 
       cursor: 'pointer', 
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center',
-      gap: '6px', 
-      fontSize: '0.85rem', 
-      fontWeight: '600', 
+      gap: '8px', 
+      fontSize: '0.9rem', 
+      fontWeight: '700', 
       whiteSpace: 'nowrap',
       minWidth: 0,
       flexShrink: 0,
       boxSizing: 'border-box',
+      transition: 'all 0.2s',
       WebkitTapHighlightColor: 'transparent' 
     }
 };
