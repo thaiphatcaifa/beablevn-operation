@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext'; 
 import bcrypt from 'bcryptjs'; // IMPORT THƯ VIỆN MÃ HÓA
+import { auth } from '../firebase'; // BỔ SUNG: Import auth
+import { signInAnonymously } from 'firebase/auth'; // BỔ SUNG: Import signInAnonymously
 
 const LoginForm = () => {
   // State quản lý form
@@ -18,6 +20,21 @@ const LoginForm = () => {
   // Lấy thêm biến 'user' từ useAuth để kiểm tra phiên đăng nhập hiện tại
   const { login, user } = useAuth();
   const { staffList } = useData(); 
+
+  // --- BỔ SUNG: TỰ ĐỘNG ĐĂNG NHẬP ẨN DANH ĐỂ LẤY QUYỀN ĐỌC DATABASE ---
+  useEffect(() => {
+    const triggerAnonymousAuth = async () => {
+      try {
+        if (!auth.currentUser) {
+          await signInAnonymously(auth);
+          console.log("Đã kích hoạt phiên ẩn danh hợp lệ để đồng bộ dữ liệu.");
+        }
+      } catch (err) {
+        console.error("Lỗi thiết lập quyền truy cập bảo mật:", err);
+      }
+    };
+    triggerAnonymousAuth();
+  }, []);
 
   // --- BỔ SUNG: TỰ ĐỘNG ĐIỀU HƯỚNG NẾU ĐÃ ĐĂNG NHẬP (AUTO-LOGIN) ---
   useEffect(() => {
