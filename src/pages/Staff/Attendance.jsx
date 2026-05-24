@@ -244,11 +244,12 @@ const Attendance = () => {
   };
 
   return (
-    <div style={{ paddingBottom: '40px', boxSizing: 'border-box' }}>
+    <div style={{ paddingBottom: '40px', boxSizing: 'border-box', width: '100%', overflowX: 'hidden' }}>
       {/* CSS CHO HOVER EFFECTS & LAYOUT */}
       <style>{`
           .attendance-card {
               transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+              box-sizing: border-box;
           }
           .attendance-card:hover {
               transform: translateY(-4px);
@@ -268,10 +269,11 @@ const Attendance = () => {
           }
           .filter-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
 
-          @media (max-width: 480px) {
+          @media (max-width: 500px) {
               .filter-container { flex-direction: column; width: 100%; }
               .filter-modern { width: 100%; box-sizing: border-box; }
-              .card-actions { flex-direction: row !important; width: 100%; justify-content: flex-end; margin-top: 16px; border-top: 1px dashed #e2e8f0; padding-top: 16px;}
+              .schedule-item-mobile { flex-direction: column !important; align-items: stretch !important; gap: 16px !important; }
+              .card-actions { flex-direction: row !important; width: 100%; justify-content: flex-end !important; margin-top: 0; border-top: 1px dashed #e2e8f0; padding-top: 16px; align-items: center;}
           }
       `}</style>
 
@@ -318,6 +320,7 @@ const Attendance = () => {
           </div>
       </div>
 
+      {/* DANH SÁCH SCHEDULER TASK */}
       <div style={{display: 'grid', gap: '20px', marginBottom: '40px'}}>
            {filteredScheduleTasks.length > 0 ? filteredScheduleTasks.map(task => {
                const start = new Date(task.startTime);
@@ -329,20 +332,20 @@ const Attendance = () => {
                const diffEnd = (end - now) / 60000; 
 
                return (
-                   <div key={task.id} className="attendance-card" style={{ ...styles.scheduleItem, borderLeft: `6px solid ${isCompleted ? '#10b981' : (isCheckedIn ? '#3b82f6' : '#cbd5e1')}` }}>
+                   <div key={task.id} className="attendance-card schedule-item-mobile" style={{ ...styles.scheduleItem, borderLeft: `6px solid ${isCompleted ? '#10b981' : (isCheckedIn ? '#3b82f6' : '#cbd5e1')}` }}>
                        <div style={{flex: 1, minWidth: 0}}>
-                           <div style={{fontWeight:'800', color:'#1e293b', fontSize:'1.1rem', marginBottom: '8px', letterSpacing: '-0.01em'}}>{task.title}</div>
-                           <div style={{fontSize:'0.85rem', color:'#475569', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap'}}>
-                               <span style={{background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', fontWeight: '600', border: '1px solid #e2e8f0'}}>📅 {start.toLocaleDateString('vi-VN')}</span>
-                               <span style={{background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', fontWeight: '600', border: '1px solid #e2e8f0'}}>⏰ {start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                           <div style={{fontWeight:'800', color:'#1e293b', fontSize:'1.1rem', marginBottom: '12px', letterSpacing: '-0.01em', wordBreak: 'break-word', lineHeight: '1.4'}}>{task.title}</div>
+                           <div style={{fontSize:'0.85rem', color:'#475569', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap'}}>
+                               <span style={{background: '#f8fafc', padding: '6px 12px', borderRadius: '8px', fontWeight: '600', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '6px'}}>📅 {start.toLocaleDateString('vi-VN')}</span>
+                               <span style={{background: '#f8fafc', padding: '6px 12px', borderRadius: '8px', fontWeight: '600', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '6px'}}>⏰ {start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                            </div>
-                           <div style={{marginTop:'16px', display:'flex', gap:'8px', flexWrap:'wrap', alignItems: 'center'}}>
+                           <div style={{marginTop:'12px', display:'flex', gap:'8px', flexWrap:'wrap', alignItems: 'center'}}>
                                <span style={styles.roleBadge}>{task.assignedRole}</span>
                                {task.checkInStatus === 'Late' && <span style={styles.lateBadge}>⚠️ Trễ giờ</span>}
                                {isCheckedIn && !isCompleted && <span style={styles.workingBadge}>Đang trong ca</span>}
                                
                                {task.adminEdited && (
-                                   <span style={{fontSize:'0.8rem', background: '#ffedd5', color:'#c2410c', fontWeight:'700', padding: '2px 8px', borderRadius: '6px'}}>
+                                   <span style={{fontSize:'0.8rem', background: '#ffedd5', color:'#c2410c', fontWeight:'700', padding: '4px 10px', borderRadius: '8px', border: '1px solid #fed7aa', marginTop: '4px'}}>
                                        *Sửa bởi Admin: {task.adminEditReason}
                                    </span>
                                )}
@@ -362,6 +365,7 @@ const Attendance = () => {
            )}
       </div>
 
+      {/* DANH SÁCH CA CỐ ĐỊNH CŨ */}
       {myShifts.length > 0 && (
         <div style={{borderTop: '2px solid #e5e7eb', paddingTop: '24px'}}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
@@ -370,16 +374,18 @@ const Attendance = () => {
               </div>
               <h3 style={{ color: '#111827', fontSize:'1.25rem', margin: 0, fontWeight: '800', letterSpacing: '-0.02em' }}>Ca làm việc cố định (Hệ cũ)</h3>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '24px' }}>
             {myShifts.map(shift => {
               const todayLog = attendanceLogs.find(l => l.shiftId === shift.id && new Date(l.date).toDateString() === new Date().toDateString());
               return (
-                <div key={shift.id} className="attendance-card" style={styles.shiftCard}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                      <span style={{ fontWeight: '800', color: '#1e293b', fontSize: '1.1rem' }}>{shift.shiftName}</span>
-                      <span style={{ fontSize: '0.8rem', color: '#475569', background: '#f1f5f9', padding: '4px 10px', borderRadius: '8px', fontWeight: '700' }}>{shift.timeRange}</span>
+                <div key={shift.id} className="attendance-card" style={{...styles.shiftCard, display: 'flex', flexDirection: 'column', height: '100%'}}>
+                  <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', gap: '12px' }}>
+                          <span style={{ fontWeight: '800', color: '#1e293b', fontSize: '1.1rem', lineHeight: '1.4', wordBreak: 'break-word' }}>{shift.shiftName}</span>
+                          <span style={{ fontSize: '0.8rem', color: '#475569', background: '#f1f5f9', padding: '4px 10px', borderRadius: '8px', fontWeight: '700', whiteSpace: 'nowrap' }}>{shift.timeRange}</span>
+                      </div>
                   </div>
-                  <div style={{ marginTop: '16px' }}>
+                  <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid #f1f5f9' }}>
                       {!todayLog ? (
                           <button className="btn-primary" onClick={() => handleCheckInOld(shift.id)} style={{...styles.mainBtn, width: '100%'}}>
                               <div style={{display:'flex', alignItems:'center', justifyContent: 'center', gap:'8px'}}>
@@ -387,12 +393,12 @@ const Attendance = () => {
                               </div>
                           </button>
                       ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
                               <span style={todayLog.checkOut ? styles.badgeSuccess : styles.badgeActive}>
                                   {todayLog.checkOut ? 'Đã hoàn thành' : 'Đang làm việc'}
                               </span>
                               {!todayLog.checkOut && (
-                                  <button className="btn-danger-outline" onClick={() => handleCheckOutOld(todayLog.id)} style={styles.outBtn}>
+                                  <button className="btn-danger-outline" onClick={() => handleCheckOutOld(todayLog.id)} style={{...styles.outBtn, flex: 1, minWidth: '120px', display: 'flex', justifyContent: 'center'}}>
                                       <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
                                           <Icons.ButtonIconOut /> Check-out
                                       </div>
@@ -412,11 +418,11 @@ const Attendance = () => {
 };
 
 const styles = {
-    scheduleItem: { background: 'white', padding: '24px', borderRadius: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', gap: '16px', border: '1px solid #f1f5f9' },
+    scheduleItem: { background: 'white', padding: '24px', borderRadius: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', gap: '16px', border: '1px solid #f1f5f9' },
     shiftCard: { background: 'white', padding: '24px', borderRadius: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9', borderTop: '5px solid #003366' },
-    mainBtn: { background: '#003366', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem', boxShadow: '0 4px 6px rgba(0, 51, 102, 0.2)', whiteSpace: 'nowrap', transition: 'all 0.2s' },
-    outBtn: { background: 'white', border: '1px solid #ef4444', color: '#ef4444', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', whiteSpace: 'nowrap', transition: 'all 0.2s' },
-    explainBtn: { background: '#fff7ed', border: '1px solid #fed7aa', color: '#ea580c', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', display:'flex', alignItems:'center', gap:'6px', whiteSpace: 'nowrap', transition: 'all 0.2s' },
+    mainBtn: { background: '#003366', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem', boxShadow: '0 4px 6px rgba(0, 51, 102, 0.2)', whiteSpace: 'nowrap', transition: 'all 0.2s', boxSizing: 'border-box' },
+    outBtn: { background: 'white', border: '1px solid #ef4444', color: '#ef4444', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', whiteSpace: 'nowrap', transition: 'all 0.2s', boxSizing: 'border-box' },
+    explainBtn: { background: '#fff7ed', border: '1px solid #fed7aa', color: '#ea580c', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', display:'flex', alignItems:'center', gap:'6px', whiteSpace: 'nowrap', transition: 'all 0.2s', boxSizing: 'border-box' },
     roleBadge: { fontSize: '0.75rem', background: '#f1f5f9', padding: '6px 12px', borderRadius: '8px', color: '#334155', fontWeight: '700', letterSpacing: '0.01em' },
     lateBadge: { fontSize: '0.75rem', background: '#fef2f2', padding: '6px 12px', borderRadius: '8px', color: '#dc2626', fontWeight: '700', border: '1px solid #fecaca' },
     workingBadge: { fontSize: '0.75rem', background: '#eff6ff', padding: '6px 12px', borderRadius: '8px', color: '#2563eb', fontWeight: '700', border: '1px solid #bfdbfe' },

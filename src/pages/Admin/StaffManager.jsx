@@ -308,77 +308,80 @@ const StaffManager = () => {
 
       {/* DANH SÁCH NHÂN SỰ KẾT HỢP GIAO DIỆN THẺ (CARD UI) MỚI */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
-        {filteredStaffList.map(staff => (
-          <div className="staff-card" key={staff.id} style={{ 
-              background: '#ffffff', borderRadius: '20px', padding: '24px', 
-              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -2px rgba(0,0,0,0.03)',
-              border: editMode === staff.id ? '2px solid #0284c7' : '1px solid rgba(0,0,0,0.05)',
-              opacity: (staff.status === 'suspended' && editMode !== staff.id) ? 0.6 : 1,
-              display: 'flex', flexDirection: 'column'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', borderBottom: '1px dashed #e2e8f0', paddingBottom: '16px' }}>
-               <div style={{display:'flex', alignItems:'center', gap: '12px'}}>
-                  <div style={{width:'48px', height:'48px', background:'#f0f9ff', borderRadius:'14px', display:'flex', alignItems:'center', justifyContent:'center', color:'#0369a1', fontWeight:'800', fontSize:'1.2rem'}}>
-                    {staff.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <div style={{fontWeight:'800', color:'#111827', fontSize: '1.05rem', letterSpacing: '-0.01em'}}>{staff.name}</div>
-                    <div style={{fontSize:'0.85rem', color:'#64748b', fontWeight: '500'}}>@{staff.username}</div>
-                  </div>
-               </div>
-               <span style={{ background: '#f8fafc', color: '#475569', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', height: 'fit-content', fontWeight: '700', border: '1px solid #e2e8f0' }}>
-                  {roleName(staff.role)}
-               </span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom: '16px'}}>
-                    <div style={{display:'flex', flexWrap:'wrap', gap:'6px', minHeight: '24px'}}>
-                        {staff.positions && staff.positions.length > 0 ? staff.positions.map(p => (
-                            <span key={p} style={{fontSize:'0.75rem', background:'#f1f5f9', color:'#334155', padding: '4px 8px', borderRadius:'6px', fontWeight: '600'}}>{p}</span>
-                        )) : <span style={{fontSize:'0.75rem', color:'#94a3b8', fontStyle:'italic'}}>Chưa xét vị trí</span>}
+        {filteredStaffList.map(staff => {
+          const validPositions = staff.positions ? staff.positions.filter(p => POSITIONS.includes(p)) : [];
+          return (
+            <div className="staff-card" key={staff.id} style={{ 
+                background: '#ffffff', borderRadius: '20px', padding: '24px', 
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -2px rgba(0,0,0,0.03)',
+                border: editMode === staff.id ? '2px solid #0284c7' : '1px solid rgba(0,0,0,0.05)',
+                opacity: (staff.status === 'suspended' && editMode !== staff.id) ? 0.6 : 1,
+                display: 'flex', flexDirection: 'column'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', borderBottom: '1px dashed #e2e8f0', paddingBottom: '16px' }}>
+                 <div style={{display:'flex', alignItems:'center', gap: '12px'}}>
+                    <div style={{width:'48px', height:'48px', background:'#f0f9ff', borderRadius:'14px', display:'flex', alignItems:'center', justifyContent:'center', color:'#0369a1', fontWeight:'800', fontSize:'1.2rem'}}>
+                      {staff.name.charAt(0).toUpperCase()}
                     </div>
-                    <div style={{fontSize:'0.75rem', background:'#fffbeb', color:'#d97706', padding:'4px 8px', borderRadius:'6px', fontWeight:'700'}}>
-                        Min: {staff.minWorkHours || 0}h
+                    <div>
+                      <div style={{fontWeight:'800', color:'#111827', fontSize: '1.05rem', letterSpacing: '-0.01em'}}>{staff.name}</div>
+                      <div style={{fontSize:'0.85rem', color:'#64748b', fontWeight: '500'}}>@{staff.username}</div>
                     </div>
-                </div>
-                
-                <div style={{padding:'16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9'}}>
-                     <div style={{fontSize: '0.75rem', color:'#64748b', fontWeight: '600', textTransform:'uppercase', letterSpacing: '0.05em', marginBottom:'6px'}}>
-                         Lương cố định {staff.primaryRole ? `(${staff.primaryRole})` : ''}
-                     </div>
-                     <div style={{color: '#059669', fontWeight:'800', fontSize:'1.25rem', letterSpacing: '-0.02em'}}>
-                        {calculateFixedSalary(staff).toLocaleString()} <span style={{fontSize:'0.85rem', color:'#64748b', fontWeight: '600'}}>đ</span>
-                     </div>
-                     
-                     <div style={{marginTop: '16px', borderTop: '1px dashed #cbd5e1', paddingTop: '12px'}}>
-                         <div style={{fontSize: '0.75rem', color:'#64748b', fontWeight: '600', marginBottom:'8px'}}>Thù lao vượt mức (R):</div>
-                         {staff.remunerations && staff.remunerations.length > 0 ? (
-                             staff.remunerations.map((r, idx) => (
-                                 r.amount > 0 && (
-                                     <div key={idx} style={{fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#334155', marginBottom:'6px'}}>
-                                         <span><b style={{color:'#0369a1'}}>R{idx+1}:</b> {Number(r.amount).toLocaleString()}/h</span>
-                                         <span style={{color: '#64748b', fontWeight: '500'}}>{r.position} / {r.jobCode !== undefined ? r.jobCode : (r.keywords || 'All')}</span>
-                                     </div>
-                                 )
-                             ))
-                         ) : ( <div style={{fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic'}}>Chưa cấu hình mức thù lao</div> )}
-                     </div>
-                </div>
-            </div>
+                 </div>
+                 <span style={{ background: '#f8fafc', color: '#475569', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', height: 'fit-content', fontWeight: '700', border: '1px solid #e2e8f0' }}>
+                    {roleName(staff.role)}
+                 </span>
+              </div>
 
-            {/* ACTION BUTTONS */}
-            <div style={styles.cardActions}>
-                <button onClick={() => startEdit(staff)} style={styles.btnEdit}>
-                    <Icons.Edit/> <span>Sửa đổi</span>
-                </button>
-                <button onClick={() => setDeleteTarget(staff.id)} style={styles.btnDelete}>
-                    <Icons.Delete/> <span>Xóa</span>
-                </button>
-            </div>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom: '16px'}}>
+                      <div style={{display:'flex', flexWrap:'wrap', gap:'6px', minHeight: '24px'}}>
+                          {validPositions.length > 0 ? validPositions.map(p => (
+                              <span key={p} style={{fontSize:'0.75rem', background:'#f1f5f9', color:'#334155', padding: '4px 8px', borderRadius:'6px', fontWeight: '600'}}>{p}</span>
+                          )) : <span style={{fontSize:'0.75rem', color:'#94a3b8', fontStyle:'italic'}}>Chưa xét vị trí</span>}
+                      </div>
+                      <div style={{fontSize:'0.75rem', background:'#fffbeb', color:'#d97706', padding:'4px 8px', borderRadius:'6px', fontWeight:'700'}}>
+                          Min: {staff.minWorkHours || 0}h
+                      </div>
+                  </div>
+                  
+                  <div style={{padding:'16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9'}}>
+                       <div style={{fontSize: '0.75rem', color:'#64748b', fontWeight: '600', textTransform:'uppercase', letterSpacing: '0.05em', marginBottom:'6px'}}>
+                           Lương cố định {staff.primaryRole ? `(${staff.primaryRole})` : ''}
+                       </div>
+                       <div style={{color: '#059669', fontWeight:'800', fontSize:'1.25rem', letterSpacing: '-0.02em'}}>
+                          {calculateFixedSalary(staff).toLocaleString()} <span style={{fontSize:'0.85rem', color:'#64748b', fontWeight: '600'}}>đ</span>
+                       </div>
+                       
+                       <div style={{marginTop: '16px', borderTop: '1px dashed #cbd5e1', paddingTop: '12px'}}>
+                           <div style={{fontSize: '0.75rem', color:'#64748b', fontWeight: '600', marginBottom:'8px'}}>Thù lao vượt mức (R):</div>
+                           {staff.remunerations && staff.remunerations.length > 0 ? (
+                               staff.remunerations.map((r, idx) => (
+                                   r.amount > 0 && (
+                                       <div key={idx} style={{fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#334155', marginBottom:'6px'}}>
+                                           <span><b style={{color:'#0369a1'}}>R{idx+1}:</b> {Number(r.amount).toLocaleString()}/h</span>
+                                           <span style={{color: '#64748b', fontWeight: '500'}}>{r.position} / {r.jobCode !== undefined ? r.jobCode : (r.keywords || 'All')}</span>
+                                       </div>
+                                   )
+                               ))
+                           ) : ( <div style={{fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic'}}>Chưa cấu hình mức thù lao</div> )}
+                       </div>
+                  </div>
+              </div>
 
-          </div>
-        ))}
+              {/* ACTION BUTTONS */}
+              <div style={styles.cardActions}>
+                  <button onClick={() => startEdit(staff)} style={styles.btnEdit}>
+                      <Icons.Edit/> <span>Sửa đổi</span>
+                  </button>
+                  <button onClick={() => setDeleteTarget(staff.id)} style={styles.btnDelete}>
+                      <Icons.Delete/> <span>Xóa</span>
+                  </button>
+              </div>
+
+            </div>
+          );
+        })}
         {filteredStaffList.length === 0 && <div style={{textAlign: 'center', gridColumn: '1/-1', color: '#94a3b8', padding: '40px', fontSize: '1rem', fontStyle: 'italic'}}>Không tìm thấy nhân sự phù hợp với điều kiện tìm kiếm.</div>}
       </div>
 

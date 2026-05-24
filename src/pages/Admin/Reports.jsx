@@ -126,6 +126,9 @@ const Reports = () => {
   const [attendanceMonthFilter, setAttendanceMonthFilter] = useState('all'); 
   const [attendanceYearFilter, setAttendanceYearFilter] = useState('all');
 
+  // Thêm state cấu hình sắp xếp cho báo cáo chấm công
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+
   const [editingAttendanceId, setEditingAttendanceId] = useState(null);
   const [editAttForm, setEditAttForm] = useState({ checkIn: '', checkOut: '', reason: '' });
 
@@ -176,6 +179,15 @@ const Reports = () => {
 
       setEditingAttendanceId(null);
       alert("Đã cập nhật dữ liệu chấm công thành công. Hệ thống đã gửi thông báo đến nhân sự!");
+  };
+
+  // Hàm yêu cầu sắp xếp
+  const requestSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
   };
 
   const safeTasks = Array.isArray(tasks) ? tasks : [];
@@ -389,6 +401,37 @@ const Reports = () => {
 
       return true;
   });
+
+  // Áp dụng sắp xếp cho danh sách Báo cáo chấm công
+  const sortedAttendance = useMemo(() => {
+    let sortableItems = [...filteredAttendance];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        let valA = a[sortConfig.key];
+        let valB = b[sortConfig.key];
+
+        // Custom sort value handling
+        if (sortConfig.key === 'statusCol') {
+            const isCompletedA = a.status === 'completed' || a.progress === 100;
+            const isCompletedB = b.status === 'completed' || b.progress === 100;
+            valA = isCompletedA ? 1 : 0;
+            valB = isCompletedB ? 1 : 0;
+        } else if (sortConfig.key === 'workedHours') {
+            valA = calculateWorkHoursDecimal(a.startTime, a.endTime, a.checkInTime, a.checkOutTime, a.adminEdited);
+            valB = calculateWorkHoursDecimal(b.startTime, b.endTime, b.checkInTime, b.checkOutTime, b.adminEdited);
+        } else if (sortConfig.key === 'startTime') {
+            valA = new Date(a.startTime).getTime();
+            valB = new Date(b.startTime).getTime();
+        }
+
+        // Basic comparison
+        if (valA < valB) return sortConfig.direction === 'ascending' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'ascending' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredAttendance, sortConfig]);
 
   const renderDashboard = () => (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
@@ -697,17 +740,30 @@ const Reports = () => {
                       <thead>
                          <tr style={styles.tableHeadRow}>
                            <th style={{ ...styles.th, width: '50px', textAlign: 'center' }}>STT</th>
-                           <th style={styles.th}>Nhân sự</th>
-                           <th style={styles.th}>Ca làm việc</th>
-                           <th style={styles.th}>Thời gian</th>
-                           <th style={styles.th}>Số giờ</th>
-                           <th style={styles.th}>Trạng thái</th>
-                           <th style={{...styles.th, textAlign: 'center'}}>Tiến độ</th>
+                           <th onClick={() => requestSort('assigneeName')} style={{...styles.th, cursor: 'pointer'}}>
+                               Nhân sự {sortConfig.key === 'assigneeName' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                           </th>
+                           <th onClick={() => requestSort('title')} style={{...styles.th, cursor: 'pointer'}}>
+                               Ca làm việc {sortConfig.key === 'title' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                           </th>
+                           <th onClick={() => requestSort('startTime')} style={{...styles.th, cursor: 'pointer'}}>
+                               Thời gian {sortConfig.key === 'startTime' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                           </th>
+                           <th onClick={() => requestSort('workedHours')} style={{...styles.th, cursor: 'pointer'}}>
+                               Số giờ {sortConfig.key === 'workedHours' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                           </th>
+                           <th onClick={() => requestSort('statusCol')} style={{...styles.th, cursor: 'pointer'}}>
+                               Trạng thái {sortConfig.key === 'statusCol' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                           </th>
+                           <th onClick={() => requestSort('progress')} style={{...styles.th, textAlign: 'center', cursor: 'pointer'}}>
+                               Tiến độ {sortConfig.key === 'progress' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                           </th>
                            <th style={{ ...styles.th, textAlign: 'right' }} className="action-col">Hành động</th>
                          </tr>
                       </thead>
+                      {/* SỬ DỤNG sortedAttendance MAP VÀO BẢNG CHẤM CÔNG */}
                       <tbody>
-                         {filteredAttendance.length > 0 ? filteredAttendance.map((t, index) => {
+                         {sortedAttendance.length > 0 ? sortedAttendance.map((t, index) => {
                            const isCompleted = t.status === 'completed' || t.progress === 100;
                            const isOverdue = new Date() > new Date(t.endTime);
                            
