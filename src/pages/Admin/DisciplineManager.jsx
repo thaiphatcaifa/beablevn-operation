@@ -44,8 +44,11 @@ const DisciplineManager = () => {
       level: DISC_LEVELS[0]
   });
 
-  // State quản lý việc đóng mở các nhóm vi phạm (Mặc định mở hết)
-  const [expandedFolders, setExpandedFolders] = useState([...DISC_LEVELS, 'Khác']);
+  // State quản lý tìm kiếm
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // State quản lý việc đóng mở các nhóm vi phạm (Mặc định thu gọn)
+  const [expandedFolders, setExpandedFolders] = useState([]);
 
   const toggleFolder = (lvl) => {
       setExpandedFolders(prev => 
@@ -53,18 +56,30 @@ const DisciplineManager = () => {
       );
   };
 
+  // Nếu người dùng đang tìm kiếm, tự động mở rộng tất cả các folder để hiển thị kết quả
+  const effectiveExpandedFolders = searchTerm.trim() !== '' ? [...DISC_LEVELS, 'Khác'] : expandedFolders;
+
   // --- PHÂN QUYỀN ---
   const isChief = user?.role === 'chief';
   const isReg = user?.role === 'reg';
   const isOp = user?.role === 'op'; 
   const canApprove = isChief || isReg; 
 
-  // --- LỌC DANH SÁCH ---
+  // --- LỌC DANH SÁCH & TÌM KIẾM ---
   const displayedTypes = disciplineTypes.filter(t => {
       if (t.status === 'Deleted') return false;
-      if (isOp) {
-          return t.status === 'Active' || t.createdBy === user.username;
+      if (isOp && t.status !== 'Active' && t.createdBy !== user.username) {
+          return false;
       }
+      
+      // Áp dụng bộ lọc tìm kiếm
+      if (searchTerm.trim() !== '') {
+          const term = searchTerm.toLowerCase();
+          const matchName = t.name && t.name.toLowerCase().includes(term);
+          const matchDesc = t.description && t.description.toLowerCase().includes(term);
+          if (!matchName && !matchDesc) return false;
+      }
+      
       return true;
   });
 
@@ -234,8 +249,16 @@ const DisciplineManager = () => {
 
       {/* 2. DANH SÁCH HIỆN HÀNH DẠNG FOLDER */}
       <div style={styles.card}>
-          <div style={styles.cardHeader}>
+          <div style={{...styles.cardHeader, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'}}>
               <h3 style={styles.cardTitle}>1. Danh mục hình thức kỷ luật (Hiện hành)</h3>
+              <input 
+                  className="input-modern" 
+                  type="text" 
+                  placeholder="🔍 Tìm theo tên, mô tả..." 
+                  value={searchTerm} 
+                  onChange={(e) => setSearchTerm(e.target.value)} 
+                  style={{ width: '100%', maxWidth: '300px', margin: 0, padding: '10px 14px' }}
+              />
           </div>
           <div className="table-responsive">
               <table style={styles.table}>
@@ -251,7 +274,10 @@ const DisciplineManager = () => {
                   <tbody>
                       {DISC_LEVELS.map(lvl => {
                           const items = displayedTypes.filter(t => t.level === lvl);
-                          const isExpanded = expandedFolders.includes(lvl);
+                          const isExpanded = effectiveExpandedFolders.includes(lvl);
+                          // Nếu đang search mà folder không có kết quả thì không hiển thị
+                          if (searchTerm.trim() !== '' && items.length === 0) return null;
+
                           return (
                               <React.Fragment key={lvl}>
                                   <tr className="folder-row" onClick={() => toggleFolder(lvl)} style={{ cursor: 'pointer', background: '#f8fafc', transition: 'background 0.2s' }}>
@@ -311,7 +337,7 @@ const DisciplineManager = () => {
                                           </td>
                                       </tr>
                                   ))}
-                                  {isExpanded && items.length === 0 && (
+                                  {isExpanded && items.length === 0 && searchTerm.trim() === '' && (
                                       <tr>
                                           <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: '0.95rem', borderBottom: '1px solid #f1f5f9' }}>
                                               Chưa có quy định nào trong nhóm này.
@@ -326,7 +352,8 @@ const DisciplineManager = () => {
                       {(() => {
                           const otherItems = displayedTypes.filter(t => !DISC_LEVELS.includes(t.level));
                           if (otherItems.length === 0) return null;
-                          const isExpanded = expandedFolders.includes('Khác');
+                          const isExpanded = effectiveExpandedFolders.includes('Khác');
+                          
                           return (
                               <React.Fragment key="Khác">
                                   <tr className="folder-row" onClick={() => toggleFolder('Khác')} style={{ cursor: 'pointer', background: '#f8fafc', transition: 'background 0.2s' }}>
@@ -371,7 +398,13 @@ const DisciplineManager = () => {
                           );
                       })()}
                       
-                      {displayedTypes.length === 0 && <tr><td colSpan="5" style={styles.emptyTd}>Hệ thống chưa thiết lập quy định kỷ luật nào.</td></tr>}
+                      {displayedTypes.length === 0 && (
+                          <tr>
+                              <td colSpan="5" style={styles.emptyTd}>
+                                  {searchTerm.trim() !== '' ? 'Không tìm thấy kết quả nào phù hợp với từ khóa.' : 'Hệ thống chưa thiết lập quy định kỷ luật nào.'}
+                              </td>
+                          </tr>
+                      )}
                   </tbody>
               </table>
           </div>

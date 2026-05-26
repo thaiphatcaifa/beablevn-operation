@@ -55,10 +55,10 @@ const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCh
     const aIn = new Date(actualCheckIn);
     const aOut = new Date(actualCheckOut);
     let diffMs = 0;
+    
     if (isAdminEdited) {
-        const scheduledMs = sEnd - sStart;
-        const actualMs = aOut - aIn;
-        diffMs = actualMs > scheduledMs ? scheduledMs : actualMs;
+        // Lấy khoảng thời gian thực tế Admin tính (Check-out trừ Check-in) không bị giới hạn
+        diffMs = aOut - aIn;
     } else {
         let calcStart = aIn > sStart ? aIn : sStart;
         let calcEnd;
@@ -69,6 +69,7 @@ const calculateWorkHoursDecimal = (schedStart, schedEnd, actualCheckIn, actualCh
         }
         diffMs = calcEnd - calcStart;
     }
+    
     if (diffMs < 0) return 0;
     return Math.floor(diffMs / 60000) / 60; 
 };
@@ -162,12 +163,13 @@ const Reports = () => {
 
   const handlePrint = () => { window.print(); };
 
-  const handleSaveAttendanceEdit = (taskId) => {
+  const handleSaveAttendanceEdit = (task) => {
       if (!editAttForm.checkIn || !editAttForm.checkOut || !editAttForm.reason.trim()) {
           return alert("Vui lòng nhập đầy đủ Giờ vào, Giờ ra và Lý do chỉnh sửa!");
       }
 
-      updateTask(taskId, {
+      updateTask(task.id, {
+          ...task, // BẢO TOÀN DỮ LIỆU CŨ TRÁNH MẤT STARTTIME/ENDTIME
           checkInTime: new Date(editAttForm.checkIn).toISOString(),
           checkOutTime: new Date(editAttForm.checkOut).toISOString(),
           status: 'completed',
@@ -846,7 +848,7 @@ const Reports = () => {
                                           </td>
                                           <td style={{...styles.td, textAlign: 'right'}}>
                                               <div style={{display:'flex', flexDirection:'column', gap:'8px', alignItems:'flex-end'}}>
-                                                  <button onClick={() => handleSaveAttendanceEdit(t.id)} style={{color:'white', background:'#059669', border:'none', padding:'10px 20px', borderRadius:'10px', cursor:'pointer', fontWeight:'700', width:'90px', transition:'all 0.2s', boxShadow: '0 2px 4px rgba(16,185,129,0.2)'}}>Lưu</button>
+                                                  <button onClick={() => handleSaveAttendanceEdit(t)} style={{color:'white', background:'#059669', border:'none', padding:'10px 20px', borderRadius:'10px', cursor:'pointer', fontWeight:'700', width:'90px', transition:'all 0.2s', boxShadow: '0 2px 4px rgba(16,185,129,0.2)'}}>Lưu</button>
                                                   <button onClick={()=>setEditingAttendanceId(null)} style={{color:'#475569', background:'#f1f5f9', border:'1px solid #cbd5e1', padding:'10px 20px', borderRadius:'10px', cursor:'pointer', fontWeight:'700', width:'90px', transition:'all 0.2s'}}>Hủy</button>
                                               </div>
                                           </td>

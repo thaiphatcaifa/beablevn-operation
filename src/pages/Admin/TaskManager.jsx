@@ -485,7 +485,7 @@ const TaskManager = () => {
 
 
   return (
-    <div style={{ paddingBottom: '40px' }}>
+    <div style={{ paddingBottom: '40px', boxSizing: 'border-box', width: '100%', overflowX: 'hidden' }}>
       <style>{`
         .menu-card { transition: all 0.25s ease; cursor: pointer; }
         .menu-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -8px rgba(0,0,0,0.1) !important; border-color: #bae6fd !important; }
@@ -529,6 +529,12 @@ const TaskManager = () => {
             color: #334155;
             font-weight: normal;
             padding: 4px;
+        }
+
+        /* MEDIA QUERIES ĐỂ RESPONSIVE FORM TRÊN MOBILE */
+        @media (max-width: 600px) {
+            .mobile-padding { padding: 16px !important; }
+            .mobile-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -641,12 +647,12 @@ const TaskManager = () => {
              )}
 
              {activeView === 'create_task' && (
-                 <div style={styles.formContainer}>
+                 <div style={styles.formContainer} className="mobile-padding">
                     <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'24px', borderBottom: '1px solid #f3f4f6', paddingBottom: '16px'}}>
                         <h3 style={{ margin: 0, color: '#111827', fontWeight: '800', fontSize: '1.25rem' }}>Tạo Task(R)</h3>
                         <button onClick={() => setActiveView('overview')} style={styles.backBtn}><Icons.Back /> Quay lại</button>
                     </div>
-                    <form onSubmit={handleAddTaskAdhoc} style={styles.formGrid}>
+                    <form onSubmit={handleAddTaskAdhoc} style={styles.formGrid} className="mobile-grid">
                         <div style={{ gridColumn: '1 / -1' }}>
                             <label style={styles.label}>Tiêu đề công việc</label>
                             <input className="input-modern" placeholder="Nhập tiêu đề ngắn gọn, rõ ràng..." value={newTask.title} onChange={e => setNewTask({...newTask, title: e.target.value})} required />
@@ -724,14 +730,14 @@ const TaskManager = () => {
              )}
 
              {activeView === 'create_schedule' && (
-                 <div style={styles.formContainer}>
+                 <div style={styles.formContainer} className="mobile-padding">
                     <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'24px', borderBottom: '1px solid #f3f4f6', paddingBottom: '16px'}}>
                         <h3 style={{ margin: 0, color: '#111827', fontWeight: '800', fontSize: '1.25rem' }}>
                             {editingScheduleId ? 'Chỉnh sửa Lịch công tác' : 'Thiết lập Lịch làm việc mới'}
                         </h3>
                         <button onClick={() => { setActiveView('overview'); setEditingScheduleId(null); }} style={styles.backBtn}><Icons.Back /> Quay lại</button>
                     </div>
-                    <form onSubmit={handleAddScheduleSubmit} style={styles.formGrid}>
+                    <form onSubmit={handleAddScheduleSubmit} style={styles.formGrid} className="mobile-grid">
                         <div style={{ gridColumn: '1 / -1' }}>
                             <label style={styles.label}>Tiêu đề lịch trình</label>
                             <input className="input-modern" placeholder="VD: Ca trực Canteen Sáng..." value={newTask.title} onChange={e => setNewTask({...newTask, title: e.target.value})} required />
@@ -768,14 +774,14 @@ const TaskManager = () => {
                             <input className="input-modern" type="datetime-local" value={newTask.endTime} onChange={e => setNewTask({...newTask, endTime: e.target.value})} required />
                         </div>
                         
-                        <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box' }}>
                             <h5 style={{margin:'0 0 16px 0', fontSize:'1rem', color:'#1e293b', fontWeight: '700'}}>🔁 Cấu hình chu kỳ lặp lại</h5>
                             <div style={{display:'flex', gap:'30px', flexWrap:'wrap'}}>
                                 <div style={{display:'flex', flexDirection:'column', minWidth: '150px'}}>
                                     <label style={styles.label}>Số tuần kéo dài:</label>
                                     <input className="input-modern" type="number" min="1" max="52" value={scheduleConfig.repeatWeeks} onChange={e => setScheduleConfig({...scheduleConfig, repeatWeeks: e.target.value})} style={{width: '100px', fontWeight: 'bold'}} />
                                 </div>
-                                <div style={{display:'flex', flexDirection:'column', flex: 1}}>
+                                <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '0'}}>
                                     <label style={styles.label}>Chọn thứ trong tuần:</label>
                                     <div style={{display:'flex', gap:'10px', marginTop:'8px', flexWrap: 'wrap'}}>
                                         {daysOfWeek.map(d => (
@@ -919,7 +925,7 @@ const TaskManager = () => {
                         <button onClick={() => setActiveView('overview')} style={styles.backBtn}><Icons.Back /> Quay lại</button>
                     </div>
 
-                    <div style={{ display: 'flex', background: '#f1f5f9', padding: '6px', borderRadius: '12px', marginBottom: '24px', width: 'fit-content' }}>
+                    <div style={{ display: 'flex', background: '#f1f5f9', padding: '6px', borderRadius: '12px', marginBottom: '24px', width: 'fit-content', flexWrap: 'wrap', gap: '6px' }}>
                         <button 
                             className={`pill-tab ${scheduleTab === 'instances' ? 'active' : ''}`}
                             onClick={() => { setScheduleTab('instances'); setGenTaskPage(1); }} 
@@ -1083,7 +1089,7 @@ const TaskManager = () => {
                                     placeholder="🔍 Tìm tiêu đề, nhân sự..." 
                                     value={scheduleSearchTerm} 
                                     onChange={(e) => setScheduleSearchTerm(e.target.value)} 
-                                    style={{ width: '250px', marginTop: 0, padding:'10px 14px' }} 
+                                    style={{ width: '100%', maxWidth: '250px', marginTop: 0, padding:'10px 14px' }} 
                                 />
                             </div>
                             <div style={styles.tableWrapper}>
@@ -1130,11 +1136,11 @@ const TaskManager = () => {
              GIAO DIỆN DÀNH RIÊNG CHO ROLE SCHEDULER
              ============================================================== */
           <>
-              <div style={styles.formContainer}>
+              <div style={styles.formContainer} className="mobile-padding">
                 <h3 style={{ margin: '0 0 24px 0', color: '#111827', fontWeight: '800', fontSize: '1.35rem', borderBottom: '1px solid #f3f4f6', paddingBottom: '16px' }}>
                     {editingScheduleId ? 'Đang soạn yêu cầu điều chỉnh' : 'Lên lịch công tác mới (Scheduler)'}
                 </h3>
-                <form onSubmit={handleAddScheduleSubmit} style={styles.formGrid}>
+                <form onSubmit={handleAddScheduleSubmit} style={styles.formGrid} className="mobile-grid">
                     <div style={{ gridColumn: '1 / -1' }}>
                         <label style={styles.label}>Tiêu đề công việc</label>
                         <input className="input-modern" placeholder="Nhập tiêu đề..." value={newTask.title} onChange={e => setNewTask({...newTask, title: e.target.value})} required />
@@ -1170,14 +1176,14 @@ const TaskManager = () => {
                         <label style={styles.label}>Kết thúc (Giờ & Ngày)</label>
                         <input className="input-modern" type="datetime-local" value={newTask.endTime} onChange={e => setNewTask({...newTask, endTime: e.target.value})} required />
                     </div>
-                    <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box' }}>
                         <h5 style={{margin:'0 0 16px 0', fontSize:'1rem', color:'#1e293b', fontWeight: '700'}}>🔁 Cấu hình chu kỳ lặp lại</h5>
                         <div style={{display:'flex', gap:'30px', flexWrap:'wrap'}}>
                             <div style={{display:'flex', flexDirection:'column', minWidth: '150px'}}>
                                 <label style={styles.label}>Số tuần lặp lại:</label>
                                 <input className="input-modern" type="number" min="1" max="52" value={scheduleConfig.repeatWeeks} onChange={e => setScheduleConfig({...scheduleConfig, repeatWeeks: e.target.value})} style={{width: '100px', fontWeight: 'bold'}} />
                             </div>
-                            <div style={{display:'flex', flexDirection:'column', flex: 1}}>
+                            <div style={{display:'flex', flexDirection:'column', flex: 1, minWidth: '0'}}>
                                 <label style={styles.label}>Chọn thứ trong tuần:</label>
                                 <div style={{display:'flex', gap:'10px', marginTop:'8px', flexWrap: 'wrap'}}>
                                     {daysOfWeek.map(d => (
@@ -1304,8 +1310,8 @@ const TaskManager = () => {
 };
 
 const styles = {
-    formContainer: { background: '#ffffff', padding: '28px', borderRadius: '20px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.03)', marginBottom: '32px', border: '1px solid rgba(0,0,0,0.05)' },
-    formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' },
+    formContainer: { background: '#ffffff', padding: '28px', borderRadius: '20px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.03)', marginBottom: '32px', border: '1px solid rgba(0,0,0,0.05)', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' },
+    formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '20px', width: '100%', boxSizing: 'border-box' },
     label: { display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#374151', marginBottom: '4px' },
     btnSubmit: { gridColumn: '1 / -1', padding: '16px', background: '#003366', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', fontSize: '1rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(0,51,102,0.2)' },
     

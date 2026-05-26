@@ -117,17 +117,14 @@ const Attendance = () => {
       const startTime = new Date(task.startTime);
       const diffMinutes = (exactNow - startTime) / 60000; 
 
-      if (diffMinutes < -15) {
-          alert(`Chưa đến giờ! Bạn chỉ có thể check-in từ ${new Date(startTime.getTime() - 15*60000).toLocaleTimeString('vi-VN')}.`);
-          return;
-      }
-
       let updateData = { 
+          ...task, // BẢO TOÀN DỮ LIỆU CŨ TRÁNH GHI ĐÈ KÉP
           checkInTime: exactNow.toISOString(),
           status: 'in_progress' 
       };
       let msg = "Check-in thành công!";
 
+      // Kiểm tra hợp lệ: Đi sớm hoặc đi đúng giờ thì ok, quá 3 phút thì tính là trễ
       if (diffMinutes > 3) {
           updateData.checkInStatus = 'Late';
           updateData.lateReason = 'Trễ quá 3 phút';
@@ -159,6 +156,7 @@ const Attendance = () => {
       if(window.confirm("Xác nhận hoàn thành ca làm việc này?")) {
           updateTaskProgress(task.id, 100, "Check-out attendance");
           updateTask(task.id, { 
+              ...task, // BẢO TOÀN DỮ LIỆU CŨ BAO GỒM GIỜ VÀO CA TRÁNH GHI ĐÈ
               checkOutTime: exactNow.toISOString(),
               status: 'completed'
           });
@@ -172,6 +170,7 @@ const Attendance = () => {
       const reason = window.prompt("Đã quá giờ check-out quy định. Vui lòng nhập lý do:");
       if (reason && reason.trim() !== "") {
           updateTask(task.id, {
+              ...task, // BẢO TOÀN DỮ LIỆU CŨ BAO GỒM GIỜ VÀO CA
               checkOutTime: exactNow.toISOString(),
               status: 'completed',
               progress: 100,
@@ -206,13 +205,7 @@ const Attendance = () => {
       }
 
       if (!isCheckedIn) {
-          if (diffStart < -15) {
-              return (
-                  <button disabled style={{...styles.mainBtn, background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', boxShadow: 'none'}}>
-                      Chưa đến ca
-                  </button>
-              );
-          }
+          // Cho phép check-in sớm bất kì lúc nào. Chỉ hiển thị cảnh báo nếu trễ > 3 phút
           if (diffStart > 3) {
               return (
                   <button className="btn-danger" onClick={() => handleSchedulerCheckIn(task)} style={{...styles.mainBtn, background: '#ef4444'}}>
