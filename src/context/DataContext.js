@@ -17,19 +17,20 @@ export const DataProvider = ({ children }) => {
   const [disciplineRecords, setDisciplineRecords] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [payrollRecords, setPayrollRecords] = useState([]);
+  const [autoDisciplineRules, setAutoDisciplineRules] = useState([]); // State cho luật kỷ luật tự động
   
-  // THÊM MỚI: State theo dõi tiến trình tải dữ liệu ban đầu
+  // State theo dõi tiến trình tải dữ liệu ban đầu
   const [loading, setLoading] = useState(true);
 
   // --- FIREBASE LISTENERS ---
   useEffect(() => {
     let unsubs = [];
     
-    // THÊM MỚI: Đảm bảo đăng nhập ẩn danh trước khi gắn listener để lấy quyền đọc database
+    // Đảm bảo đăng nhập ẩn danh trước khi gắn listener để lấy quyền đọc database
     const setupListeners = () => {
-      // Bộ đếm kiểm tra việc nạp dữ liệu lần đầu từ 9 nhánh DatabaseListeners khác nhau
+      // Bộ đếm kiểm tra việc nạp dữ liệu lần đầu từ 10 nhánh DatabaseListeners khác nhau
       let loadedCount = 0;
-      const totalListeners = 9;
+      const totalListeners = 10; // Đã bao gồm autoDisciplineRules
 
       const checkInitialLoad = () => {
         loadedCount++;
@@ -109,7 +110,18 @@ export const DataProvider = ({ children }) => {
         checkInitialLoad();
       }, (error) => { checkInitialLoad(); });
 
-      unsubs = [unsubStaff, unsubTasks, unsubShifts, unsubAtt, unsubFacility, unsubDiscType, unsubDiscRec, unsubSchedules, unsubPayroll];
+      // 9. AUTO DISCIPLINE RULES (QUY TẮC TỰ ĐỘNG)
+      const autoRulesRef = ref(db, 'autoDisciplineRules');
+      const unsubAutoRules = onValue(autoRulesRef, (snapshot) => {
+        const data = snapshot.val();
+        setAutoDisciplineRules(data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : []);
+        checkInitialLoad();
+      }, (error) => { checkInitialLoad(); });
+
+      unsubs = [
+        unsubStaff, unsubTasks, unsubShifts, unsubAtt, unsubFacility, 
+        unsubDiscType, unsubDiscRec, unsubSchedules, unsubPayroll, unsubAutoRules
+      ];
     };
 
     const initAuth = async () => {
@@ -142,7 +154,7 @@ export const DataProvider = ({ children }) => {
 
   // --- ACTIONS ---
 
-  // Staff (Thay thế Date.now bằng push)
+  // Staff
   const addStaff = (s) => { 
     const newRef = push(ref(db, 'staff'));
     const newId = newRef.key;
@@ -162,7 +174,7 @@ export const DataProvider = ({ children }) => {
   const updateTaskProgress = (id, progress) => update(ref(db, 'tasks/' + id), { progress });
   const finishTask = (id) => update(ref(db, 'tasks/' + id), { status: 'completed', progress: 100 });
 
-  // Shifts
+  // Shifts / Attendance
   const addAttendance = (log) => { 
     const newRef = push(ref(db, 'attendance'));
     const newId = newRef.key;
@@ -195,9 +207,18 @@ export const DataProvider = ({ children }) => {
     return set(newRef, { ...record, id: newId, status: 'pending' });
   };
   const updateDisciplineRecordStatus = (id, status) => update(ref(db, 'disciplineRecords/' + id), { status });
-  const deleteDisciplineRecord = (id) => remove(ref(db, 'disciplineRecords/' + id));
+  const deleteDisciplineRecord = (id) => remove(ref(db, 'disciplineRecords/' + id)); // Hỗ trợ gỡ kỷ luật gán nhầm
 
-  // Schedules (Thay thế Date.now bằng push)
+  // Auto Discipline Rules (THÊM MỚI / HOÀN THIỆN)
+  const addAutoRule = (rule) => {
+    const newRef = push(ref(db, 'autoDisciplineRules'));
+    const newId = newRef.key;
+    return set(newRef, { ...rule, id: newId, createdAt: new Date().toISOString() });
+  };
+  const updateAutoRule = (id, updates) => update(ref(db, 'autoDisciplineRules/' + id), updates);
+  const deleteAutoRule = (id) => remove(ref(db, 'autoDisciplineRules/' + id));
+
+  // Schedules 
   const addSchedule = (sched) => { 
     const newRef = push(ref(db, 'schedules'));
     const newId = newRef.key; 
@@ -222,6 +243,7 @@ export const DataProvider = ({ children }) => {
       facilityLogs, addFacilityLog,
       disciplineTypes, addDisciplineType, updateDisciplineTypeStatus, softDeleteDisciplineType, proposeDeleteDisciplineType, deleteDisciplineType,
       disciplineRecords, addDisciplineRecord, updateDisciplineRecordStatus, deleteDisciplineRecord,
+      autoDisciplineRules, addAutoRule, updateAutoRule, deleteAutoRule, // Export cho Auto Rules
       schedules, addSchedule, updateSchedule, deleteSchedule,
       payrollRecords, savePayrollRecord 
     }}>

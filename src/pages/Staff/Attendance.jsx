@@ -64,7 +64,17 @@ const Icons = {
 
 const Attendance = () => {
   const { user } = useAuth();
-  const { shifts, attendanceLogs, addAttendance, updateAttendanceLog, tasks, updateTaskProgress, updateTask } = useData();
+  const { 
+    shifts, 
+    attendanceLogs, 
+    addAttendance, 
+    updateAttendanceLog, 
+    tasks, 
+    updateTaskProgress, 
+    updateTask,
+    autoDisciplineRules, // Lấy luật tự động từ Context
+    addDisciplineRecord // Hàm tạo biên bản vi phạm
+  } = useData();
 
   const [timeFilter, setTimeFilter] = useState('day'); 
   const [selectedMonthYear, setSelectedMonthYear] = useState('all'); 
@@ -111,7 +121,7 @@ const Attendance = () => {
   
   filteredScheduleTasks.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
-  // --- 1. XỬ LÝ CHECK-IN ---
+  // --- 1. XỬ LÝ CHECK-IN & GÁN KỶ LUẬT TỰ ĐỘNG ---
   const handleSchedulerCheckIn = (task) => {
       const exactNow = new Date();
       const startTime = new Date(task.startTime);
@@ -129,6 +139,28 @@ const Attendance = () => {
           updateData.checkInStatus = 'Late';
           updateData.lateReason = 'Trễ quá 3 phút';
           msg = "CẢNH BÁO: Bạn đã check-in TRỄ quá 3 phút! Hệ thống đã ghi nhận.";
+
+          // KIỂM TRA QUY TẮC KỶ LUẬT TỰ ĐỘNG (LATE ATTENDANCE)
+          const lateRule = autoDisciplineRules?.find(r => r.triggerType === 'late_attendance');
+          if (lateRule) {
+              // Lọc số lần đi trễ trước đó của user (dựa trên task có checkInStatus = 'Late')
+              const pastLates = tasks.filter(t => t.assigneeId === user.id && t.checkInStatus === 'Late').length;
+              const currentLateCount = pastLates + 1; // Cộng thêm lần vi phạm này
+
+              // Nếu số lần vi phạm chạm ngưỡng (ví dụ: cứ 3 lần thì phạt)
+              if (currentLateCount > 0 && currentLateCount % lateRule.threshold === 0) {
+                  addDisciplineRecord({
+                      staffId: user.id,
+                      disciplineId: lateRule.disciplineId,
+                      disciplineName: lateRule.disciplineName,
+                      taskTitle: `Điểm danh trễ lần thứ ${currentLateCount} (Ca: ${task.title})`,
+                      date: exactNow.toISOString(),
+                      isAutoAssigned: true // Đánh dấu là hệ thống tự động gán
+                  });
+                  msg += `\n\n🚨 LƯU Ý: Bạn đã tích lũy đủ ${lateRule.threshold} lần đi trễ. Hệ thống tự động kích hoạt kỷ luật: ${lateRule.disciplineName}.`;
+              }
+          }
+
       } else {
           updateData.checkInStatus = 'OnTime';
       }
@@ -156,7 +188,7 @@ const Attendance = () => {
       if(window.confirm("Xác nhận hoàn thành ca làm việc này?")) {
           updateTaskProgress(task.id, 100, "Check-out attendance");
           updateTask(task.id, { 
-              ...task, // BẢO TOÀN DỮ LIỆU CŨ BAO GỒM GIỜ VÀO CA TRÁNH GHI ĐÈ
+              ...task, 
               checkOutTime: exactNow.toISOString(),
               status: 'completed'
           });
@@ -170,7 +202,7 @@ const Attendance = () => {
       const reason = window.prompt("Đã quá giờ check-out quy định. Vui lòng nhập lý do:");
       if (reason && reason.trim() !== "") {
           updateTask(task.id, {
-              ...task, // BẢO TOÀN DỮ LIỆU CŨ BAO GỒM GIỜ VÀO CA
+              ...task,
               checkOutTime: exactNow.toISOString(),
               status: 'completed',
               progress: 100,

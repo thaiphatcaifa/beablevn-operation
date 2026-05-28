@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 const Icons = {
   Discipline: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>),
   Add: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>),
-  Trash: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>),
+  Trash: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244 2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>),
   Restore: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>),
   Check: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>),
   XMark: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>),
@@ -26,7 +26,11 @@ const DisciplineManager = () => {
     proposeDeleteDisciplineType,
     deleteDisciplineType, 
     disciplineRecords, 
-    staffList 
+    deleteDisciplineRecord, // Thêm hàm gỡ kỷ luật gán nhầm
+    staffList,
+    autoDisciplineRules, // Thêm state luật kỷ luật tự động
+    addAutoRule,
+    deleteAutoRule
   } = useData();
 
   // --- CONSTANTS ---
@@ -42,6 +46,13 @@ const DisciplineManager = () => {
       name: '', 
       description: '', 
       level: DISC_LEVELS[0]
+  });
+
+  // State form quy tắc tự động vi phạm
+  const [newAutoRule, setNewAutoRule] = useState({
+      triggerType: 'late_attendance', // late_attendance, overdue_task, failed_task
+      threshold: 3,
+      disciplineId: ''
   });
 
   // State quản lý tìm kiếm
@@ -103,6 +114,26 @@ const DisciplineManager = () => {
       alert(isOp ? "Đã gửi đề xuất hình thức kỷ luật!" : "Đã ban hành hình thức kỷ luật mới!");
   };
 
+  // Handler lưu quy tắc tự động mới
+  const handleAddAutoRule = (e) => {
+      e.preventDefault();
+      if (!newAutoRule.disciplineId) return alert("Vui lòng chọn hình thức kỷ luật áp dụng!");
+      if (parseInt(newAutoRule.threshold) <= 0) return alert("Số lần vi phạm phải lớn hơn 0!");
+
+      const targetDisc = disciplineTypes.find(d => d.id === newAutoRule.disciplineId);
+
+      addAutoRule({
+          triggerType: newAutoRule.triggerType,
+          threshold: parseInt(newAutoRule.threshold),
+          disciplineId: newAutoRule.disciplineId,
+          disciplineName: targetDisc ? targetDisc.name : 'Unknown',
+          createdBy: user.username
+      });
+
+      setNewAutoRule({ triggerType: 'late_attendance', threshold: 3, disciplineId: '' });
+      alert("Đã thiết lập quy tắc kỷ luật tự động thành công!");
+  };
+
   const handleApprove = (id) => {
       if(window.confirm("Phê duyệt hình thức này?")) {
           updateDisciplineTypeStatus(id, 'Active');
@@ -159,6 +190,15 @@ const DisciplineManager = () => {
       }
   };
 
+  // Handler xử lý gỡ hồ sơ gán nhầm
+  const handleRemoveRecord = (id) => {
+      if (window.confirm("Xác nhận gỡ bỏ hồ sơ vi phạm này khỏi hệ thống nhân sự?")) {
+          deleteDisciplineRecord(id)
+              .then(() => alert("Đã gỡ bỏ hồ sơ kỷ luật thành công!"))
+              .catch(err => alert("Lỗi hệ thống: " + err.message));
+      }
+  };
+
   const renderStatusBadge = (t) => {
       if (t.status === 'Pending') return <span style={styles.badgeWarning}>⏳ Chờ duyệt</span>;
       if (t.status === 'Suspended') return <span style={styles.badgeError}>⛔ Đình chỉ</span>;
@@ -176,7 +216,7 @@ const DisciplineManager = () => {
           .table-row { transition: background 0.2s; }
           .table-row:hover { background: #f1f5f9 !important; }
           .action-btn { transition: all 0.2s; flex-shrink: 0; }
-          .action-btn:hover { transform: scale(1.1); filter: brightness(0.95); }
+          .action-btn:hover { transform: scale(1.05); filter: brightness(0.95); }
           
           .form-grid { 
               display: grid; 
@@ -198,9 +238,20 @@ const DisciplineManager = () => {
               min-width: 160px; 
           }
           
-          /* Hiệu ứng hover cho thẻ Folder */
           .folder-row:hover {
               background: #f1f5f9 !important;
+          }
+
+          @media (max-width: 768px) {
+              .form-grid {
+                  grid-template-columns: 1fr !important;
+                  gap: 12px;
+              }
+              .card-header-flex {
+                  flex-direction: column;
+                  align-items: flex-start !important;
+                  gap: 12px;
+              }
           }
       `}</style>
 
@@ -247,9 +298,88 @@ const DisciplineManager = () => {
           </div>
       </div>
 
+      {/* 1.5. CẤU HÌNH QUY TẮC KỶ LUẬT TỰ ĐỘNG (CHỈ CHIEF & REG ADMIN) */}
+      {canApprove && (
+          <div style={styles.card}>
+              <div style={styles.cardHeader}>
+                  <h3 style={styles.cardTitle}>Cấu hình quy tắc gán kỷ luật tự động</h3>
+                  <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: '500' }}>Hệ thống tự đối chiếu số lần tích lũy sai phạm để tự động áp dụng kỷ luật</span>
+              </div>
+              <div style={styles.cardBody}>
+                  <form onSubmit={handleAddAutoRule} className="form-grid" style={{ marginBottom: '24px', borderBottom: '1px dashed #e5e7eb', paddingBottom: '20px' }}>
+                      <div>
+                          <label style={styles.label}>Hành vi vi phạm (Trigger)</label>
+                          <select className="input-modern" value={newAutoRule.triggerType} onChange={e => setNewAutoRule({...newAutoRule, triggerType: e.target.value})}>
+                              <option value="late_attendance">Tích lũy số lần đi làm trễ ca (> 3 phút)</option>
+                              <option value="overdue_task">Tích lũy số lần bàn giao Task trễ hạn</option>
+                              <option value="failed_task">Tích lũy số lần Task bị đánh giá Không Đạt</option>
+                          </select>
+                      </div>
+                      <div>
+                          <label style={styles.label}>Số lần chạm ngưỡng (Tối thiểu)</label>
+                          <input type="number" min="1" className="input-modern" value={newAutoRule.threshold} onChange={e => setNewAutoRule({...newAutoRule, threshold: e.target.value})} required />
+                      </div>
+                      <div>
+                          <label style={styles.label}>Hình thức gán tự động</label>
+                          <select className="input-modern" value={newAutoRule.disciplineId} onChange={e => setNewAutoRule({...newAutoRule, disciplineId: e.target.value})} required>
+                              <option value="">-- Chọn hình thức phạt hiện hành --</option>
+                              {disciplineTypes.filter(d => d.status === 'Active').map(d => (
+                                  <option key={d.id} value={d.id}>{d.name} ({d.level})</option>
+                              ))}
+                          </select>
+                      </div>
+                      <div>
+                          <button type="submit" style={{ ...styles.btnAdd, width: '100%' }}>
+                              <Icons.Add /> <span>Thiết lập luật</span>
+                          </button>
+                      </div>
+                  </form>
+
+                  <h4 style={{ margin: '0 0 12px 0', color: '#111827', fontWeight: '700', fontSize: '1rem' }}>Luật tự động đang hoạt động</h4>
+                  <div className="table-responsive">
+                      <table style={styles.table}>
+                          <thead>
+                              <tr style={styles.tableHeadRow}>
+                                  <th style={styles.th}>Hành vi hệ thống theo dõi</th>
+                                  <th style={styles.th}>Ngưỡng phạt</th>
+                                  <th style={styles.th}>Hình thức kỷ luật tự động kích hoạt</th>
+                                  <th style={{...styles.th, textAlign: 'right', paddingRight: '24px', width: '100px'}}>Hành động</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {autoDisciplineRules && autoDisciplineRules.map(rule => (
+                                  <tr key={rule.id} className="table-row">
+                                      <td style={{...styles.td, fontWeight: '700', color: '#1e293b'}}>
+                                          {rule.triggerType === 'late_attendance' && 'Điểm danh vào ca muộn'}
+                                          {rule.triggerType === 'overdue_task' && 'Bàn giao nhiệm vụ trễ hạn'}
+                                          {rule.triggerType === 'failed_task' && 'Nhiệm vụ Không Đạt yêu cầu'}
+                                      </td>
+                                      <td style={styles.td}>
+                                          Đủ <span style={{ fontWeight: '800', color: '#dc2626' }}>{rule.threshold}</span> lần
+                                      </td>
+                                      <td style={{...styles.td, color: '#003366', fontWeight: '700'}}>{rule.disciplineName}</td>
+                                      <td style={{...styles.td, textAlign: 'right', paddingRight: '24px'}}>
+                                          <button className="action-btn" onClick={() => { if(window.confirm("Hủy quy tắc tự động gán này?")) deleteAutoRule(rule.id); }} style={styles.btnActionRed} title="Hủy quy tắc">
+                                              <Icons.Trash />
+                                          </button>
+                                      </td>
+                                  </tr>
+                              ))}
+                              {(!autoDisciplineRules || autoDisciplineRules.length === 0) && (
+                                  <tr>
+                                      <td colSpan="4" style={styles.emptyTd}>Chưa cấu hình quy tắc phạt tự động nào.</td>
+                                  </tr>
+                              )}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {/* 2. DANH SÁCH HIỆN HÀNH DẠNG FOLDER */}
       <div style={styles.card}>
-          <div style={{...styles.cardHeader, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'}}>
+          <div className="card-header-flex" style={{...styles.cardHeader, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'}}>
               <h3 style={styles.cardTitle}>1. Danh mục hình thức kỷ luật (Hiện hành)</h3>
               <input 
                   className="input-modern" 
@@ -275,7 +405,6 @@ const DisciplineManager = () => {
                       {DISC_LEVELS.map(lvl => {
                           const items = displayedTypes.filter(t => t.level === lvl);
                           const isExpanded = effectiveExpandedFolders.includes(lvl);
-                          // Nếu đang search mà folder không có kết quả thì không hiển thị
                           if (searchTerm.trim() !== '' && items.length === 0) return null;
 
                           return (
@@ -348,7 +477,7 @@ const DisciplineManager = () => {
                           );
                       })}
 
-                      {/* Các hình thức chưa phân loại (Nếu có) */}
+                      {/* Các hình thức chưa phân loại */}
                       {(() => {
                           const otherItems = displayedTypes.filter(t => !DISC_LEVELS.includes(t.level));
                           if (otherItems.length === 0) return null;
@@ -410,7 +539,7 @@ const DisciplineManager = () => {
           </div>
       </div>
 
-      {/* 3. DANH SÁCH HỒ SƠ VI PHẠM */}
+      {/* 3. DANH SÁCH HỒ SƠ VI PHẠM (CÓ TÍNH NĂNG GỠ LỖI / GÁN NHẦM DÀNH CHO ADMIN) */}
       <div style={styles.card}>
           <div style={styles.cardHeader}>
               <h3 style={styles.cardTitle}>2. Hồ sơ nhân sự vi phạm</h3>
@@ -424,6 +553,7 @@ const DisciplineManager = () => {
                           <th style={styles.th}>Nhiệm vụ / Ca làm</th>
                           <th style={styles.th}>Mức độ Kỷ luật</th>
                           <th style={styles.th}>Ngày ghi nhận</th>
+                          {canApprove && <th style={{...styles.th, textAlign: 'right', paddingRight: '24px', width: '130px'}}>Quản lý</th>}
                       </tr>
                   </thead>
                   <tbody>
@@ -441,7 +571,9 @@ const DisciplineManager = () => {
                                           {staff ? staff.name : 'Unknown'}
                                       </div>
                                   </td>
-                                  <td style={{...styles.td, color: '#475569', fontWeight: '600'}} className="td-wrap">{rec.taskTitle || '---'}</td>
+                                  <td style={{...styles.td, color: '#475569', fontWeight: '600'}} className="td-wrap">
+                                      {rec.taskTitle || '---'} {rec.isAutoAssigned && <span style={{color: '#2563eb', fontSize: '0.8rem', display: 'block'}}>🤖 Tự động gán</span>}
+                                  </td>
                                   <td style={styles.td}>
                                       <span style={{...styles.levelBadge, background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', whiteSpace: 'nowrap'}}>
                                           {discType ? discType.level : (rec.disciplineName || '---')}
@@ -450,16 +582,23 @@ const DisciplineManager = () => {
                                   <td style={{...styles.td, color:'#64748b'}}>
                                       {new Date(rec.date).toLocaleDateString('vi-VN')}
                                   </td>
+                                  {canApprove && (
+                                      <td style={{...styles.td, textAlign: 'right', paddingRight: '24px'}}>
+                                          <button className="action-btn" onClick={() => handleRemoveRecord(rec.id)} style={{...styles.btnActionRed, padding: '6px 12px', fontSize: '0.85rem', fontWeight: '700', display: 'inline-flex', gap: '4px', alignItems: 'center'}} title="Xóa bản ghi kỷ luật gán sai">
+                                              <Icons.Trash /> <span>Gỡ lỗi</span>
+                                          </button>
+                                      </td>
+                                  )}
                               </tr>
                           );
                       })}
-                      {disciplineRecords.length === 0 && <tr><td colSpan="5" style={styles.emptyTd}>Tuyệt vời! Không có hồ sơ vi phạm nào được ghi nhận.</td></tr>}
+                      {disciplineRecords.length === 0 && <tr><td colSpan={canApprove ? "6" : "5"} style={styles.emptyTd}>Tuyệt vời! Không có hồ sơ vi phạm nào được ghi nhận.</td></tr>}
                   </tbody>
               </table>
           </div>
       </div>
 
-      {/* 4. LỊCH SỬ HIỆU CHỈNH (CHỈ CHIEF & REG THẤY) */}
+      {/* 4. LỊCH SỬ HIỆU CHỈNH */}
       {!isOp && deletedTypes.length > 0 && (
           <div style={{...styles.card, border: '1px solid #fecaca'}}>
               <div style={{...styles.cardHeader, background: '#fef2f2', borderBottom: '1px solid #fecaca'}}>
