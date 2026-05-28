@@ -34,7 +34,7 @@ const getSpecificDate = (startDateStr, dayName) => {
 
 // --- BỘ ICON MINIMALIST ---
 const Icons = {
-    Task: () => (<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" /></svg>),
+    Task: () => (<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125-1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" /></svg>),
     Schedule: () => (<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>),
     ArrowRight: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>),
     Back: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>),
@@ -57,6 +57,8 @@ const POSITIONS = [
     'Junior Marketing'
 ];
 
+const AREAS = ['Phòng 1', 'Phòng 2', 'Phòng 3', 'Phòng Lab', 'Sảnh OA', 'CC Tầng G', 'Kho Tầng 3', 'Canteen'];
+
 const DISC_LEVELS = [
     "1. Nhắc nhở",
     "2. Khiển trách",
@@ -77,13 +79,15 @@ const TaskManager = () => {
   const [activeView, setActiveView] = useState('overview'); 
   const [scheduleTab, setScheduleTab] = useState('instances'); 
 
+  // Bổ sung state 'area'
   const [newTask, setNewTask] = useState({ 
       title: '', assigneeId: '', description: '',
       startTime: '', endTime: '', 
       assignedRole: '',
       jobCode: '', 
       paymentType: '', 
-      disciplineId: ''
+      disciplineId: '',
+      area: '' 
   });
 
   const [scheduleConfig, setScheduleConfig] = useState({
@@ -144,7 +148,6 @@ const TaskManager = () => {
       return `${s.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - ${e.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
   };
 
-  // --- CHUYỂN ĐỔI MÃ PHÂN QUYỀN SANG TÊN VAI TRÒ CHUẨN ---
   const getSystemRoleName = (role) => {
       if (!role) return 'Staff';
       switch (role.toLowerCase()) {
@@ -156,7 +159,6 @@ const TaskManager = () => {
       }
   };
 
-  // --- TRÍCH XUẤT MÃ CÔNG VIỆC TỪ REMUNERATIONS ---
   const getStaffJobCodes = (staffId) => {
       const codes = [];
       const st = staffList.find(s => s.id === staffId);
@@ -172,26 +174,35 @@ const TaskManager = () => {
       return codes;
   };
 
-  // --- TRÍCH XUẤT ĐÚNG CÁC VAI TRÒ TẠI MỤC QUYỀN & VỊ TRÍ, ĐỒNG THỜI LOẠI BỎ MÃ CŨ ---
   const getStaffRoles = (staffId) => {
       if (!staffId) return [];
       const st = staffList.find(s => s.id === staffId);
       if (!st) return [];
 
-      // 1. Lấy danh sách các vị trí đã tích chọn, LỌC CHUẨN với POSITIONS hiện hành
       let roles = Array.isArray(st.positions) 
             ? st.positions.filter(p => POSITIONS.includes(p)) 
             : [];
 
-      // 2. Lấy tên vai trò quản trị hệ thống tương ứng (Chief Admin, Scheduler...)
       const systemRole = getSystemRoleName(st.role);
 
-      // 3. Nếu chưa tồn tại vai trò hệ thống này trong danh sách, tự động chèn lên đầu
       if (systemRole && systemRole !== 'Staff' && !roles.includes(systemRole)) {
           roles.unshift(systemRole);
       }
 
       return roles;
+  };
+
+  // --- HANDLER THAY ĐỔI NHÂN SỰ & AUTOFILL KHU VỰC ---
+  const handleAssigneeChange = (e) => {
+      const selectedId = e.target.value;
+      const staff = staffList.find(s => s.id === selectedId);
+      setNewTask(prev => ({
+          ...prev,
+          assigneeId: selectedId,
+          assignedRole: '',
+          jobCode: '',
+          area: staff?.defaultArea || '' // Tự động điền khu vực mặc định của nhân sự
+      }));
   };
 
   const generateTasksFromSchedule = (scheduleData, schedId) => {
@@ -218,6 +229,7 @@ const TaskManager = () => {
                     description: scheduleData.description,
                     assignedRole: scheduleData.assignedRole,
                     jobCode: scheduleData.jobCode || '', 
+                    area: scheduleData.area || '', // Lưu area vào Task con
                     startTime: taskStart.toISOString(),
                     endTime: taskEnd.toISOString(),
                     paymentType: 'Theo lịch', 
@@ -262,6 +274,7 @@ const TaskManager = () => {
               title: sched.title, assigneeId: sched.assigneeId, description: sched.description,
               startTime: sched.startTime, endTime: sched.endTime, assignedRole: sched.assignedRole,
               jobCode: sched.jobCode || '',
+              area: sched.area || '', // Load lại area
               paymentType: '', disciplineId: ''
           });
           setScheduleConfig({ repeatWeeks: sched.repeatWeeks, days: sched.repeatDays || [] });
@@ -287,7 +300,7 @@ const TaskManager = () => {
           paymentType: newTask.paymentType ? `${newTask.paymentType} VNĐ` : 'Chưa nhập'
       });
       
-      setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', paymentType: '', disciplineId: '' });
+      setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', area: '', paymentType: '', disciplineId: '' });
       alert("Đã giao nhiệm vụ thành công!");
   };
 
@@ -323,7 +336,7 @@ const TaskManager = () => {
           alert(`Đã lên lịch và tạo tasks cho ${scheduleData.assigneeName}!`);
       }
 
-      setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', paymentType: '', disciplineId: '' });
+      setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', area: '', paymentType: '', disciplineId: '' });
       setScheduleConfig({ repeatWeeks: 1, days: [] });
       setEditingScheduleId(null);
   };
@@ -367,6 +380,7 @@ const TaskManager = () => {
           title: sched.title, assigneeId: sched.assigneeId, description: sched.description,
           startTime: sched.startTime, endTime: sched.endTime, assignedRole: sched.assignedRole,
           jobCode: sched.jobCode || '',
+          area: sched.area || '', // Load lại area
           paymentType: '', disciplineId: ''
       });
       setScheduleConfig({ repeatWeeks: sched.repeatWeeks, days: sched.repeatDays || [] });
@@ -388,6 +402,7 @@ const TaskManager = () => {
           assigneeId: task.assigneeId,
           assignedRole: task.assignedRole || '',
           jobCode: task.jobCode || '',
+          area: task.area || '', // Lưu area để edit
           startTime: task.startTime,
           endTime: task.endTime
       });
@@ -405,6 +420,7 @@ const TaskManager = () => {
           assigneeName: staff ? staff.name : 'Unknown',
           assignedRole: editTaskForm.assignedRole,
           jobCode: editTaskForm.jobCode || '',
+          area: editTaskForm.area || '', // Update area
           startTime: new Date(editTaskForm.startTime).toISOString(),
           endTime: new Date(editTaskForm.endTime).toISOString(),
       });
@@ -600,7 +616,7 @@ const TaskManager = () => {
           <>
              {activeView === 'overview' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
-                    <div className="menu-card" style={styles.menuCard} onClick={() => { setActiveView('create_task'); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', paymentType: '', disciplineId: '' }); }}>
+                    <div className="menu-card" style={styles.menuCard} onClick={() => { setActiveView('create_task'); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', area: '', paymentType: '', disciplineId: '' }); }}>
                         <div style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:'16px'}}>
                             <div style={styles.iconBox}><Icons.Task /></div>
                             <h3 style={styles.cardTitle}>Tạo Task(R)</h3>
@@ -611,12 +627,12 @@ const TaskManager = () => {
                         </div>
                     </div>
 
-                    <div className="menu-card" style={styles.menuCard} onClick={() => { setActiveView('create_schedule'); setEditingScheduleId(null); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', paymentType: '', disciplineId: '' }); setScheduleConfig({ repeatWeeks: 1, days: [] }); }}>
+                    <div className="menu-card" style={styles.menuCard} onClick={() => { setActiveView('create_schedule'); setEditingScheduleId(null); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', area: '', paymentType: '', disciplineId: '' }); setScheduleConfig({ repeatWeeks: 1, days: [] }); }}>
                         <div style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:'16px'}}>
                             <div style={{...styles.iconBox, background: '#fef3c7', color: '#d97706'}}><Icons.Schedule /></div>
                             <h3 style={styles.cardTitle}>Thiết lập Lịch làm</h3>
                         </div>
-                        <div style={{color:'#6b7280', fontSize:'0.9rem', marginBottom:'24px', lineHeight: '1.5'}}>Khởi tạo lịch làm việc lặp lại theo tuần cho nhân sự.</div>
+                        <div style={{color:'#6b7280', fontSize:'0.9rem', marginBottom:'24px', lineHeight: '1.5'}}>Khởi tạo lịch làm việc lặp lại theo tuần cho nhân sự. Bắt buộc kiểm tra CSVT nếu có gán Khu vực.</div>
                         <div style={{...styles.accessBtn, background: '#fffbeb', color: '#d97706'}}>
                             Bắt đầu <Icons.ArrowRight />
                         </div>
@@ -659,7 +675,7 @@ const TaskManager = () => {
                         </div>
                         <div>
                             <label style={styles.label}>Người thực hiện</label>
-                            <select className="input-modern" value={newTask.assigneeId} onChange={e => setNewTask({...newTask, assigneeId: e.target.value, assignedRole: ''})} required>
+                            <select className="input-modern" value={newTask.assigneeId} onChange={handleAssigneeChange} required>
                                 <option value="" disabled>-- Chọn nhân sự --</option>
                                 {staffList.map(s => <option key={s.id} value={s.id}>{s.name} ({getSystemRoleName(s.role)})</option>)}
                             </select>
@@ -678,6 +694,13 @@ const TaskManager = () => {
                                 {getStaffJobCodes(newTask.assigneeId).map(code => (
                                     <option key={code} value={code}>{code}</option>
                                 ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label style={styles.label}>Khu vực làm việc (Area)</label>
+                            <select className="input-modern" value={newTask.area || ''} onChange={e => setNewTask({...newTask, area: e.target.value})}>
+                                <option value="">-- Không yêu cầu kiểm tra CSVT --</option>
+                                {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                             </select>
                         </div>
                         <div>
@@ -744,7 +767,7 @@ const TaskManager = () => {
                         </div>
                         <div>
                             <label style={styles.label}>Người thực hiện</label>
-                            <select className="input-modern" value={newTask.assigneeId} onChange={e => setNewTask({...newTask, assigneeId: e.target.value, assignedRole: ''})} required>
+                            <select className="input-modern" value={newTask.assigneeId} onChange={handleAssigneeChange} required>
                                 <option value="" disabled>-- Chọn nhân sự --</option>
                                 {staffList.map(s => <option key={s.id} value={s.id}>{s.name} ({getSystemRoleName(s.role)})</option>)}
                             </select>
@@ -763,6 +786,13 @@ const TaskManager = () => {
                                 {getStaffJobCodes(newTask.assigneeId).map(code => (
                                     <option key={code} value={code}>{code}</option>
                                 ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label style={styles.label}>Khu vực làm việc (Area)</label>
+                            <select className="input-modern" value={newTask.area || ''} onChange={e => setNewTask({...newTask, area: e.target.value})}>
+                                <option value="">-- Không yêu cầu kiểm tra CSVT --</option>
+                                {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                             </select>
                         </div>
                         <div>
@@ -813,7 +843,7 @@ const TaskManager = () => {
                             {editingScheduleId ? 'Gửi yêu cầu điều chỉnh' : 'Lưu Lịch & Tự Động Tạo Tasks'}
                         </button>
                         {editingScheduleId && (
-                            <button type="button" onClick={() => { setEditingScheduleId(null); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', paymentType: '', disciplineId: '' }); setScheduleConfig({ repeatWeeks: 1, days: [] }); }} style={{ ...styles.btnSubmit, background: '#f1f5f9', color: '#475569', marginTop: '-10px' }}>
+                            <button type="button" onClick={() => { setEditingScheduleId(null); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', area: '', paymentType: '', disciplineId: '' }); setScheduleConfig({ repeatWeeks: 1, days: [] }); }} style={{ ...styles.btnSubmit, background: '#f1f5f9', color: '#475569', marginTop: '-10px' }}>
                                 Hủy thao tác
                             </button>
                         )}
@@ -875,7 +905,8 @@ const TaskManager = () => {
                                     <td style={{...styles.td, textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{(adhocPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                                     <td style={styles.td}>
                                         <div style={{fontWeight:'700', color: '#1f2937', marginBottom: '4px'}}>{t.title}</div>
-                                        {t.paymentType && <span style={{fontSize:'0.7rem', background:'#ecfdf5', color:'#059669', padding:'2px 8px', borderRadius:'12px', fontWeight:'700'}}>{t.paymentType}</span>}
+                                        {t.paymentType && <span style={{fontSize:'0.7rem', background:'#ecfdf5', color:'#059669', padding:'2px 8px', borderRadius:'12px', fontWeight:'700', marginRight: '6px'}}>{t.paymentType}</span>}
+                                        {t.area && <span style={{fontSize:'0.7rem', background:'#fef3c7', color:'#b45309', padding:'2px 8px', borderRadius:'12px', fontWeight:'700'}}>📍 {t.area}</span>}
                                     </td>
                                     <td style={{...styles.td, fontWeight: '600'}}>{t.assigneeName}</td>
                                     <td style={styles.td}>
@@ -1019,6 +1050,10 @@ const TaskManager = () => {
                                                                   <option key={code} value={code}>{code}</option>
                                                               ))}
                                                           </select>
+                                                          <select className="input-modern" value={editTaskForm.area || ''} onChange={e => setEditTaskForm({...editTaskForm, area: e.target.value})} style={{marginTop:0, padding: '8px 36px 8px 12px'}}>
+                                                              <option value="">-- Không yêu cầu --</option>
+                                                              {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                                                          </select>
                                                       </div>
                                                   </td>
                                                   <td style={styles.td}>
@@ -1037,7 +1072,10 @@ const TaskManager = () => {
                                                </>
                                            ) : (
                                                <>
-                                                  <td style={styles.td}><strong style={{color: '#1f2937'}}>{t.title}</strong></td>
+                                                  <td style={styles.td}>
+                                                      <strong style={{color: '#1f2937'}}>{t.title}</strong>
+                                                      {t.area && <div style={{fontSize:'0.7rem', background:'#fef3c7', color:'#b45309', padding:'2px 8px', borderRadius:'12px', fontWeight:'700', marginTop: '4px', display: 'inline-block'}}>📍 {t.area}</div>}
+                                                  </td>
                                                   <td style={{...styles.td, fontWeight: '600'}}>{t.assigneeName}</td>
                                                   <td style={styles.td}>
                                                       <div style={{color: '#4b5563', fontSize: '0.85rem'}}>{t.assignedRole}</div>
@@ -1106,7 +1144,7 @@ const TaskManager = () => {
                                        <tr key={s.id} className="table-row">
                                           <td style={{...styles.td, textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{index + 1}</td>
                                           <td style={styles.td}>
-                                              <div style={{fontWeight:'700', color: '#111827', fontSize: '1.05rem', marginBottom: '4px'}}>{s.title}</div>
+                                              <div style={{fontWeight:'700', color: '#111827', fontSize: '1.05rem', marginBottom: '4px'}}>{s.title} {s.area && <span style={{fontSize:'0.7rem', background:'#fef3c7', color:'#b45309', padding:'2px 8px', borderRadius:'12px', fontWeight:'700', marginLeft: '6px', verticalAlign: 'middle'}}>📍 {s.area}</span>}</div>
                                               {s.assigneeName && <div style={{fontSize:'0.85rem', color:'#4b5563'}}>👤 <span style={{fontWeight:'600'}}>{s.assigneeName}</span> {s.assignedRole ? `(${s.assignedRole})` : ''}</div>}
                                               <div style={{fontSize:'0.8rem', color:'#059669', marginTop: '6px', fontWeight: '600'}}>
                                                   🔁 Lặp lại {s.repeatWeeks} tuần vào các ngày: {s.repeatDays?.join(', ')}
@@ -1147,7 +1185,7 @@ const TaskManager = () => {
                     </div>
                     <div>
                         <label style={styles.label}>Người thực hiện</label>
-                        <select className="input-modern" value={newTask.assigneeId} onChange={e => setNewTask({...newTask, assigneeId: e.target.value, assignedRole: ''})} required>
+                        <select className="input-modern" value={newTask.assigneeId} onChange={handleAssigneeChange} required>
                             <option value="" disabled>-- Chọn nhân sự --</option>
                             {staffList.map(s => <option key={s.id} value={s.id}>{s.name} ({getSystemRoleName(s.role)})</option>)}
                         </select>
@@ -1166,6 +1204,13 @@ const TaskManager = () => {
                             {getStaffJobCodes(newTask.assigneeId).map(code => (
                                 <option key={code} value={code}>{code}</option>
                             ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label style={styles.label}>Khu vực làm việc (Area)</label>
+                        <select className="input-modern" value={newTask.area || ''} onChange={e => setNewTask({...newTask, area: e.target.value})}>
+                            <option value="">-- Không yêu cầu kiểm tra CSVT --</option>
+                            {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                         </select>
                     </div>
                     <div>
@@ -1214,7 +1259,7 @@ const TaskManager = () => {
                         {editingScheduleId ? 'Gửi yêu cầu điều chỉnh' : 'Lưu Lịch & Tự Động Tạo Tasks'}
                     </button>
                     {editingScheduleId && (
-                        <button type="button" onClick={() => { setEditingScheduleId(null); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', paymentType: '', disciplineId: '' }); setScheduleConfig({ repeatWeeks: 1, days: [] }); }} style={{ ...styles.btnSubmit, background: '#f1f5f9', color: '#475569', marginTop: '-10px' }}>
+                        <button type="button" onClick={() => { setEditingScheduleId(null); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', area: '', paymentType: '', disciplineId: '' }); setScheduleConfig({ repeatWeeks: 1, days: [] }); }} style={{ ...styles.btnSubmit, background: '#f1f5f9', color: '#475569', marginTop: '-10px' }}>
                             Hủy thao tác
                         </button>
                     )}
@@ -1253,7 +1298,7 @@ const TaskManager = () => {
                              <tr key={s.id} className="table-row" style={{ background: s.request ? '#fefce8' : 'transparent' }}>
                                 <td style={{...styles.td, textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{(schedulerPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                                 <td style={styles.td}>
-                                    <div style={{fontWeight:'700', color: '#1f2937', marginBottom: '4px'}}>{s.title}</div>
+                                    <div style={{fontWeight:'700', color: '#1f2937', marginBottom: '4px'}}>{s.title} {s.area && <span style={{fontSize:'0.7rem', background:'#fef3c7', color:'#b45309', padding:'2px 8px', borderRadius:'12px', fontWeight:'700', marginLeft: '6px', verticalAlign: 'middle'}}>📍 {s.area}</span>}</div>
                                     <div style={{fontSize:'0.8rem', color:'#6b7280'}}>{s.description?.substring(0, 40)}...</div>
                                     {s.request && <div style={{fontSize:'0.75rem', color:'#ea580c', fontWeight:'bold', marginTop:'6px', background: '#ffedd5', display: 'inline-block', padding: '2px 8px', borderRadius: '10px'}}>⏳ Đang chờ duyệt: {s.request.type === 'delete' ? 'XÓA' : 'SỬA'}</div>}
                                 </td>

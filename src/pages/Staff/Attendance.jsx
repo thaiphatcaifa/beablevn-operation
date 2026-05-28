@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // Bổ sung để điều hướng
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 
@@ -63,6 +64,7 @@ const Icons = {
 };
 
 const Attendance = () => {
+  const navigate = useNavigate(); // Sử dụng hook điều hướng
   const { user } = useAuth();
   const { 
     shifts, 
@@ -72,8 +74,8 @@ const Attendance = () => {
     tasks, 
     updateTaskProgress, 
     updateTask,
-    autoDisciplineRules, // Lấy luật tự động từ Context
-    addDisciplineRecord // Hàm tạo biên bản vi phạm
+    autoDisciplineRules, 
+    addDisciplineRecord 
   } = useData();
 
   const [timeFilter, setTimeFilter] = useState('day'); 
@@ -127,27 +129,41 @@ const Attendance = () => {
       const startTime = new Date(task.startTime);
       const diffMinutes = (exactNow - startTime) / 60000; 
 
+      // YÊU CẦU 2: GIỚI HẠN CHECK-IN SỚM TỐI ĐA 30 PHÚT
+      if (diffMinutes < -30) {
+          alert(`Chưa đến giờ điểm danh!\nBạn chỉ được phép vào ca sớm tối đa 30 phút. Giờ bắt đầu ca của bạn là: ${startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}.`);
+          return;
+      }
+
+      // YÊU CẦU 3: BẮT BUỘC KIỂM TRA CƠ SỞ VẬT CHẤT TRƯỚC KHI VÀO CA (ĐẦU GIỜ)
+      if (task.area) {
+          alert("Ca làm việc này yêu cầu bạn kiểm tra cơ sở vật chất trước khi vào ca!");
+          // Điều hướng sang FacilityCheck và mang theo toàn bộ Object task để xử lý sau khi nộp form
+          navigate('/facility-check', { 
+              state: { isAttendanceFlow: true, action: 'checkin', task: task } 
+          });
+          return; // Dừng tiến trình check-in tại đây
+      }
+
+      // LOGIC CHECK-IN CŨ NẾU KHÔNG CẦN FACILITY CHECK
       let updateData = { 
-          ...task, // BẢO TOÀN DỮ LIỆU CŨ TRÁNH GHI ĐÈ KÉP
+          ...task,
           checkInTime: exactNow.toISOString(),
           status: 'in_progress' 
       };
       let msg = "Check-in thành công!";
 
-      // Kiểm tra hợp lệ: Đi sớm hoặc đi đúng giờ thì ok, quá 3 phút thì tính là trễ
+      // Kiểm tra hợp lệ: quá 3 phút thì tính là trễ
       if (diffMinutes > 3) {
           updateData.checkInStatus = 'Late';
           updateData.lateReason = 'Trễ quá 3 phút';
           msg = "CẢNH BÁO: Bạn đã check-in TRỄ quá 3 phút! Hệ thống đã ghi nhận.";
 
-          // KIỂM TRA QUY TẮC KỶ LUẬT TỰ ĐỘNG (LATE ATTENDANCE)
           const lateRule = autoDisciplineRules?.find(r => r.triggerType === 'late_attendance');
           if (lateRule) {
-              // Lọc số lần đi trễ trước đó của user (dựa trên task có checkInStatus = 'Late')
               const pastLates = tasks.filter(t => t.assigneeId === user.id && t.checkInStatus === 'Late').length;
-              const currentLateCount = pastLates + 1; // Cộng thêm lần vi phạm này
+              const currentLateCount = pastLates + 1;
 
-              // Nếu số lần vi phạm chạm ngưỡng (ví dụ: cứ 3 lần thì phạt)
               if (currentLateCount > 0 && currentLateCount % lateRule.threshold === 0) {
                   addDisciplineRecord({
                       staffId: user.id,
@@ -155,12 +171,11 @@ const Attendance = () => {
                       disciplineName: lateRule.disciplineName,
                       taskTitle: `Điểm danh trễ lần thứ ${currentLateCount} (Ca: ${task.title})`,
                       date: exactNow.toISOString(),
-                      isAutoAssigned: true // Đánh dấu là hệ thống tự động gán
+                      isAutoAssigned: true 
                   });
                   msg += `\n\n🚨 LƯU Ý: Bạn đã tích lũy đủ ${lateRule.threshold} lần đi trễ. Hệ thống tự động kích hoạt kỷ luật: ${lateRule.disciplineName}.`;
               }
           }
-
       } else {
           updateData.checkInStatus = 'OnTime';
       }
@@ -185,6 +200,16 @@ const Attendance = () => {
           return;
       }
 
+      // YÊU CẦU 3: BẮT BUỘC BÁO CÁO CƠ SỞ VẬT CHẤT SAU KHI TAN CA (CUỐI GIỜ)
+      if (task.area) {
+          alert("Ca làm việc này yêu cầu bạn báo cáo tình trạng cơ sở vật chất cuối ca trước khi ra về!");
+          navigate('/facility-check', { 
+              state: { isAttendanceFlow: true, action: 'checkout', task: task } 
+          });
+          return; // Dừng tiến trình check-out tại đây
+      }
+
+      // LOGIC CHECK-OUT CŨ
       if(window.confirm("Xác nhận hoàn thành ca làm việc này?")) {
           updateTaskProgress(task.id, 100, "Check-out attendance");
           updateTask(task.id, { 
@@ -237,7 +262,7 @@ const Attendance = () => {
       }
 
       if (!isCheckedIn) {
-          // Cho phép check-in sớm bất kì lúc nào. Chỉ hiển thị cảnh báo nếu trễ > 3 phút
+          // Chỉ hiển thị cảnh báo giao diện (màu đỏ) nếu trễ > 3 phút
           if (diffStart > 3) {
               return (
                   <button className="btn-danger" onClick={() => handleSchedulerCheckIn(task)} style={{...styles.mainBtn, background: '#ef4444'}}>
@@ -366,6 +391,7 @@ const Attendance = () => {
                            </div>
                            <div style={{marginTop:'12px', display:'flex', gap:'8px', flexWrap:'wrap', alignItems: 'center'}}>
                                <span style={styles.roleBadge}>{task.assignedRole}</span>
+                               {task.area && <span style={{...styles.roleBadge, background: '#fef3c7', color: '#b45309'}}>📍 {task.area}</span>}
                                {task.checkInStatus === 'Late' && <span style={styles.lateBadge}>⚠️ Trễ giờ</span>}
                                {isCheckedIn && !isCompleted && <span style={styles.workingBadge}>Đang trong ca</span>}
                                

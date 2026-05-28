@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 
@@ -18,12 +19,28 @@ const Icons = {
 
 const FacilityCheck = () => {
   const { user } = useAuth();
-  const { addFacilityLog } = useData();
+  const location = useLocation();
+  const navigate = useNavigate();
   
-  const [checkType, setCheckType] = useState('Đầu giờ'); 
-  const [selectedArea, setSelectedArea] = useState('');
+  const { 
+      addFacilityLog, 
+      updateTask, 
+      updateTaskProgress, 
+      autoDisciplineRules, 
+      tasks, 
+      addDisciplineRecord 
+  } = useData();
 
-  // --- CẤU HÌNH CHECKLIST THEO KHU VỰC (GIỮ NGUYÊN LOGIC) ---
+  // --- KIỂM TRA LUỒNG ĐIỂM DANH (NAVIGATE TỪ ATTENDANCE) ---
+  const stateParams = location.state || {};
+  const isAttendanceFlow = stateParams.isAttendanceFlow || false;
+  const action = stateParams.action || ''; // 'checkin' hoặc 'checkout'
+  const targetTask = stateParams.task || null;
+  
+  const [checkType, setCheckType] = useState(isAttendanceFlow ? (action === 'checkin' ? 'Đầu giờ' : 'Cuối giờ') : 'Đầu giờ'); 
+  const [selectedArea, setSelectedArea] = useState(isAttendanceFlow && targetTask?.area ? targetTask.area : '');
+
+  // --- CẤU HÌNH CHECKLIST THEO KHU VỰC ---
   const defaultChecklist = [
     { item: 'Máy lạnh', options: ['Mát', 'Chảy nước', 'Không lạnh', 'Hỏng'], goodStatus: 'Mát' },
     { item: 'Máy chiếu', options: ['Tốt', 'Lệch khung', 'Hư hỏng'], goodStatus: 'Tốt' },
@@ -98,27 +115,90 @@ const FacilityCheck = () => {
     e.preventDefault();
     if (!selectedArea) return alert("Vui lòng chọn khu vực!");
 
-    // CHECK ALL ITEMS logic
+    // Yêu cầu tích đủ các thiết bị
     const missingItems = currentChecklist.filter(config => !currentStatusMap[config.item]);
     if (missingItems.length > 0) {
       alert(`Bạn chưa kiểm tra: ${missingItems.map(c => c.item).join(', ')}. Vui lòng hoàn thành hết trước khi gửi!`);
       return;
     }
 
-    // Submit to server
+    // Submit báo cáo CSVT
     currentChecklist.forEach(config => {
       addFacilityLog({
         staffName: user.name,
         type: checkType,
         area: selectedArea,
         item: config.item,
-        status: currentStatusMap[config.item]
+        status: currentStatusMap[config.item],
+        timestamp: new Date().toISOString()
       });
     });
 
+    // --- LOGIC: TỰ ĐỘNG CHỐT ĐIỂM DANH KHI NẰM TRONG LUỒNG ATTENDANCE FLOW ---
+    if (isAttendanceFlow && targetTask) {
+        const exactNow = new Date();
+
+        // 1. Xử lý Check-in
+        if (action === 'checkin') {
+            const startTime = new Date(targetTask.startTime);
+            const diffMinutes = (exactNow - startTime) / 60000; 
+
+            let updateData = { 
+                ...targetTask,
+                checkInTime: exactNow.toISOString(),
+                status: 'in_progress' 
+            };
+            let msg = "Báo cáo CSVT hoàn tất và Check-in vào ca thành công!";
+
+            if (diffMinutes > 3) {
+                updateData.checkInStatus = 'Late';
+                updateData.lateReason = 'Trễ quá 3 phút';
+                msg = "Báo cáo CSVT thành công!\nCẢNH BÁO: Bạn đã check-in TRỄ quá 3 phút! Hệ thống đã ghi nhận.";
+
+                // Check luật kỷ luật tự động
+                const lateRule = autoDisciplineRules?.find(r => r.triggerType === 'late_attendance');
+                if (lateRule) {
+                    const pastLates = tasks.filter(t => t.assigneeId === user.id && t.checkInStatus === 'Late').length;
+                    const currentLateCount = pastLates + 1; 
+
+                    if (currentLateCount > 0 && currentLateCount % lateRule.threshold === 0) {
+                        addDisciplineRecord({
+                            staffId: user.id,
+                            disciplineId: lateRule.disciplineId,
+                            disciplineName: lateRule.disciplineName,
+                            taskTitle: `Điểm danh trễ lần thứ ${currentLateCount} (Ca: ${targetTask.title})`,
+                            date: exactNow.toISOString(),
+                            isAutoAssigned: true 
+                        });
+                        msg += `\n\n🚨 LƯU Ý: Bạn đã tích lũy đủ ${lateRule.threshold} lần đi trễ. Hệ thống tự động kích hoạt kỷ luật: ${lateRule.disciplineName}.`;
+                    }
+                }
+            } else {
+                updateData.checkInStatus = 'OnTime';
+            }
+
+            updateTask(targetTask.id, updateData);
+            alert(msg);
+        } 
+        
+        // 2. Xử lý Check-out
+        else if (action === 'checkout') {
+            updateTaskProgress(targetTask.id, 100, "Check-out attendance");
+            updateTask(targetTask.id, { 
+                ...targetTask, 
+                checkOutTime: exactNow.toISOString(),
+                status: 'completed'
+            });
+            alert("Báo cáo CSVT cuối giờ hoàn tất. Đã Check-out tan ca thành công!");
+        }
+
+        // Quay lại trang điểm danh sau khi xong xuôi
+        navigate(-1);
+        return;
+    }
+
+    // Nếu chỉ báo cáo CSVT thông thường
     alert("✅ Báo cáo đã gửi thành công về máy chủ!");
-    
-    // Clear temp data
     setTempData(prev => {
       const newData = { ...prev };
       delete newData[currentKey]; 
@@ -128,7 +208,6 @@ const FacilityCheck = () => {
 
   return (
     <div style={{ paddingBottom: '40px', boxSizing: 'border-box' }}>
-      {/* STYLE TỐI ƯU GIAO DIỆN & RESPONSIVE */}
       <style>{`
           .filter-modern {
               padding: 12px 16px; border-radius: 12px; border: 1px solid #e2e8f0; outline: none;
@@ -139,6 +218,7 @@ const FacilityCheck = () => {
               background-repeat: no-repeat; background-position: right 12px center; padding-right: 40px;
           }
           .filter-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+          .filter-modern:disabled { background: #f1f5f9; cursor: not-allowed; color: #64748b; }
           
           .radio-pill {
               padding: 10px 16px; border-radius: 12px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
@@ -174,18 +254,24 @@ const FacilityCheck = () => {
           </div>
       </div>
       
+      {isAttendanceFlow && (
+          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '16px', marginBottom: '24px', color: '#0369a1', fontSize: '0.95rem', fontWeight: '600' }}>
+              ⚠️ Đang trong luồng Điểm danh: Hoàn tất kiểm tra thiết bị tại <b>{selectedArea}</b> để hệ thống tự động ghi nhận {action === 'checkin' ? 'Vào ca' : 'Tan ca'} cho bạn.
+          </div>
+      )}
+
       <div style={{ background: 'white', padding: '24px', borderRadius: '20px', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -2px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
             <div>
               <label style={{ display: 'block', fontWeight: '700', color: '#475569', marginBottom: '8px', fontSize: '0.9rem' }}>Thời điểm báo cáo</label>
-              <select value={checkType} onChange={e => setCheckType(e.target.value)} className="filter-modern">
+              <select value={checkType} onChange={e => setCheckType(e.target.value)} className="filter-modern" disabled={isAttendanceFlow}>
                 <option value="Đầu giờ">☀️ Ca sáng / Đầu giờ</option>
                 <option value="Cuối giờ">🌙 Ca tối / Cuối giờ</option>
               </select>
             </div>
             <div>
               <label style={{ display: 'block', fontWeight: '700', color: '#475569', marginBottom: '8px', fontSize: '0.9rem' }}>Khu vực kiểm tra</label>
-              <select value={selectedArea} onChange={e => setSelectedArea(e.target.value)} required className="filter-modern">
+              <select value={selectedArea} onChange={e => setSelectedArea(e.target.value)} required className="filter-modern" disabled={isAttendanceFlow}>
                 <option value="" disabled>-- Vui lòng chọn khu vực --</option>
                 {areas.map(area => <option key={area} value={area}>{area}</option>)}
               </select>
@@ -240,7 +326,7 @@ const FacilityCheck = () => {
             </div>
 
             <button type="submit" className="btn-submit">
-               <Icons.Check /> Xác nhận gửi Báo cáo
+               <Icons.Check /> {isAttendanceFlow ? "Xác nhận & Điểm danh" : "Xác nhận gửi Báo cáo"}
             </button>
         </form>
       )}

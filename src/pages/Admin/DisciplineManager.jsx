@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 const Icons = {
   Discipline: () => (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>),
   Add: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>),
+  Edit: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>),
   Trash: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244 2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>),
   Restore: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>),
   Check: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>),
@@ -20,15 +21,16 @@ const DisciplineManager = () => {
   const { user } = useAuth();
   const { 
     disciplineTypes, 
-    addDisciplineType, 
+    addDisciplineType,
+    updateDisciplineType, 
     updateDisciplineTypeStatus, 
     softDeleteDisciplineType, 
     proposeDeleteDisciplineType,
     deleteDisciplineType, 
     disciplineRecords, 
-    deleteDisciplineRecord, // Thêm hàm gỡ kỷ luật gán nhầm
+    deleteDisciplineRecord, 
     staffList,
-    autoDisciplineRules, // Thêm state luật kỷ luật tự động
+    autoDisciplineRules, 
     addAutoRule,
     deleteAutoRule
   } = useData();
@@ -50,15 +52,19 @@ const DisciplineManager = () => {
 
   // State form quy tắc tự động vi phạm
   const [newAutoRule, setNewAutoRule] = useState({
-      triggerType: 'late_attendance', // late_attendance, overdue_task, failed_task
+      triggerType: 'late_attendance', 
       threshold: 3,
       disciplineId: ''
   });
 
+  // State Edit Modal (Chief Admin)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingType, setEditingType] = useState(null);
+
   // State quản lý tìm kiếm
   const [searchTerm, setSearchTerm] = useState('');
 
-  // State quản lý việc đóng mở các nhóm vi phạm (Mặc định thu gọn)
+  // State quản lý việc đóng mở các nhóm vi phạm
   const [expandedFolders, setExpandedFolders] = useState([]);
 
   const toggleFolder = (lvl) => {
@@ -67,7 +73,6 @@ const DisciplineManager = () => {
       );
   };
 
-  // Nếu người dùng đang tìm kiếm, tự động mở rộng tất cả các folder để hiển thị kết quả
   const effectiveExpandedFolders = searchTerm.trim() !== '' ? [...DISC_LEVELS, 'Khác'] : expandedFolders;
 
   // --- PHÂN QUYỀN ---
@@ -82,15 +87,12 @@ const DisciplineManager = () => {
       if (isOp && t.status !== 'Active' && t.createdBy !== user.username) {
           return false;
       }
-      
-      // Áp dụng bộ lọc tìm kiếm
       if (searchTerm.trim() !== '') {
           const term = searchTerm.toLowerCase();
           const matchName = t.name && t.name.toLowerCase().includes(term);
           const matchDesc = t.description && t.description.toLowerCase().includes(term);
           if (!matchName && !matchDesc) return false;
       }
-      
       return true;
   });
 
@@ -114,7 +116,6 @@ const DisciplineManager = () => {
       alert(isOp ? "Đã gửi đề xuất hình thức kỷ luật!" : "Đã ban hành hình thức kỷ luật mới!");
   };
 
-  // Handler lưu quy tắc tự động mới
   const handleAddAutoRule = (e) => {
       e.preventDefault();
       if (!newAutoRule.disciplineId) return alert("Vui lòng chọn hình thức kỷ luật áp dụng!");
@@ -146,6 +147,7 @@ const DisciplineManager = () => {
       }
   };
 
+  // Regulatory Đề xuất xóa
   const handleDeleteAction = (type) => {
       if (isReg) {
           const reason = window.prompt("Nhập lý do ĐỀ XUẤT XÓA hình thức này:");
@@ -156,21 +158,42 @@ const DisciplineManager = () => {
               by: user.username
           });
           alert("Đã gửi đề xuất xóa lên Chief Admin.");
-          return;
       }
+  };
 
-      if (isChief) {
-          if (!type.isDeleteProposed) {
-              alert("Chỉ có thể xóa các hình thức đã được Regulatory đề xuất xóa!");
-              return;
-          }
-          if(window.confirm(`Xác nhận xóa hình thức này (Chuyển vào thùng rác)?\nLý do đề xuất: ${type.deleteProposalReason}`)) {
-              const info = {
-                  deletedBy: user.username,
-                  deleteReason: type.deleteProposalReason
-              };
-              softDeleteDisciplineType(type.id, info);
-          }
+  // Chief Admin Sửa trực tiếp
+  const openEditModal = (type) => {
+      setEditingType({ ...type });
+      setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = (e) => {
+      e.preventDefault();
+      if (!editingType.name) return alert("Vui lòng nhập tên hình thức!");
+      
+      updateDisciplineType(editingType.id, {
+          name: editingType.name,
+          level: editingType.level,
+          description: editingType.description,
+      }).then(() => {
+          alert("Cập nhật hình thức kỷ luật thành công!");
+          setIsEditModalOpen(false);
+          setEditingType(null);
+      }).catch(err => alert("Lỗi: " + err.message));
+  };
+
+  // Chief Admin Xóa trực tiếp
+  const handleDirectDelete = (type) => {
+      const msg = type.isDeleteProposed 
+          ? `Duyệt đề xuất xóa từ Reg Admin?\nLý do: ${type.deleteProposalReason}` 
+          : `[QUYỀN CHIEF ADMIN] - Xác nhận XÓA TRỰC TIẾP hình thức kỷ luật này?`;
+          
+      if(window.confirm(msg)) {
+          updateDisciplineType(type.id, {
+              status: 'Deleted',
+              deletedBy: user.username,
+              deleteReason: type.isDeleteProposed ? type.deleteProposalReason : "Chief Admin xóa trực tiếp"
+          });
       }
   };
 
@@ -190,7 +213,6 @@ const DisciplineManager = () => {
       }
   };
 
-  // Handler xử lý gỡ hồ sơ gán nhầm
   const handleRemoveRecord = (id) => {
       if (window.confirm("Xác nhận gỡ bỏ hồ sơ vi phạm này khỏi hệ thống nhân sự?")) {
           deleteDisciplineRecord(id)
@@ -452,14 +474,19 @@ const DisciplineManager = () => {
                                                           </button>
                                                       </>
                                                   )}
-                                                  {isReg && t.status === 'Active' && !t.isDeleteProposed && (
+                                                  {isChief && t.status === 'Active' && (
+                                                      <>
+                                                          <button className="action-btn" onClick={(e) => { e.stopPropagation(); openEditModal(t); }} style={styles.btnActionBlue} title="Sửa nội dung">
+                                                              <Icons.Edit />
+                                                          </button>
+                                                          <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleDirectDelete(t); }} style={styles.btnActionRed} title={t.isDeleteProposed ? `Duyệt đề xuất xóa: ${t.deleteProposalReason}` : "Xóa trực tiếp"}>
+                                                              <Icons.Trash />
+                                                          </button>
+                                                      </>
+                                                  )}
+                                                  {isReg && t.status === 'Active' && !t.isDeleteProposed && !isChief && (
                                                       <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleDeleteAction(t); }} style={styles.btnActionOrange} title="Đề xuất xóa">
                                                           <Icons.ProposeDelete />
-                                                      </button>
-                                                  )}
-                                                  {isChief && t.isDeleteProposed && (
-                                                      <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleDeleteAction(t); }} style={styles.btnActionRed} title="Chuyển vào thùng rác">
-                                                          <Icons.Trash />
                                                       </button>
                                                   )}
                                               </div>
@@ -516,8 +543,11 @@ const DisciplineManager = () => {
                                                   {canApprove && t.status === 'Pending' && (
                                                       <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleApprove(t.id); }} style={styles.btnActionGreen} title="Phê duyệt"><Icons.Check /></button>
                                                   )}
-                                                  {isChief && (
-                                                      <button className="action-btn" onClick={(e) => { e.stopPropagation(); softDeleteDisciplineType(t.id, { deletedBy: user.username }); }} style={styles.btnActionRed} title="Xóa"><Icons.Trash /></button>
+                                                  {isChief && t.status === 'Active' && (
+                                                      <>
+                                                          <button className="action-btn" onClick={(e) => { e.stopPropagation(); openEditModal(t); }} style={styles.btnActionBlue} title="Sửa nội dung"><Icons.Edit /></button>
+                                                          <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleDirectDelete(t); }} style={styles.btnActionRed} title="Xóa"><Icons.Trash /></button>
+                                                      </>
                                                   )}
                                               </div>
                                           </td>
@@ -539,7 +569,7 @@ const DisciplineManager = () => {
           </div>
       </div>
 
-      {/* 3. DANH SÁCH HỒ SƠ VI PHẠM (CÓ TÍNH NĂNG GỠ LỖI / GÁN NHẦM DÀNH CHO ADMIN) */}
+      {/* 3. DANH SÁCH HỒ SƠ VI PHẠM */}
       <div style={styles.card}>
           <div style={styles.cardHeader}>
               <h3 style={styles.cardTitle}>2. Hồ sơ nhân sự vi phạm</h3>
@@ -610,8 +640,8 @@ const DisciplineManager = () => {
                           <tr style={{background: '#fff5f5'}}>
                               <th style={{...styles.th, color: '#991b1b'}}>Hình thức</th>
                               <th style={{...styles.th, color: '#991b1b'}}>Mức độ</th>
-                              <th style={{...styles.th, color: '#991b1b'}}>Lý do hủy</th>
-                              <th style={{...styles.th, color: '#991b1b'}}>Người hủy</th>
+                              <th style={{...styles.th, color: '#991b1b'}}>Lý do hủy/xóa</th>
+                              <th style={{...styles.th, color: '#991b1b'}}>Người hủy/xóa</th>
                               <th style={{...styles.th, color: '#991b1b', textAlign: 'right', paddingRight: '24px'}}>Hành động</th>
                           </tr>
                       </thead>
@@ -638,6 +668,40 @@ const DisciplineManager = () => {
                           ))}
                       </tbody>
                   </table>
+              </div>
+          </div>
+      )}
+
+      {/* MODAL SỬA HÌNH THỨC KỶ LUẬT (CHIEF ADMIN) */}
+      {isEditModalOpen && editingType && (
+          <div style={styles.modalOverlay}>
+              <div style={styles.modalContent}>
+                  <div style={styles.modalHeader}>
+                      <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#111827' }}>Sửa hình thức kỷ luật</h3>
+                      <button onClick={() => setIsEditModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                          <Icons.XMark />
+                      </button>
+                  </div>
+                  <form onSubmit={handleSaveEdit} style={{ padding: '24px' }}>
+                      <div style={{ marginBottom: '16px' }}>
+                          <label style={styles.label}>Tên vi phạm</label>
+                          <input className="input-modern" value={editingType.name} onChange={e => setEditingType({...editingType, name: e.target.value})} required />
+                      </div>
+                      <div style={{ marginBottom: '16px' }}>
+                          <label style={styles.label}>Mức độ áp dụng</label>
+                          <select className="input-modern" value={editingType.level} onChange={e => setEditingType({...editingType, level: e.target.value})} style={{appearance: 'none', backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="%2364748b" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center'}}>
+                              {DISC_LEVELS.map(lvl => <option key={lvl} value={lvl}>{lvl}</option>)}
+                          </select>
+                      </div>
+                      <div style={{ marginBottom: '24px' }}>
+                          <label style={styles.label}>Mô tả / Quy định chi tiết</label>
+                          <input className="input-modern" value={editingType.description} onChange={e => setEditingType({...editingType, description: e.target.value})} />
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9', paddingTop: '20px' }}>
+                          <button type="button" onClick={() => setIsEditModalOpen(false)} style={styles.btnActionGray}>Hủy bỏ</button>
+                          <button type="submit" style={styles.btnActionSave}>Lưu thay đổi</button>
+                      </div>
+                  </form>
               </div>
           </div>
       )}
@@ -670,7 +734,13 @@ const styles = {
     btnActionGreen: { background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#059669', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
     btnActionRed: { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
     btnActionBlue: { background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
-    btnActionOrange: { background: '#fff7ed', border: '1px solid #fed7aa', color: '#ea580c', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }
+    btnActionOrange: { background: '#fff7ed', border: '1px solid #fed7aa', color: '#ea580c', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
+
+    modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' },
+    modalContent: { background: 'white', borderRadius: '20px', width: '100%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', overflow: 'hidden' },
+    modalHeader: { padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    btnActionGray: { background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#475569', padding: '10px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem' },
+    btnActionSave: { background: '#003366', border: 'none', color: 'white', padding: '10px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem' }
 };
 
 export default DisciplineManager;

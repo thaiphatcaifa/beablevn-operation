@@ -195,6 +195,7 @@ export const DataProvider = ({ children }) => {
     const newId = newRef.key;
     return set(newRef, { ...type, id: newId });
   };
+  const updateDisciplineType = (id, updates) => update(ref(db, 'disciplineTypes/' + id), updates); // Hàm mới thêm để edit
   const updateDisciplineTypeStatus = (id, status) => update(ref(db, 'disciplineTypes/' + id), { status });
   const softDeleteDisciplineType = (id) => update(ref(db, 'disciplineTypes/' + id), { status: 'inactive' });
   const proposeDeleteDisciplineType = (id) => update(ref(db, 'disciplineTypes/' + id), { status: 'pending_delete' });
@@ -241,7 +242,7 @@ export const DataProvider = ({ children }) => {
       tasks, addTask, updateTask, deleteTask, updateTaskProgress, finishTask,
       shifts, attendanceLogs, addAttendance, updateAttendanceLog,
       facilityLogs, addFacilityLog,
-      disciplineTypes, addDisciplineType, updateDisciplineTypeStatus, softDeleteDisciplineType, proposeDeleteDisciplineType, deleteDisciplineType,
+      disciplineTypes, addDisciplineType, updateDisciplineType, updateDisciplineTypeStatus, softDeleteDisciplineType, proposeDeleteDisciplineType, deleteDisciplineType, // Bổ sung updateDisciplineType
       disciplineRecords, addDisciplineRecord, updateDisciplineRecordStatus, deleteDisciplineRecord,
       autoDisciplineRules, addAutoRule, updateAutoRule, deleteAutoRule, // Export cho Auto Rules
       schedules, addSchedule, updateSchedule, deleteSchedule,

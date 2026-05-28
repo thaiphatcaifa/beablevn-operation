@@ -43,6 +43,8 @@ const POSITIONS = [
   'Junior Marketing'
 ];
 
+const AREAS = ['Phòng 1', 'Phòng 2', 'Phòng 3', 'Phòng Lab', 'Sảnh OA', 'CC Tầng G', 'Kho Tầng 3', 'Canteen'];
+
 const StaffManager = () => {
   const { user } = useAuth();
   const { staffList, addStaff, deleteStaff, updateStaffInfo } = useData();
@@ -91,6 +93,7 @@ const StaffManager = () => {
         minWorkHours: 0,
         ubiBase: 0, 
         primaryRole: '',
+        defaultArea: '', // Thêm trường Area mặc định
         secondaryUBIs: [], 
         specificAllowance: 0, 
         remunerations: [], 
@@ -117,6 +120,7 @@ const StaffManager = () => {
         secondaryUBIs: currentSecUbis,
         ubiBase: initialUbiBase,
         primaryRole: staff.primaryRole || '',
+        defaultArea: staff.defaultArea || '', // Khởi tạo trường khu vực
         specificAllowance: staff.specificAllowance || 0
     }); 
   };
@@ -165,6 +169,7 @@ const StaffManager = () => {
         updates.ubiBase = safeNumber(updates.ubiBase);
         updates.specificAllowance = safeNumber(updates.specificAllowance);
         updates.primaryRole = editForm.primaryRole || '';
+        updates.defaultArea = editForm.defaultArea || ''; // Cập nhật khu vực
         
         if (Array.isArray(updates.secondaryUBIs)) {
             updates.secondaryUBIs = updates.secondaryUBIs.map(u => ({ 
@@ -328,9 +333,17 @@ const StaffManager = () => {
                       <div style={{fontSize:'0.85rem', color:'#64748b', fontWeight: '500'}}>@{staff.username}</div>
                     </div>
                  </div>
-                 <span style={{ background: '#f8fafc', color: '#475569', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', height: 'fit-content', fontWeight: '700', border: '1px solid #e2e8f0' }}>
-                    {roleName(staff.role)}
-                 </span>
+                 <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px'}}>
+                    <span style={{ background: '#f8fafc', color: '#475569', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', height: 'fit-content', fontWeight: '700', border: '1px solid #e2e8f0' }}>
+                        {roleName(staff.role)}
+                    </span>
+                    {/* HIỂN THỊ KHU VỰC NẾU CÓ */}
+                    {staff.defaultArea && (
+                        <span style={{ background: '#fef3c7', color: '#b45309', padding: '4px 10px', borderRadius: '8px', fontSize: '0.7rem', height: 'fit-content', fontWeight: '700', border: '1px solid #fde68a' }}>
+                            📍 {staff.defaultArea}
+                        </span>
+                    )}
+                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
@@ -418,6 +431,16 @@ const StaffManager = () => {
                       <option value="chief">Chief Admin</option>
                       <option value="scheduler">Scheduler (Lên lịch)</option>
                   </select>
+                  
+                  {/* BỔ SUNG YÊU CẦU: GÁN KHU VỰC CỤ THỂ CHO NHÂN SỰ */}
+                  <div style={{marginTop: '16px'}}>
+                      <label style={styles.label}>Khu vực làm việc mặc định (Area/Zone)</label>
+                      <select className="input-modern" value={editForm.defaultArea || ''} onChange={e => setEditForm({...editForm, defaultArea: e.target.value})} style={{marginTop: 0}}>
+                          <option value="">-- Cấu hình này sẽ bỏ qua nếu điền rỗng --</option>
+                          {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                  </div>
+
                   <div style={{display:'flex', flexWrap:'wrap', gap:'8px', marginTop:'16px'}}>
                       {POSITIONS.map(r => (
                           <label key={r} style={styles.checkboxLabel}>
