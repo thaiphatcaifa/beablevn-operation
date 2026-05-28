@@ -22,7 +22,9 @@ const FacilityCheck = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
+  // NẠP DỮ LIỆU KHU VỰC (AREAS) TỪ CONTEXT
   const { 
+      areas, 
       addFacilityLog, 
       updateTask, 
       updateTaskProgress, 
@@ -40,69 +42,18 @@ const FacilityCheck = () => {
   const [checkType, setCheckType] = useState(isAttendanceFlow ? (action === 'checkin' ? 'Đầu giờ' : 'Cuối giờ') : 'Đầu giờ'); 
   const [selectedArea, setSelectedArea] = useState(isAttendanceFlow && targetTask?.area ? targetTask.area : '');
 
-  // --- CẤU HÌNH CHECKLIST THEO KHU VỰC ---
-  const defaultChecklist = [
-    { item: 'Máy lạnh', options: ['Mát', 'Chảy nước', 'Không lạnh', 'Hỏng'], goodStatus: 'Mát' },
-    { item: 'Máy chiếu', options: ['Tốt', 'Lệch khung', 'Hư hỏng'], goodStatus: 'Tốt' },
-    { item: 'Đèn chiếu sáng', options: ['Tốt', 'Hư hỏng'], goodStatus: 'Tốt' },
-    { item: 'Bàn ghế', options: ['Sạch & Tốt', 'Hư hỏng'], goodStatus: 'Sạch & Tốt' },
-    { item: 'Màn hình CC', options: ['Ổn định', 'Lỗi'], goodStatus: 'Ổn định' },
-    { item: 'Loa', options: ['Còn pin', 'Hết pin', 'Rè'], goodStatus: 'Còn pin' },
-    { item: 'Cây cối', options: ['Xanh tốt', 'Héo úa'], goodStatus: 'Xanh tốt' }
-  ];
+  // --- TẢI CHECKLIST ĐỘNG THEO KHU VỰC ĐÃ CHỌN TỪ FIREBASE ---
+  const selectedAreaObj = useMemo(() => {
+      return areas.find(a => a.name === selectedArea);
+  }, [areas, selectedArea]);
 
-  const getChecklistForArea = (area) => {
-      if (area === 'Canteen') {
-          return [
-              { item: 'Đèn chiếu sáng', options: ['Tốt', 'Hư hỏng'], goodStatus: 'Tốt' },
-              { item: 'Bàn ghế', options: ['Sạch & Tốt', 'Hư hỏng'], goodStatus: 'Sạch & Tốt' },
-              { item: 'Loa', options: ['Còn pin', 'Hết pin', 'Rè'], goodStatus: 'Còn pin' },
-              { item: 'Cây cối', options: ['Xanh tốt', 'Héo úa'], goodStatus: 'Xanh tốt' },
-              
-              { item: 'Sân', options: ['Sạch sẽ', 'Chưa đổ rác', 'Bừa bộn'], goodStatus: 'Sạch sẽ' },
-              { item: 'Quạt', options: ['Tốt', 'Bám bụi', 'Hư hỏng'], goodStatus: 'Tốt' },
-              { item: 'Quầy pha chế', options: ['Sạch sẽ', 'Chưa cất nguyên liệu', 'Chưa rút điện', 'Bừa bộn'], goodStatus: 'Sạch sẽ' },
-              { item: 'Kệ nguyên liệu', options: ['Sạch sẽ', 'Chưa lau dọn'], goodStatus: 'Sạch sẽ' }
-          ];
-      }
-      
-      if (area === 'Kho Tầng 3') {
-          return [
-              { item: 'Máy lạnh', options: ['Mát', 'Chảy nước', 'Không lạnh', 'Hỏng'], goodStatus: 'Mát' },
-              { item: 'Đèn chiếu sáng', options: ['Tốt', 'Hư hỏng'], goodStatus: 'Tốt' },
-              { item: 'Bàn ghế', options: ['Sạch & Tốt', 'Hư hỏng'], goodStatus: 'Sạch & Tốt' },
-              { item: 'Loa', options: ['Còn pin', 'Hết pin', 'Rè'], goodStatus: 'Còn pin' },
-              { item: 'Cây cối', options: ['Xanh tốt', 'Héo úa'], goodStatus: 'Xanh tốt' },
-              
-              { item: 'Sàn', options: ['Sạch sẽ', 'Chưa lau dọn'], goodStatus: 'Sạch sẽ' },
-              { item: 'Kệ tủ', options: ['Sạch sẽ', 'Bừa bộn'], goodStatus: 'Sạch sẽ' },
-              { item: 'Tủ mát', options: ['Đã kiểm HSD và lau dọn', 'Chưa kiểm HSD', 'Chưa lau dọn'], goodStatus: 'Đã kiểm HSD và lau dọn' },
-              { item: 'Tủ đông', options: ['Đã kiểm HSD', 'Chưa kiểm'], goodStatus: 'Đã kiểm HSD' }
-          ];
-      }
-
-      if (area === 'Phòng Lab') {
-          return [
-              { item: 'Máy lạnh', options: ['Mát', 'Chảy nước', 'Không lạnh', 'Hỏng'], goodStatus: 'Mát' },
-              { item: 'Đèn chiếu sáng', options: ['Tốt', 'Hư hỏng'], goodStatus: 'Tốt' },
-              { item: 'Bàn ghế', options: ['Sạch & Tốt', 'Hư hỏng'], goodStatus: 'Sạch & Tốt' },
-              { item: 'Cây cối', options: ['Xanh tốt', 'Héo úa'], goodStatus: 'Xanh tốt' },
-              
-              { item: 'Máy PC', options: ['Tốt', 'Hư hỏng', 'Mất'], goodStatus: 'Tốt' },
-              { item: 'Tai nghe', options: ['Tốt', 'Hư hỏng', 'Mất'], goodStatus: 'Tốt' },
-              { item: 'Bàn phím', options: ['Tốt', 'Hư hỏng', 'Mất'], goodStatus: 'Tốt' }
-          ];
-      }
-
-      return defaultChecklist;
-  };
-
-  const areas = ['Phòng 1', 'Phòng 2', 'Phòng 3', 'Phòng Lab', 'Sảnh OA', 'CC Tầng G', 'Kho Tầng 3', 'Canteen'];
+  const currentChecklist = useMemo(() => {
+      return selectedAreaObj && selectedAreaObj.checklist ? selectedAreaObj.checklist : [];
+  }, [selectedAreaObj]);
 
   const [tempData, setTempData] = useState({});
   const currentKey = `${checkType}_${selectedArea}`;
   const currentStatusMap = useMemo(() => tempData[currentKey] || {}, [tempData, currentKey]);
-  const currentChecklist = useMemo(() => getChecklistForArea(selectedArea), [selectedArea]);
 
   const handleStatusChange = (item, status) => {
     setTempData(prev => ({
@@ -114,6 +65,7 @@ const FacilityCheck = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!selectedArea) return alert("Vui lòng chọn khu vực!");
+    if (currentChecklist.length === 0) return alert("Khu vực này chưa có hạng mục kiểm tra nào được cấu hình!");
 
     // Yêu cầu tích đủ các thiết bị
     const missingItems = currentChecklist.filter(config => !currentStatusMap[config.item]);
@@ -273,7 +225,7 @@ const FacilityCheck = () => {
               <label style={{ display: 'block', fontWeight: '700', color: '#475569', marginBottom: '8px', fontSize: '0.9rem' }}>Khu vực kiểm tra</label>
               <select value={selectedArea} onChange={e => setSelectedArea(e.target.value)} required className="filter-modern" disabled={isAttendanceFlow}>
                 <option value="" disabled>-- Vui lòng chọn khu vực --</option>
-                {areas.map(area => <option key={area} value={area}>{area}</option>)}
+                {areas && areas.map(area => <option key={area.id} value={area.name}>{area.name}</option>)}
               </select>
             </div>
         </div>
@@ -285,19 +237,24 @@ const FacilityCheck = () => {
             <div style={{ fontWeight: '700', fontSize: '1.05rem', color: '#475569' }}>Chưa chọn khu vực</div>
             <div style={{ fontSize: '0.9rem' }}>Vui lòng chọn khu vực làm việc ở phía trên để tải danh sách thiết bị.</div>
         </div>
+      ) : currentChecklist.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#ea580c', background: '#fff7ed', borderRadius: '20px', border: '1px dashed #fed7aa', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+            <div style={{ fontWeight: '700', fontSize: '1.05rem' }}>Chưa có cấu hình cho khu vực này!</div>
+            <div style={{ fontSize: '0.9rem' }}>Vui lòng liên hệ Admin để thêm hạng mục kiểm tra cho khu vực <b>{selectedArea}</b>.</div>
+        </div>
       ) : (
         <form onSubmit={handleSubmit} style={{ background: 'white', padding: '28px 24px', borderRadius: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -2px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.15rem', color: '#1e293b', borderBottom: '2px solid #f1f5f9', paddingBottom: '16px', fontWeight: '800' }}>Checklist kiểm tra: <span style={{color: '#0369a1'}}>{selectedArea}</span></h3>
             
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {currentChecklist.map((config) => (
-                <div key={config.item} className="checklist-row">
+              {currentChecklist.map((config, index) => (
+                <div key={index} className="checklist-row">
                   <div className="item-label" style={{ fontWeight: '800', color: '#1e293b', fontSize: '1rem' }}>
                       {config.item}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                      {config.options.map(option => {
+                      {Array.isArray(config.options) && config.options.map(option => {
                         const isGood = option === config.goodStatus;
                         const isSelected = currentStatusMap[config.item] === option;
                         

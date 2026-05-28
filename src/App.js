@@ -10,6 +10,7 @@ import StaffLayout from './components/Layouts/StaffLayout';
 import StaffManager from './pages/Admin/StaffManager';
 import TaskManager from './pages/Admin/TaskManager';
 import DisciplineManager from './pages/Admin/DisciplineManager'; 
+import FacilityManager from './pages/Admin/FacilityManager'; // --- IMPORT TRANG CSHT ---
 import Reports from './pages/Admin/Reports';
 
 // --- IMPORT STAFF PAGES ---
@@ -19,7 +20,7 @@ import MyTasks from './pages/Staff/MyTasks';
 import FacilityCheck from './pages/Staff/FacilityCheck';
 import Performance from './pages/Staff/Performance';
 
-// --- THÊM MỚI: COMPONENT BỌC BẢO VỆ ĐỊNH TUYẾN (PROTECTED ROUTE) ---
+// --- COMPONENT BỌC BẢO VỆ ĐỊNH TUYẾN (PROTECTED ROUTE) ---
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const { user } = useAuth();
 
@@ -31,10 +32,12 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
   // DANH SÁCH CÁC ROLE CÓ QUYỀN TRUY CẬP TRANG QUẢN TRỊ (ADMIN PORTAL)
   const adminRoles = ['admin', 'chief', 'reg', 'op', 'scheduler'];
 
-  // 2. Nếu route yêu cầu quyền admin mà user không nằm trong danh sách phân quyền admin, chuyển hướng về /staff
+  // 2. Nếu route yêu cầu quyền admin mà user không phải admin -> Đẩy về app nhân viên
   if (requireAdmin && !adminRoles.includes(user.role)) {
-    return <Navigate to="/staff" replace />;
+    return <Navigate to="/staff/dashboard" replace />;
   }
+
+  // ĐÃ XÓA ĐOẠN CODE CHẶN ADMIN TRUY CẬP TRANG STAFF ĐỂ BẠN CÓ THỂ CHUYỂN ĐỔI GIAO DIỆN BÌNH THƯỜNG
 
   return children;
 };
@@ -44,9 +47,10 @@ function App() {
     <AuthProvider>
       <DataProvider>
         <Routes>
+          {/* Màn hình đăng nhập */}
           <Route path="/" element={<LoginForm />} />
-          
-          {/* --- ADMIN ROUTES (Đã được bọc bảo vệ nghiêm ngặt yêu cầu quyền admin) --- */}
+
+          {/* --- ADMIN ROUTES --- */}
           <Route 
             path="/admin" 
             element={
@@ -59,10 +63,11 @@ function App() {
             <Route path="staff-manager" element={<StaffManager />} />
             <Route path="task-manager" element={<TaskManager />} />
             <Route path="discipline-manager" element={<DisciplineManager />} />
+            <Route path="facility-manager" element={<FacilityManager />} /> {/* --- ROUTE CHO TRANG CSHT --- */}
             <Route path="reports" element={<Reports />} />
           </Route>
 
-          {/* --- STAFF ROUTES (Đã được bọc bảo vệ yêu cầu đăng nhập thành viên) --- */}
+          {/* --- STAFF ROUTES --- */}
           <Route 
             path="/staff" 
             element={
@@ -71,7 +76,6 @@ function App() {
               </ProtectedRoute>
             }
           >
-            {/* Khi vào /staff sẽ tự chuyển hướng vào Dashboard */}
             <Route index element={<Navigate to="dashboard" />} /> 
             <Route path="dashboard" element={<StaffDashboard />} />
             <Route path="attendance" element={<Attendance />} />

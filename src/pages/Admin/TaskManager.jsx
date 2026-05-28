@@ -57,8 +57,6 @@ const POSITIONS = [
     'Junior Marketing'
 ];
 
-const AREAS = ['Phòng 1', 'Phòng 2', 'Phòng 3', 'Phòng Lab', 'Sảnh OA', 'CC Tầng G', 'Kho Tầng 3', 'Canteen'];
-
 const DISC_LEVELS = [
     "1. Nhắc nhở",
     "2. Khiển trách",
@@ -69,7 +67,9 @@ const DISC_LEVELS = [
 
 const TaskManager = () => {
   const { user } = useAuth();
-  const { tasks, addTask, deleteTask, updateTask, staffList, disciplineTypes, schedules, addSchedule, deleteSchedule, updateSchedule } = useData();
+  
+  // --- LOAD AREAS TỪ DATABASE ---
+  const { tasks, addTask, deleteTask, updateTask, staffList, disciplineTypes, schedules, addSchedule, deleteSchedule, updateSchedule, areas } = useData();
   
   const activeDisciplines = disciplineTypes.filter(d => d.status === 'Active');
   
@@ -696,11 +696,12 @@ const TaskManager = () => {
                                 ))}
                             </select>
                         </div>
+                        {/* --- CHỌN KHU VỰC ĐỘNG TỪ FIREBASE --- */}
                         <div>
                             <label style={styles.label}>Khu vực làm việc (Area)</label>
                             <select className="input-modern" value={newTask.area || ''} onChange={e => setNewTask({...newTask, area: e.target.value})}>
                                 <option value="">-- Không yêu cầu kiểm tra CSVT --</option>
-                                {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                                {areas && areas.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
                             </select>
                         </div>
                         <div>
@@ -788,11 +789,12 @@ const TaskManager = () => {
                                 ))}
                             </select>
                         </div>
+                        {/* --- CHỌN KHU VỰC ĐỘNG TỪ FIREBASE --- */}
                         <div>
                             <label style={styles.label}>Khu vực làm việc (Area)</label>
                             <select className="input-modern" value={newTask.area || ''} onChange={e => setNewTask({...newTask, area: e.target.value})}>
                                 <option value="">-- Không yêu cầu kiểm tra CSVT --</option>
-                                {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                                {areas && areas.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
                             </select>
                         </div>
                         <div>
@@ -1050,9 +1052,10 @@ const TaskManager = () => {
                                                                   <option key={code} value={code}>{code}</option>
                                                               ))}
                                                           </select>
+                                                          {/* --- CHỌN KHU VỰC ĐỘNG KHI CHỈNH SỬA TASK --- */}
                                                           <select className="input-modern" value={editTaskForm.area || ''} onChange={e => setEditTaskForm({...editTaskForm, area: e.target.value})} style={{marginTop:0, padding: '8px 36px 8px 12px'}}>
                                                               <option value="">-- Không yêu cầu --</option>
-                                                              {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                                                              {areas && areas.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
                                                           </select>
                                                       </div>
                                                   </td>
@@ -1206,11 +1209,12 @@ const TaskManager = () => {
                             ))}
                         </select>
                     </div>
+                    {/* --- CHỌN KHU VỰC ĐỘNG TỪ FIREBASE --- */}
                     <div>
                         <label style={styles.label}>Khu vực làm việc (Area)</label>
                         <select className="input-modern" value={newTask.area || ''} onChange={e => setNewTask({...newTask, area: e.target.value})}>
                             <option value="">-- Không yêu cầu kiểm tra CSVT --</option>
-                            {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                            {areas && areas.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
                         </select>
                     </div>
                     <div>

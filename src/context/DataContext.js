@@ -17,7 +17,8 @@ export const DataProvider = ({ children }) => {
   const [disciplineRecords, setDisciplineRecords] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [payrollRecords, setPayrollRecords] = useState([]);
-  const [autoDisciplineRules, setAutoDisciplineRules] = useState([]); // State cho luật kỷ luật tự động
+  const [autoDisciplineRules, setAutoDisciplineRules] = useState([]); 
+  const [areas, setAreas] = useState([]); // THÊM MỚI: State cho Cơ sở hạ tầng (Khu vực)
   
   // State theo dõi tiến trình tải dữ liệu ban đầu
   const [loading, setLoading] = useState(true);
@@ -28,9 +29,9 @@ export const DataProvider = ({ children }) => {
     
     // Đảm bảo đăng nhập ẩn danh trước khi gắn listener để lấy quyền đọc database
     const setupListeners = () => {
-      // Bộ đếm kiểm tra việc nạp dữ liệu lần đầu từ 10 nhánh DatabaseListeners khác nhau
+      // Bộ đếm kiểm tra việc nạp dữ liệu lần đầu từ 11 nhánh DatabaseListeners khác nhau
       let loadedCount = 0;
-      const totalListeners = 10; // Đã bao gồm autoDisciplineRules
+      const totalListeners = 11; // Tăng lên 11 vì có thêm 'areas'
 
       const checkInitialLoad = () => {
         loadedCount++;
@@ -110,7 +111,7 @@ export const DataProvider = ({ children }) => {
         checkInitialLoad();
       }, (error) => { checkInitialLoad(); });
 
-      // 9. AUTO DISCIPLINE RULES (QUY TẮC TỰ ĐỘNG)
+      // 9. AUTO DISCIPLINE RULES
       const autoRulesRef = ref(db, 'autoDisciplineRules');
       const unsubAutoRules = onValue(autoRulesRef, (snapshot) => {
         const data = snapshot.val();
@@ -118,9 +119,17 @@ export const DataProvider = ({ children }) => {
         checkInitialLoad();
       }, (error) => { checkInitialLoad(); });
 
+      // 10. AREAS (THÊM MỚI: Dữ liệu Khu vực & Cơ sở hạ tầng)
+      const areasRef = ref(db, 'areas');
+      const unsubAreas = onValue(areasRef, (snapshot) => {
+        const data = snapshot.val();
+        setAreas(data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : []);
+        checkInitialLoad();
+      }, (error) => { checkInitialLoad(); });
+
       unsubs = [
         unsubStaff, unsubTasks, unsubShifts, unsubAtt, unsubFacility, 
-        unsubDiscType, unsubDiscRec, unsubSchedules, unsubPayroll, unsubAutoRules
+        unsubDiscType, unsubDiscRec, unsubSchedules, unsubPayroll, unsubAutoRules, unsubAreas
       ];
     };
 
@@ -136,10 +145,8 @@ export const DataProvider = ({ children }) => {
 
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // Đã có Auth (ẩn danh hoặc thật), bắt đầu gắn listeners
         setupListeners();
       } else {
-        // Chưa có, tiến hành đăng nhập ẩn danh
         initAuth();
       }
     });
@@ -157,8 +164,7 @@ export const DataProvider = ({ children }) => {
   // Staff
   const addStaff = (s) => { 
     const newRef = push(ref(db, 'staff'));
-    const newId = newRef.key;
-    return set(newRef, { ...s, id: newId }); 
+    return set(newRef, { ...s, id: newRef.key }); 
   };
   const deleteStaff = (id) => remove(ref(db, 'staff/' + id));
   const updateStaffInfo = (id, updates) => update(ref(db, 'staff/' + id), updates);
@@ -166,8 +172,7 @@ export const DataProvider = ({ children }) => {
   // Tasks
   const addTask = (t) => { 
     const newRef = push(ref(db, 'tasks'));
-    const newId = newRef.key; 
-    return set(newRef, { ...t, id: newId, progress: 0, status: 'assigned', createdDate: new Date().toISOString() }); 
+    return set(newRef, { ...t, id: newRef.key, progress: 0, status: 'assigned', createdDate: new Date().toISOString() }); 
   };
   const updateTask = (id, updates) => update(ref(db, 'tasks/' + id), updates);
   const deleteTask = (id) => remove(ref(db, 'tasks/' + id));
@@ -177,44 +182,45 @@ export const DataProvider = ({ children }) => {
   // Shifts / Attendance
   const addAttendance = (log) => { 
     const newRef = push(ref(db, 'attendance'));
-    const newId = newRef.key;
-    return set(newRef, { ...log, id: newId }); 
+    return set(newRef, { ...log, id: newRef.key }); 
   };
   const updateAttendanceLog = (id, updates) => update(ref(db, 'attendance/' + id), updates);
 
-  // Facility
+  // Facility Logs
   const addFacilityLog = (log) => {
     const newRef = push(ref(db, 'facilityLogs'));
-    const newId = newRef.key;
-    return set(newRef, { ...log, id: newId });
+    return set(newRef, { ...log, id: newRef.key });
   };
 
-  // Discipline Types
+  // Facility Areas (THÊM MỚI: Quản lý khu vực)
+  const addArea = (area) => {
+    const newRef = push(ref(db, 'areas'));
+    return set(newRef, { ...area, id: newRef.key, createdAt: new Date().toISOString() });
+  };
+  const updateArea = (id, updates) => update(ref(db, 'areas/' + id), updates);
+  const deleteArea = (id) => remove(ref(db, 'areas/' + id));
+
+  // Discipline
   const addDisciplineType = (type) => {
     const newRef = push(ref(db, 'disciplineTypes'));
-    const newId = newRef.key;
-    return set(newRef, { ...type, id: newId });
+    return set(newRef, { ...type, id: newRef.key });
   };
-  const updateDisciplineType = (id, updates) => update(ref(db, 'disciplineTypes/' + id), updates); // Hàm mới thêm để edit
+  const updateDisciplineType = (id, updates) => update(ref(db, 'disciplineTypes/' + id), updates);
   const updateDisciplineTypeStatus = (id, status) => update(ref(db, 'disciplineTypes/' + id), { status });
   const softDeleteDisciplineType = (id) => update(ref(db, 'disciplineTypes/' + id), { status: 'inactive' });
   const proposeDeleteDisciplineType = (id) => update(ref(db, 'disciplineTypes/' + id), { status: 'pending_delete' });
   const deleteDisciplineType = (id) => remove(ref(db, 'disciplineTypes/' + id));
 
-  // Discipline Records
   const addDisciplineRecord = (record) => {
     const newRef = push(ref(db, 'disciplineRecords'));
-    const newId = newRef.key;
-    return set(newRef, { ...record, id: newId, status: 'pending' });
+    return set(newRef, { ...record, id: newRef.key, status: 'pending' });
   };
   const updateDisciplineRecordStatus = (id, status) => update(ref(db, 'disciplineRecords/' + id), { status });
-  const deleteDisciplineRecord = (id) => remove(ref(db, 'disciplineRecords/' + id)); // Hỗ trợ gỡ kỷ luật gán nhầm
+  const deleteDisciplineRecord = (id) => remove(ref(db, 'disciplineRecords/' + id));
 
-  // Auto Discipline Rules (THÊM MỚI / HOÀN THIỆN)
   const addAutoRule = (rule) => {
     const newRef = push(ref(db, 'autoDisciplineRules'));
-    const newId = newRef.key;
-    return set(newRef, { ...rule, id: newId, createdAt: new Date().toISOString() });
+    return set(newRef, { ...rule, id: newRef.key, createdAt: new Date().toISOString() });
   };
   const updateAutoRule = (id, updates) => update(ref(db, 'autoDisciplineRules/' + id), updates);
   const deleteAutoRule = (id) => remove(ref(db, 'autoDisciplineRules/' + id));
@@ -229,22 +235,22 @@ export const DataProvider = ({ children }) => {
   const updateSchedule = (id, updates) => update(ref(db, 'schedules/' + id), updates);
   const deleteSchedule = (id) => remove(ref(db, 'schedules/' + id));
 
-  // --- PAYROLL RECORDS (Chốt báo cáo) ---
+  // Payroll
   const savePayrollRecord = (recordData) => {
     return set(ref(db, 'payrollRecords/' + recordData.month), { ...recordData, id: recordData.month });
   };
 
-  // --- EXPORT CONTEXT ---
   return (
     <DataContext.Provider value={{ 
-      loading, // Xuất trạng thái loading ra ngoài context
+      loading, 
       staffList, addStaff, deleteStaff, updateStaffInfo, 
       tasks, addTask, updateTask, deleteTask, updateTaskProgress, finishTask,
       shifts, attendanceLogs, addAttendance, updateAttendanceLog,
       facilityLogs, addFacilityLog,
-      disciplineTypes, addDisciplineType, updateDisciplineType, updateDisciplineTypeStatus, softDeleteDisciplineType, proposeDeleteDisciplineType, deleteDisciplineType, // Bổ sung updateDisciplineType
+      areas, addArea, updateArea, deleteArea, // EXPORT CÁC HÀM CSHT
+      disciplineTypes, addDisciplineType, updateDisciplineType, updateDisciplineTypeStatus, softDeleteDisciplineType, proposeDeleteDisciplineType, deleteDisciplineType,
       disciplineRecords, addDisciplineRecord, updateDisciplineRecordStatus, deleteDisciplineRecord,
-      autoDisciplineRules, addAutoRule, updateAutoRule, deleteAutoRule, // Export cho Auto Rules
+      autoDisciplineRules, addAutoRule, updateAutoRule, deleteAutoRule,
       schedules, addSchedule, updateSchedule, deleteSchedule,
       payrollRecords, savePayrollRecord 
     }}>

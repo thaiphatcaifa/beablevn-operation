@@ -19,6 +19,12 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
     </svg>
   ),
+  // --- BỔ SUNG ICON CHO THẺ CSHT ---
+  Facility: ({ active }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#003366" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
+    </svg>
+  ),
   Report: ({ active }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#003366" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
@@ -45,6 +51,7 @@ const AdminLayout = () => {
 
   const isActive = (path) => location.pathname.includes(path);
   const isScheduler = user?.role === 'scheduler';
+  const canManageFacility = user?.role === 'chief' || user?.role === 'reg'; // Chỉ có Chief và Reg mới thấy tab CSHT
 
   // Style cho Sidebar Desktop
   const sidebarLinkStyle = (path) => ({
@@ -161,6 +168,14 @@ const AdminLayout = () => {
                <Link to="/admin/discipline-manager" className={`sidebar-link ${isActive('discipline-manager') ? 'active' : ''}`} style={sidebarLinkStyle('discipline-manager')}>
                   <Icons.Discipline active={isActive('discipline-manager')} /> <span>Kỷ luật</span>
                </Link>
+               
+               {/* --- BỔ SUNG THẺ CSHT VÀO SIDEBAR --- */}
+               {canManageFacility && (
+                 <Link to="/admin/facility-manager" className={`sidebar-link ${isActive('facility-manager') ? 'active' : ''}`} style={sidebarLinkStyle('facility-manager')}>
+                    <Icons.Facility active={isActive('facility-manager')} /> <span>Cơ sở hạ tầng</span>
+                 </Link>
+               )}
+
                <Link to="/admin/reports" className={`sidebar-link ${isActive('reports') ? 'active' : ''}`} style={sidebarLinkStyle('reports')}>
                   <Icons.Report active={isActive('reports')} /> <span>Báo cáo</span>
                </Link>
@@ -215,6 +230,16 @@ const AdminLayout = () => {
                   <Icons.Discipline active={isActive('discipline-manager')} />
                   <span style={{ fontSize: '0.65rem', marginTop: '6px', fontWeight: isActive('discipline-manager') ? '700' : '500' }}>Kỷ luật</span>
               </Link>
+              
+              {/* --- BỔ SUNG THẺ CSHT VÀO BOTTOM NAV --- */}
+              {canManageFacility && (
+                 <Link to="/admin/facility-manager" style={mobileNavItemStyle('facility-manager')}>
+                    {isActive('facility-manager') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#003366', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
+                    <Icons.Facility active={isActive('facility-manager')} />
+                    <span style={{ fontSize: '0.65rem', marginTop: '6px', fontWeight: isActive('facility-manager') ? '700' : '500' }}>CSHT</span>
+                 </Link>
+              )}
+
               <Link to="/admin/reports" style={mobileNavItemStyle('reports')}>
                   {isActive('reports') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#003366', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
                   <Icons.Report active={isActive('reports')} />
