@@ -87,7 +87,7 @@ const StaffManager = () => {
         password: hashedPassword,
         role: 'staff', positions: [], 
         minWorkHours: 0,
-        ubiBase: 0, 
+        ubi1Base: 0, 
         primaryRole: '',
         defaultArea: '',
         secondaryUBIs: [], 
@@ -104,17 +104,14 @@ const StaffManager = () => {
     const currentRems = Array.isArray(staff.remunerations) ? staff.remunerations : [];
     const currentSecUbis = Array.isArray(staff.secondaryUBIs) ? staff.secondaryUBIs : [];
     
-    let initialUbiBase = staff.ubiBase;
-    if (initialUbiBase === undefined) {
-        initialUbiBase = safeNumber(staff.ubi1Base) * (safeNumber(staff.ubi1Percent)/100 || 1);
-    }
+    let initialUbi1Base = safeNumber(staff.ubi1Base);
 
     setEditForm({ 
         ...staff, 
         newPassword: '',
         remunerations: currentRems,
         secondaryUBIs: currentSecUbis,
-        ubiBase: initialUbiBase,
+        ubi1Base: initialUbi1Base,
         primaryRole: staff.primaryRole || '',
         defaultArea: staff.defaultArea || '',
         specificAllowance: staff.specificAllowance || 0
@@ -153,7 +150,7 @@ const StaffManager = () => {
 
   const saveEdit = async (id) => {
     try {
-        const { newPassword, ...rest } = editForm;
+        const { newPassword, ubiBase, ...rest } = editForm;
         const updates = { ...rest };
         
         if (newPassword && newPassword.trim() !== '') {
@@ -162,7 +159,7 @@ const StaffManager = () => {
         }
         
         updates.minWorkHours = safeNumber(updates.minWorkHours);
-        updates.ubiBase = safeNumber(updates.ubiBase);
+        updates.ubi1Base = safeNumber(editForm.ubi1Base);
         updates.specificAllowance = safeNumber(updates.specificAllowance);
         updates.primaryRole = editForm.primaryRole || '';
         updates.defaultArea = editForm.defaultArea || '';
@@ -181,6 +178,15 @@ const StaffManager = () => {
                 ...r, amount: safeNumber(r.amount), jobCode: r.jobCode !== undefined ? r.jobCode : (r.keywords || '') 
             }));
         } else { updates.remunerations = []; }
+
+        // Đồng bộ toàn bộ positions tự động để chuẩn hóa data
+        const derivedPositions = new Set([
+            ...(editForm.positions || []),
+            updates.primaryRole,
+            ...updates.secondaryUBIs.map(u => u.role),
+            ...updates.remunerations.map(r => r.position)
+        ]);
+        updates.positions = Array.from(derivedPositions).filter(p => p && POSITIONS.includes(p));
 
         await updateStaffInfo(id, updates);
         
@@ -213,7 +219,7 @@ const StaffManager = () => {
   };
 
   const calculateFixedSalary = (s) => {
-      const base = s.ubiBase !== undefined ? safeNumber(s.ubiBase) : (safeNumber(s.ubi1Base) * (safeNumber(s.ubi1Percent)/100 || 1));
+      const base = safeNumber(s.ubi1Base);
       let secTotal = 0;
       if (s.secondaryUBIs && s.secondaryUBIs.length > 0) {
           secTotal = s.secondaryUBIs.reduce((sum, u) => {
@@ -307,7 +313,14 @@ const StaffManager = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
         {filteredStaffList.map(staff => {
-          const validPositions = staff.positions ? staff.positions.filter(p => POSITIONS.includes(p)) : [];
+          // Tính toán tags vị trí động tự động
+          const validPositions = Array.from(new Set([
+              ...(staff.positions || []),
+              staff.primaryRole,
+              ...(staff.secondaryUBIs || []).map(u => u.role),
+              ...(staff.remunerations || []).map(r => r.position)
+          ])).filter(p => p && POSITIONS.includes(p));
+
           return (
             <div className="staff-card" key={staff.id} style={{ 
                 background: '#ffffff', borderRadius: '20px', padding: '24px', 
@@ -352,7 +365,7 @@ const StaffManager = () => {
                   
                   <div style={{padding:'16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9'}}>
                        <div style={{fontSize: '0.75rem', color:'#64748b', fontWeight: '600', textTransform:'uppercase', letterSpacing: '0.05em', marginBottom:'6px'}}>
-                           Lương cố định {staff.primaryRole ? `(${staff.primaryRole})` : ''}
+                           UBI cố định gốc (100%) {staff.primaryRole ? `(${staff.primaryRole})` : ''}
                        </div>
                        <div style={{color: '#059669', fontWeight:'800', fontSize:'1.25rem', letterSpacing: '-0.02em'}}>
                           {calculateFixedSalary(staff).toLocaleString()} <span style={{fontSize:'0.85rem', color:'#64748b', fontWeight: '600'}}>đ</span>
@@ -469,8 +482,8 @@ const StaffManager = () => {
                   </div>
 
                   <div style={{...styles.financeRow, flexWrap: 'wrap'}}>
-                      <span style={styles.financeLabel}>Lương cứng / UBI 1</span>
-                      <input className="input-modern" type="number" placeholder="VNĐ" value={editForm.ubiBase} onChange={e => setEditForm({...editForm, ubiBase: e.target.value})} style={{flex: 1, marginTop: 0, fontWeight: '600'}} />
+                      <span style={styles.financeLabel}>UBI cố định gốc (100%)</span>
+                      <input className="input-modern" type="number" placeholder="VNĐ" value={editForm.ubi1Base !== undefined ? editForm.ubi1Base : ''} onChange={e => setEditForm({...editForm, ubi1Base: e.target.value})} style={{flex: 1, marginTop: 0, fontWeight: '600'}} />
                   </div>
                   
                   <div style={{...styles.financeRow, flexWrap: 'wrap'}}>

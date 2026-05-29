@@ -194,7 +194,8 @@ const Performance = () => {
       });
   }
 
-  const baseUbi = currentUserData.ubiBase !== undefined ? parseAmount(currentUserData.ubiBase) : (parseAmount(currentUserData.ubi1Base) * (parseAmount(currentUserData.ubi1Percent)/100 || 1));
+  // FIX: Đảm bảo UBI Cố định hiển thị chính xác theo trường ubi1Base (UBI 1) do Admin thiết lập
+  const baseUbi = parseAmount(currentUserData.ubi1Base);
   
   const allowance = parseAmount(currentUserData.specificAllowance);
   const totalFixedSalary = baseUbi + secUbiTotal + allowance;

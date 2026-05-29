@@ -44,6 +44,7 @@ export const DataProvider = ({ children }) => {
       const staffRef = ref(db, 'staff');
       const unsubStaff = onValue(staffRef, (snapshot) => {
         const data = snapshot.val();
+        // Đảm bảo positions luôn là mảng để tránh lỗi .includes() hoặc .map()
         setStaffList(data ? Object.keys(data).map(key => ({ ...data[key], id: key, positions: data[key].positions || [] })) : []);
         checkInitialLoad();
       }, (error) => { checkInitialLoad(); });
