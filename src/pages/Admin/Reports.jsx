@@ -118,7 +118,7 @@ const monthYearOptions = generateMonthYearOptions();
 
 const Reports = () => {
   const { user } = useAuth();
-  const { tasks, staffList, facilityLogs, updateTask, payrollRecords, savePayrollRecord, areas } = useData(); 
+  const { tasks, staffList, facilityLogs, updateTask, payrollRecords, savePayrollRecord, areas, evaluateTask } = useData();
   
   const [activeTab, setActiveTab] = useState('overview'); 
 
@@ -221,8 +221,9 @@ const Reports = () => {
       lockedInfo = { by: lockedRecord.lockedBy, at: lockedRecord.lockedAt };
   } else {
       const currentMonthScheduleTasks = scheduleTasks.filter(t => {
-          if (!t.startTime) return false;
-          const d = new Date(t.startTime);
+          // [FIX BUG #2] Dùng ngày dự phòng (startTime -> checkInTime -> endTime) để không bỏ sót
+          // ca đã chấm công T5 khi startTime bị thiếu/không hợp lệ.
+          const d = new Date(t.startTime || t.checkInTime || t.endTime);
           return !isNaN(d.getTime()) && isSameMonth(d, selectedFinanceMonth);
       });
 
@@ -233,9 +234,13 @@ const Reports = () => {
           
           let hoursUBI1 = 0;
           let ubi1Tasks = [];
-          
+
           let R_Secondary = 0;
           let hoursSecondaryPartTime = 0;
+
+          // [FIX BUG #2] Tổng giờ công thực tế trong tháng (đếm MỌI vai trò),
+          // dùng để hiển thị ở cột "Thông tin thêm" — không ảnh hưởng logic tính lương.
+          let totalWorkedHours = 0;
 
           const ubiRoles = [];
           let secUbiTotal = 0;
@@ -253,8 +258,11 @@ const Reports = () => {
           }
 
           staffTasks.forEach(task => {
-              if (!task.checkInTime || !task.checkOutTime) return; 
+              if (!task.checkInTime || !task.checkOutTime) return;
               const workedHours = calculateWorkHoursDecimal(task.startTime, task.endTime, task.checkInTime, task.checkOutTime, task.adminEdited);
+
+              // [FIX BUG #2] Cộng dồn tổng giờ công thực tế (mọi vai trò)
+              totalWorkedHours += workedHours;
 
               let taskRate = getMatchedRate(staff.remunerations, task);
 
@@ -306,10 +314,11 @@ const Reports = () => {
 
           const netIncome = grossIncome - bhxhDeduction - taxDeduction;
 
-          if (grossIncome > 0 || minHours > 0) {
+          if (grossIncome > 0 || minHours > 0 || totalWorkedHours > 0) {
               financeRows.push({
                   item: staff.name,
-                  type: `Giờ UBI 1: ${hoursUBI1.toFixed(1)}/${minHours}h`,
+                  // [FIX BUG #2] Hiển thị tổng giờ công của tháng + giờ UBI 1 (giữ nguyên thông tin cũ)
+                  type: `Giờ công T${Number(selMonth)}: ${totalWorkedHours.toFixed(1)}h • UBI 1: ${hoursUBI1.toFixed(1)}/${minHours}h`,
                   gross: grossIncome,
                   bhxh: bhxhDeduction,
                   tax: taxDeduction,
@@ -422,7 +431,10 @@ const Reports = () => {
   // 4. LOGIC ATTENDANCE
   // ==============================================================
   const filteredAttendance = scheduleTasks.filter(t => {
-      const taskDate = new Date(t.startTime);
+      // [FIX BUG #1] Dùng ngày dự phòng: nếu startTime rỗng/không hợp lệ thì lấy giờ
+      // check-in, rồi mới đến endTime — tránh việc ca đã chấm công T5 bị rớt khỏi bộ lọc tháng.
+      const taskDate = new Date(t.startTime || t.checkInTime || t.endTime);
+      if (isNaN(taskDate.getTime())) return false;
       const now = new Date();
       const taskMonth = taskDate.getMonth() + 1;
       const taskYear = taskDate.getFullYear();
@@ -1044,6 +1056,7 @@ const Reports = () => {
                         <th style={styles.th}>Hạn chót</th>
                         <th style={styles.th}>Tiến độ</th>
                         <th style={styles.th}>Trạng thái</th>
+                        <th style={{...styles.th, textAlign: 'center'}}>Đánh giá kết quả</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1076,10 +1089,30 @@ const Reports = () => {
                               <td style={styles.td}>
                                   <div style={{ display: 'inline-flex' }}>{statusElement}</div>
                               </td>
+                              <td style={{...styles.td, textAlign: 'center'}}>
+                                  {task.status !== 'completed' ? (
+                                      <span style={{fontSize:'0.85rem', color:'#cbd5e1', fontStyle: 'italic'}}>Chưa hoàn thành</span>
+                                  ) : task.evaluation === 'passed' ? (
+                                      <span style={styles.badgeSuccess}>✓ Đạt</span>
+                                  ) : task.evaluation === 'failed' ? (
+                                      <span style={styles.badgeError}>✕ Không đạt</span>
+                                  ) : (
+                                      <div style={{display:'flex', gap:'8px', justifyContent:'center'}}>
+                                          <button
+                                              onClick={() => evaluateTask(task.id, true)}
+                                              style={{color:'#059669', border:'1px solid #a7f3d0', background:'#ecfdf5', padding:'6px 12px', borderRadius:'8px', cursor:'pointer', fontWeight:'700', fontSize:'0.8rem', whiteSpace:'nowrap'}}
+                                          >Đạt</button>
+                                          <button
+                                              onClick={() => { if (window.confirm(`Đánh giá "${task.title}" là KHÔNG ĐẠT?\n\nHệ thống sẽ tự động xét kỷ luật theo số lần tích lũy nếu chạm ngưỡng.`)) evaluateTask(task.id, false); }}
+                                              style={{color:'#dc2626', border:'1px solid #fecaca', background:'#fef2f2', padding:'6px 12px', borderRadius:'8px', cursor:'pointer', fontWeight:'700', fontSize:'0.8rem', whiteSpace:'nowrap'}}
+                                          >Không đạt</button>
+                                      </div>
+                                  )}
+                              </td>
                             </tr>
                           );
                         })}
-                        {filteredOpTasks.length === 0 && <tr><td colSpan="6" style={styles.emptyTd}>Không tìm thấy nhiệm vụ phù hợp.</td></tr>}
+                        {filteredOpTasks.length === 0 && <tr><td colSpan="7" style={styles.emptyTd}>Không tìm thấy nhiệm vụ phù hợp.</td></tr>}
                     </tbody>
                   </table>
                 </div>

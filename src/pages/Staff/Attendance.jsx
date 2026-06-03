@@ -159,21 +159,26 @@ const Attendance = () => {
           updateData.lateReason = 'Trễ quá 3 phút';
           msg = "CẢNH BÁO: Bạn đã check-in TRỄ quá 3 phút! Hệ thống đã ghi nhận.";
 
-          const lateRule = autoDisciplineRules?.find(r => r.triggerType === 'late_attendance');
-          if (lateRule) {
+          // [FIX KỶ LUẬT] Lấy TẤT CẢ luật đi trễ, rồi tìm luật có NGƯỠNG ĐÚNG BẰNG số lần trễ hiện tại.
+          // Trước đây dùng .find (luôn lấy luật đầu tiên = ngưỡng 3) + phép % (modulo) nên:
+          //  - luôn gán cùng một mức, không leo thang lên 4/5 lần;
+          //  - bị lặp hồ sơ liên tục. Nay mỗi mốc ngưỡng chỉ kích hoạt ĐÚNG 1 lần và đúng mức.
+          const lateRules = (autoDisciplineRules || []).filter(r => r.triggerType === 'late_attendance');
+          if (lateRules.length > 0) {
               const pastLates = tasks.filter(t => t.assigneeId === user.id && t.checkInStatus === 'Late').length;
               const currentLateCount = pastLates + 1;
 
-              if (currentLateCount > 0 && currentLateCount % lateRule.threshold === 0) {
+              const matchedRule = lateRules.find(r => Number(r.threshold) === currentLateCount);
+              if (matchedRule) {
                   addDisciplineRecord({
                       staffId: user.id,
-                      disciplineId: lateRule.disciplineId,
-                      disciplineName: lateRule.disciplineName,
+                      disciplineId: matchedRule.disciplineId,
+                      disciplineName: matchedRule.disciplineName,
                       taskTitle: `Điểm danh trễ lần thứ ${currentLateCount} (Ca: ${task.title})`,
                       date: exactNow.toISOString(),
-                      isAutoAssigned: true 
+                      isAutoAssigned: true
                   });
-                  msg += `\n\n🚨 LƯU Ý: Bạn đã tích lũy đủ ${lateRule.threshold} lần đi trễ. Hệ thống tự động kích hoạt kỷ luật: ${lateRule.disciplineName}.`;
+                  msg += `\n\n🚨 LƯU Ý: Bạn đã tích lũy đủ ${currentLateCount} lần đi trễ. Hệ thống tự động kích hoạt kỷ luật: ${matchedRule.disciplineName}.`;
               }
           }
       } else {

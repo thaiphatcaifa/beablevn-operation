@@ -118,6 +118,25 @@ const TaskManager = () => {
   const [filterSchedTaskYear, setFilterSchedTaskYear] = useState('all');   
   const [scheduleSearchTerm, setScheduleSearchTerm] = useState('');
 
+  // [TÍNH NĂNG MỚI] Tháng cần sinh ca (mặc định tháng hiện tại) — dùng cho nút "Sinh ca theo tháng"
+  const [genMonth, setGenMonth] = useState(() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  // [MODAL] Hộp thoại pop-up tùy biến (giữa màn hình) thay cho alert()/confirm() mặc định của trình duyệt.
+  // modal = { kind:'alert'|'confirm', title, message, onConfirm, confirmText, cancelText, tone }
+  const [modal, setModal] = useState(null);
+  const closeModal = () => setModal(null);
+  const showAlert = (message, opts = {}) =>
+      setModal({ kind: 'alert', title: opts.title || 'Thông báo', message, tone: opts.tone || 'info' });
+  const showConfirm = (message, onConfirm, opts = {}) =>
+      setModal({
+          kind: 'confirm', title: opts.title || 'Xác nhận', message, onConfirm,
+          confirmText: opts.confirmText || 'Đồng ý', cancelText: opts.cancelText || 'Hủy',
+          tone: opts.tone || 'primary'
+      });
+
   const [adhocPage, setAdhocPage] = useState(1);
   const [genTaskPage, setGenTaskPage] = useState(1);
   const [schedulerPage, setSchedulerPage] = useState(1); 
@@ -146,6 +165,21 @@ const TaskManager = () => {
       const s = new Date(start);
       const e = new Date(end);
       return `${s.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - ${e.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+  };
+
+  // [CHỐNG NHẦM ĐỊNH DẠNG NGÀY] Hiển thị ngày rõ ràng kiểu Việt Nam: "Thứ X, dd/MM/yyyy HH:mm".
+  // Ô <input type="datetime-local"> có thể hiển thị theo MM/DD/YYYY (kiểu Mỹ) gây nhầm với DD/MM của VN —
+  // nhãn này giúp Scheduler nhìn đúng ngày thực sự đang được lưu.
+  const formatVNDateTimeLabel = (val) => {
+      if (!val) return '';
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return '';
+      const WD = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mi = String(d.getMinutes()).padStart(2, '0');
+      return `${WD[d.getDay()]}, ${dd}/${mm}/${d.getFullYear()} ${hh}:${mi}`;
   };
 
   const getSystemRoleName = (role) => {
@@ -250,13 +284,164 @@ const TaskManager = () => {
       relatedTasks.forEach(t => deleteTask(t.id));
   };
 
+  // ==============================================================
+  // [TÍNH NĂNG MỚI] SINH CA THEO THÁNG
+  // --------------------------------------------------------------
+  // Quét toàn bộ Lịch gốc (templates) và sinh đầy đủ ca cho ĐÚNG tháng được chọn,
+  // dựa trên các thứ trong tuần (repeatDays) + giờ:phút của lịch gốc.
+  // - KHÔNG xóa bất kỳ ca cũ nào (ca đã chấm công được giữ nguyên tuyệt đối).
+  // - CHỐNG TRÙNG: nếu một lịch đã có ca trong đúng ngày đó thì bỏ qua, không tạo lại.
+  // - Bỏ qua lịch đang chờ duyệt yêu cầu điều chỉnh (s.request).
+  // ==============================================================
+  const handleGenerateMonthShifts = () => {
+      if (!genMonth) return showAlert("Vui lòng chọn tháng cần sinh ca!");
+      const [yStr, mStr] = genMonth.split('-');
+      const year = Number(yStr);
+      const month = Number(mStr); // 1-12
+
+      showConfirm(
+          `Sinh ca làm việc cho THÁNG ${month}/${year}?\n\n` +
+          `• Hệ thống quét tất cả Lịch gốc và tạo đủ ca cho tháng này.\n` +
+          `• Các ca đã tồn tại (kể cả đã chấm công) sẽ ĐƯỢC GIỮ NGUYÊN, không tạo trùng.\n` +
+          `• Không xóa bất kỳ dữ liệu nào.`,
+          () => runGenerateMonthShifts(year, month),
+          { confirmText: 'Sinh ca' }
+      );
+  };
+
+  const runGenerateMonthShifts = (year, month) => {
+      // Tập hợp khóa các ca ĐÃ CÓ theo từng lịch + ngày, để chống trùng.
+      // Khóa dạng: "<scheduleId>_<year>-<month>-<day>" (month/day không pad, dùng giờ địa phương).
+      const existingKeys = new Set();
+      tasks.filter(t => t.fromScheduleId).forEach(t => {
+          const dt = new Date(t.startTime || t.checkInTime || t.endTime || t.deadline);
+          if (!isNaN(dt.getTime())) {
+              existingKeys.add(`${t.fromScheduleId}_${dt.getFullYear()}-${dt.getMonth() + 1}-${dt.getDate()}`);
+          }
+      });
+
+      let created = 0;
+      let skipped = 0;       // ca đã tồn tại sẵn -> không tạo trùng
+      let outOfRange = 0;    // ca thuộc lịch nhưng rơi ngoài tháng được chọn
+
+      schedules.forEach(s => {
+          if (s.request) return; // bỏ qua lịch đang chờ duyệt
+          if (!s.startTime || !s.endTime || !Array.isArray(s.repeatDays) || s.repeatDays.length === 0) return;
+
+          const startObj = new Date(s.startTime);
+          const endObj = new Date(s.endTime);
+          if (isNaN(startObj.getTime()) || isNaN(endObj.getTime())) return;
+
+          const duration = endObj - startObj; // độ dài ca (ms)
+          const repeatWeeks = Number(s.repeatWeeks) || 1;
+          const targetDayVals = daysOfWeek.filter(d => s.repeatDays.includes(d.key)).map(d => d.val);
+          const staff = staffList.find(st => st.id === s.assigneeId);
+
+          // [ĐÚNG THIẾT LẬP SCHEDULER] Lặp y hệt generateTasksFromSchedule:
+          // chỉ sinh đúng các ca mà Scheduler đã định nghĩa (ngày bắt đầu + repeatDays + repeatWeeks),
+          // sau đó CHỈ GIỮ những ca rơi vào tháng được chọn.
+          for (let w = 0; w < repeatWeeks; w++) {
+              for (let dd = 0; dd < 7; dd++) {
+                  const cur = new Date(startObj);
+                  cur.setDate(startObj.getDate() + (w * 7) + dd);
+
+                  if (!targetDayVals.includes(cur.getDay())) continue;
+
+                  // Chỉ lấy ca rơi đúng vào tháng/năm được chọn
+                  if (cur.getFullYear() !== year || (cur.getMonth() + 1) !== month) { outOfRange++; continue; }
+
+                  const key = `${s.id}_${year}-${month}-${cur.getDate()}`;
+                  if (existingKeys.has(key)) { skipped++; continue; }
+
+                  const taskStart = new Date(cur);
+                  const taskEnd = new Date(taskStart.getTime() + duration);
+
+                  addTask({
+                      title: s.title,
+                      assigneeId: s.assigneeId,
+                      assigneeName: s.assigneeName || (staff ? staff.name : 'Unknown'),
+                      description: s.description || '',
+                      assignedRole: s.assignedRole || '',
+                      jobCode: s.jobCode || '',
+                      area: s.area || '',
+                      startTime: taskStart.toISOString(),
+                      endTime: taskEnd.toISOString(),
+                      paymentType: 'Theo lịch',
+                      disciplineId: '',
+                      disciplineName: '',
+                      deadline: taskEnd.toISOString(),
+                      fromScheduleId: s.id,
+                      generatedDate: new Date().toISOString()
+                  });
+
+                  existingKeys.add(key);
+                  created++;
+              }
+          }
+      });
+
+      showAlert(
+          `Hoàn tất sinh ca tháng ${month}/${year} (đúng theo thiết lập Scheduler)!\n\n` +
+          `• Đã tạo mới: ${created} ca\n` +
+          `• Bỏ qua (đã có sẵn): ${skipped} ca\n\n` +
+          `Mở tab "Ca làm việc thực tế" và lọc Tháng ${month} / Năm ${year} để kiểm tra.`,
+          { title: 'Hoàn tất', tone: 'success' }
+      );
+  };
+
+  // ==============================================================
+  // [TÍNH NĂNG MỚI] DỌN CA SINH DƯ (lịch chưa có hiệu lực)
+  // --------------------------------------------------------------
+  // Xóa các ca trong tháng đã chọn thuộc Lịch gốc CHƯA tới ngày bắt đầu
+  // (ca được sinh nhầm trước khi lịch có hiệu lực). CHỈ xóa ca CHƯA chấm công
+  // — ca đã có check-in/check-out được giữ nguyên tuyệt đối.
+  // ==============================================================
+  const handleCleanupIneffectiveShifts = () => {
+      if (!genMonth) return showAlert("Vui lòng chọn tháng cần dọn!");
+      const [yStr, mStr] = genMonth.split('-');
+      const year = Number(yStr);
+      const month = Number(mStr);
+
+      const schedMap = {};
+      schedules.forEach(s => { schedMap[s.id] = s; });
+
+      const toDelete = tasks.filter(t => {
+          if (!t.fromScheduleId) return false;
+          if (t.checkInTime || t.checkOutTime) return false; // giữ ca đã chấm công
+          const dt = new Date(t.startTime || t.endTime || t.deadline);
+          if (isNaN(dt.getTime())) return false;
+          if (dt.getFullYear() !== year || (dt.getMonth() + 1) !== month) return false;
+          const s = schedMap[t.fromScheduleId];
+          if (!s || !s.startTime) return false;
+          const base = new Date(s.startTime);
+          if (isNaN(base.getTime())) return false;
+          // Ca nằm TRƯỚC ngày lịch bắt đầu => lịch chưa có hiệu lực => cần xóa
+          return dt.getTime() < base.getTime();
+      });
+
+      if (toDelete.length === 0) {
+          return showAlert(`Không có ca sinh dư nào cần dọn trong tháng ${month}/${year}.`);
+      }
+
+      showConfirm(
+          `Tìm thấy ${toDelete.length} ca sinh dư trong tháng ${month}/${year}\n` +
+          `(thuộc lịch chưa tới ngày bắt đầu, chưa chấm công).\n\n` +
+          `Xóa các ca này? Ca đã chấm công và ca hợp lệ sẽ được giữ nguyên.`,
+          () => {
+              toDelete.forEach(t => deleteTask(t.id));
+              showAlert(`Đã dọn ${toDelete.length} ca sinh dư trong tháng ${month}/${year}.`, { title: 'Hoàn tất', tone: 'success' });
+          },
+          { tone: 'danger', confirmText: 'Xóa ca sinh dư' }
+      );
+  };
+
   const handleRequestAdjustmentClick = (sched) => {
       const action = window.prompt("Bạn muốn thực hiện hành động gì?\n- Nhập 'delete' để xin XÓA\n- Nhập 'edit' để xin SỬA");
       if (!action) return;
 
       if (action.toLowerCase() === 'delete') {
           const reason = window.prompt("Vui lòng nhập lý do muốn xóa (Bắt buộc):");
-          if (!reason || reason.trim() === "") return alert("Bắt buộc phải có lý do để xin xóa!");
+          if (!reason || reason.trim() === "") return showAlert("Bắt buộc phải có lý do để xin xóa!", { tone: 'danger' });
 
           updateSchedule(sched.id, {
               request: {
@@ -266,7 +451,7 @@ const TaskManager = () => {
                   requestedAt: new Date().toISOString()
               }
           });
-          alert("Đã gửi yêu cầu xóa. Vui lòng đợi Admin phê duyệt.");
+          showAlert("Đã gửi yêu cầu xóa. Vui lòng đợi Admin phê duyệt.", { tone: 'success' });
 
       } else if (action.toLowerCase() === 'edit') {
           setEditingScheduleId(sched.id);
@@ -279,16 +464,16 @@ const TaskManager = () => {
           });
           setScheduleConfig({ repeatWeeks: sched.repeatWeeks, days: sched.repeatDays || [] });
           window.scrollTo({ top: 0, behavior: 'smooth' });
-          alert("Dữ liệu đã được tải lên form. Hãy chỉnh sửa và nhấn nút 'Gửi yêu cầu điều chỉnh'.");
+          showAlert("Dữ liệu đã được tải lên form. Hãy chỉnh sửa và nhấn nút 'Gửi yêu cầu điều chỉnh'.");
       } else {
-          alert("Lệnh không hợp lệ. Vui lòng nhập 'delete' hoặc 'edit'.");
+          showAlert("Lệnh không hợp lệ. Vui lòng nhập 'delete' hoặc 'edit'.", { tone: 'danger' });
       }
   };
 
   const handleAddTaskAdhoc = (e) => {
       e.preventDefault();
-      if (!newTask.title || !newTask.assigneeId || !newTask.endTime) return alert("Vui lòng điền đủ thông tin!");
-      
+      if (!newTask.title || !newTask.assigneeId || !newTask.endTime) return showAlert("Vui lòng điền đủ thông tin!", { tone: 'danger' });
+
       const staff = staffList.find(s => s.id === newTask.assigneeId);
       const disc = activeDisciplines.find(d => d.id === newTask.disciplineId);
       
@@ -301,13 +486,13 @@ const TaskManager = () => {
       });
       
       setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', area: '', paymentType: '', disciplineId: '' });
-      alert("Đã giao nhiệm vụ thành công!");
+      showAlert("Đã giao nhiệm vụ thành công!", { tone: 'success' });
   };
 
   const handleAddScheduleSubmit = (e) => {
       e.preventDefault();
-      if (!newTask.title || !newTask.assigneeId || !newTask.endTime) return alert("Vui lòng điền đủ thông tin!");
-      if (scheduleConfig.days.length === 0) return alert("Vui lòng chọn ít nhất một ngày trong tuần!");
+      if (!newTask.title || !newTask.assigneeId || !newTask.endTime) return showAlert("Vui lòng điền đủ thông tin!", { tone: 'danger' });
+      if (scheduleConfig.days.length === 0) return showAlert("Vui lòng chọn ít nhất một ngày trong tuần!", { tone: 'danger' });
       
       const staff = staffList.find(s => s.id === newTask.assigneeId);
       const scheduleData = {
@@ -320,20 +505,29 @@ const TaskManager = () => {
       };
 
       if (isScheduler && editingScheduleId) {
+          // SCHEDULER chỉnh sửa -> gửi yêu cầu chờ Admin duyệt
           updateSchedule(editingScheduleId, {
               request: {
                   type: 'edit',
-                  reason: 'Điều chỉnh thông tin', 
-                  draftData: scheduleData, 
+                  reason: 'Điều chỉnh thông tin',
+                  draftData: scheduleData,
                   requestedBy: user.username,
                   requestedAt: new Date().toISOString()
               }
           });
-          alert("Đã gửi yêu cầu điều chỉnh. Admin sẽ xem xét và phê duyệt.");
+          showAlert("Đã gửi yêu cầu điều chỉnh. Admin sẽ xem xét và phê duyệt.", { tone: 'success' });
+      } else if (editingScheduleId) {
+          // [FIX] ADMIN chỉnh sửa -> cập nhật TRỰC TIẾP lên lịch gốc đã có (không tạo lịch mới),
+          // xóa các ca cũ của lịch này rồi sinh lại ca theo cấu hình mới.
+          updateSchedule(editingScheduleId, { ...scheduleData, request: null });
+          deleteRelatedTasks(editingScheduleId);
+          generateTasksFromSchedule(scheduleData, editingScheduleId);
+          showAlert(`Đã cập nhật lịch gốc "${scheduleData.title}" và sinh lại ca thành công!`, { tone: 'success' });
       } else {
+          // Tạo lịch mới
           const savedId = addSchedule(scheduleData);
           generateTasksFromSchedule(scheduleData, savedId);
-          alert(`Đã lên lịch và tạo tasks cho ${scheduleData.assigneeName}!`);
+          showAlert(`Đã lên lịch và tạo tasks cho ${scheduleData.assigneeName}!`, { tone: 'success' });
       }
 
       setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', area: '', paymentType: '', disciplineId: '' });
@@ -345,7 +539,7 @@ const TaskManager = () => {
       const { request } = sched;
       if (!request) return;
 
-      if (window.confirm(`Xác nhận phê duyệt yêu cầu "${request.type}" của ${request.requestedBy}?`)) {
+      showConfirm(`Xác nhận phê duyệt yêu cầu "${request.type}" của ${request.requestedBy}?`, () => {
           deleteRelatedTasks(sched.id);
 
           if (request.type === 'delete') {
@@ -355,17 +549,19 @@ const TaskManager = () => {
               updateSchedule(sched.id, newScheduleData);
               generateTasksFromSchedule(newScheduleData, sched.id);
           }
-      }
+      }, { confirmText: 'Phê duyệt' });
   };
 
   const handleRejectRequest = (sched) => {
       const reason = window.prompt("Lý do từ chối (tùy chọn):");
-      if (window.confirm("Từ chối yêu cầu này?")) {
+      showConfirm("Từ chối yêu cầu này?", () => {
           updateSchedule(sched.id, { request: null, rejectionReason: reason || '' });
-      }
+      }, { tone: 'danger', confirmText: 'Từ chối' });
   };
 
-  const handleDeleteTask = (id) => { if (window.confirm("Bạn có chắc chắn muốn xóa nhiệm vụ này?")) deleteTask(id); };
+  const handleDeleteTask = (id) => {
+      showConfirm("Bạn có chắc chắn muốn xóa nhiệm vụ này?", () => deleteTask(id), { tone: 'danger', confirmText: 'Xóa' });
+  };
   
   const handleDayToggle = (dayKey) => {
       setScheduleConfig(prev => {
@@ -389,10 +585,10 @@ const TaskManager = () => {
   };
 
   const handleDeleteSchedule = (id) => {
-      if(window.confirm("Xóa lịch này sẽ xóa cả các ca làm việc liên quan. Bạn có chắc chắn tiếp tục?")) {
+      showConfirm("Xóa lịch này sẽ xóa cả các ca làm việc liên quan. Bạn có chắc chắn tiếp tục?", () => {
           deleteRelatedTasks(id);
           deleteSchedule(id);
-      }
+      }, { tone: 'danger', confirmText: 'Xóa lịch' });
   };
 
   const startEditTask = (task) => {
@@ -410,7 +606,7 @@ const TaskManager = () => {
 
   const saveTaskEdit = () => {
       if (!editTaskForm.title || !editTaskForm.assigneeId || !editTaskForm.startTime || !editTaskForm.endTime) {
-          return alert("Vui lòng điền đủ thông tin bắt buộc!");
+          return showAlert("Vui lòng điền đủ thông tin bắt buộc!", { tone: 'danger' });
       }
       const staff = staffList.find(s => s.id === editTaskForm.assigneeId);
       
@@ -439,7 +635,9 @@ const TaskManager = () => {
 
   const opAdminTasks = tasks.filter(t => !t.fromScheduleId);
   const filteredAdhocTasks = opAdminTasks.filter(t => {
-      const taskDate = new Date(t.startTime);
+      // [FIX BUG #3] Đồng bộ ngày dự phòng cho Task(R) lẻ để tránh bỏ sót khi lọc theo tháng.
+      const taskDate = new Date(t.startTime || t.checkInTime || t.endTime || t.deadline);
+      if (isNaN(taskDate.getTime())) return false;
       const now = new Date();
       const taskMonth = taskDate.getMonth() + 1;
       const taskYear = taskDate.getFullYear();
@@ -474,7 +672,10 @@ const TaskManager = () => {
 
   const generatedTasks = tasks.filter(t => t.fromScheduleId);
   const filteredGeneratedTasks = generatedTasks.filter(t => {
-      const taskDate = new Date(t.startTime);
+      // [FIX BUG #3] Dùng ngày dự phòng (startTime -> checkInTime -> endTime -> deadline)
+      // để ca làm thiếu/không hợp lệ startTime không bị rớt khỏi bộ đếm tháng (T5/2026).
+      const taskDate = new Date(t.startTime || t.checkInTime || t.endTime || t.deadline);
+      if (isNaN(taskDate.getTime())) return false;
       const now = new Date();
       const taskMonth = taskDate.getMonth() + 1;
       const taskYear = taskDate.getFullYear();
@@ -711,10 +912,12 @@ const TaskManager = () => {
                         <div>
                             <label style={styles.label}>Bắt đầu (Check-in)</label>
                             <input className="input-modern" type="datetime-local" value={newTask.startTime} onChange={e => setNewTask({...newTask, startTime: e.target.value})} required />
+                            {newTask.startTime && <div style={{fontSize:'0.8rem', color:'#0369a1', fontWeight:'700', marginTop:'4px'}}>📅 {formatVNDateTimeLabel(newTask.startTime)}</div>}
                         </div>
                         <div>
                             <label style={styles.label}>Kết thúc (Check-out)</label>
                             <input className="input-modern" type="datetime-local" value={newTask.endTime} onChange={e => setNewTask({...newTask, endTime: e.target.value})} required />
+                            {newTask.endTime && <div style={{fontSize:'0.8rem', color:'#0369a1', fontWeight:'700', marginTop:'4px'}}>📅 {formatVNDateTimeLabel(newTask.endTime)}</div>}
                         </div>
                         <div style={{ gridColumn: '1 / -1' }}>
                             <label style={{...styles.label, color: '#dc2626'}}>Kỷ luật áp dụng (nếu trễ hạn)</label>
@@ -800,10 +1003,12 @@ const TaskManager = () => {
                         <div>
                             <label style={styles.label}>Bắt đầu (Giờ & Ngày gốc)</label>
                             <input className="input-modern" type="datetime-local" value={newTask.startTime} onChange={e => setNewTask({...newTask, startTime: e.target.value})} required />
+                            {newTask.startTime && <div style={{fontSize:'0.8rem', color:'#0369a1', fontWeight:'700', marginTop:'4px'}}>📅 {formatVNDateTimeLabel(newTask.startTime)}</div>}
                         </div>
                         <div>
                             <label style={styles.label}>Kết thúc (Giờ & Ngày gốc)</label>
                             <input className="input-modern" type="datetime-local" value={newTask.endTime} onChange={e => setNewTask({...newTask, endTime: e.target.value})} required />
+                            {newTask.endTime && <div style={{fontSize:'0.8rem', color:'#0369a1', fontWeight:'700', marginTop:'4px'}}>📅 {formatVNDateTimeLabel(newTask.endTime)}</div>}
                         </div>
                         
                         <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box' }}>
@@ -842,7 +1047,7 @@ const TaskManager = () => {
                             <textarea className="input-modern" placeholder="Ghi chú thêm..." value={newTask.description} onChange={e => setNewTask({...newTask, description: e.target.value})} style={{height: '80px', resize: 'vertical'}} />
                         </div>
                         <button type="submit" style={styles.btnSubmit}>
-                            {editingScheduleId ? 'Gửi yêu cầu điều chỉnh' : 'Lưu Lịch & Tự Động Tạo Tasks'}
+                            {editingScheduleId ? 'Xác nhận thay đổi' : 'Lưu Lịch & Tự Động Tạo Tasks'}
                         </button>
                         {editingScheduleId && (
                             <button type="button" onClick={() => { setEditingScheduleId(null); setNewTask({ title: '', assigneeId: '', description: '', startTime: '', endTime: '', assignedRole: '', jobCode: '', area: '', paymentType: '', disciplineId: '' }); setScheduleConfig({ repeatWeeks: 1, days: [] }); }} style={{ ...styles.btnSubmit, background: '#f1f5f9', color: '#475569', marginTop: '-10px' }}>
@@ -1011,7 +1216,42 @@ const TaskManager = () => {
                                     {availableYears.map(y => <option key={y} value={y}>Năm {y}</option>)}
                                 </select>
                             </div>
-                            
+
+                            {/* [FIX BUG #3] Hiển thị tổng số ca thực tế khớp bộ lọc để dễ đối chiếu với số ca đã thiết lập */}
+                            <div style={{ marginBottom: '16px', fontSize: '0.9rem', color: '#475569', fontWeight: '600' }}>
+                                Tổng số ca làm việc (theo bộ lọc):{' '}
+                                <span style={{ color: '#003366', fontWeight: '800' }}>{filteredGeneratedTasks.length}</span> ca
+                            </div>
+
+                            {/* [TÍNH NĂNG MỚI] Bảng điều khiển: Sinh ca theo tháng từ Lịch gốc */}
+                            <div style={{ marginBottom: '20px', padding: '16px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0369a1' }}>🛠️ Sinh ca theo tháng</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Tạo đủ ca cho tháng đã chọn từ Lịch gốc. Không xóa, chống trùng, giữ nguyên ca đã chấm công.</span>
+                                </div>
+                                <input
+                                    type="month"
+                                    value={genMonth}
+                                    onChange={e => setGenMonth(e.target.value)}
+                                    className="filter-modern"
+                                    style={{ marginLeft: 'auto', minWidth: '160px' }}
+                                    title="Chọn tháng cần sinh ca"
+                                />
+                                <button
+                                    onClick={handleGenerateMonthShifts}
+                                    style={{ background: '#0369a1', color: 'white', border: 'none', padding: '10px 18px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', whiteSpace: 'nowrap', boxShadow: '0 4px 6px rgba(3,105,161,0.2)' }}
+                                >
+                                    Sinh ca cho tháng này
+                                </button>
+                                <button
+                                    onClick={handleCleanupIneffectiveShifts}
+                                    style={{ background: 'white', color: '#dc2626', border: '1px solid #fecaca', padding: '10px 18px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', whiteSpace: 'nowrap' }}
+                                    title="Xóa ca sinh nhầm thuộc lịch chưa tới ngày bắt đầu (chưa chấm công)"
+                                >
+                                    Dọn ca sinh dư
+                                </button>
+                            </div>
+
                             <div style={styles.tableWrapper}>
                                 <table style={styles.table}>
                                    <thead>
@@ -1149,7 +1389,10 @@ const TaskManager = () => {
                                           <td style={styles.td}>
                                               <div style={{fontWeight:'700', color: '#111827', fontSize: '1.05rem', marginBottom: '4px'}}>{s.title} {s.area && <span style={{fontSize:'0.7rem', background:'#fef3c7', color:'#b45309', padding:'2px 8px', borderRadius:'12px', fontWeight:'700', marginLeft: '6px', verticalAlign: 'middle'}}>📍 {s.area}</span>}</div>
                                               {s.assigneeName && <div style={{fontSize:'0.85rem', color:'#4b5563'}}>👤 <span style={{fontWeight:'600'}}>{s.assigneeName}</span> {s.assignedRole ? `(${s.assignedRole})` : ''}</div>}
-                                              <div style={{fontSize:'0.8rem', color:'#059669', marginTop: '6px', fontWeight: '600'}}>
+                                              <div style={{fontSize:'0.8rem', color:'#0369a1', marginTop: '6px', fontWeight: '700'}}>
+                                                  📅 Bắt đầu: {formatVNDateTimeLabel(s.startTime)}
+                                              </div>
+                                              <div style={{fontSize:'0.8rem', color:'#059669', marginTop: '4px', fontWeight: '600'}}>
                                                   🔁 Lặp lại {s.repeatWeeks} tuần vào các ngày: {s.repeatDays?.join(', ')}
                                               </div>
                                           </td>
@@ -1220,10 +1463,12 @@ const TaskManager = () => {
                     <div>
                         <label style={styles.label}>Bắt đầu (Giờ & Ngày)</label>
                         <input className="input-modern" type="datetime-local" value={newTask.startTime} onChange={e => setNewTask({...newTask, startTime: e.target.value})} required />
+                        {newTask.startTime && <div style={{fontSize:'0.8rem', color:'#0369a1', fontWeight:'700', marginTop:'4px'}}>📅 {formatVNDateTimeLabel(newTask.startTime)}</div>}
                     </div>
                     <div>
                         <label style={styles.label}>Kết thúc (Giờ & Ngày)</label>
                         <input className="input-modern" type="datetime-local" value={newTask.endTime} onChange={e => setNewTask({...newTask, endTime: e.target.value})} required />
+                        {newTask.endTime && <div style={{fontSize:'0.8rem', color:'#0369a1', fontWeight:'700', marginTop:'4px'}}>📅 {formatVNDateTimeLabel(newTask.endTime)}</div>}
                     </div>
                     <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box' }}>
                         <h5 style={{margin:'0 0 16px 0', fontSize:'1rem', color:'#1e293b', fontWeight: '700'}}>🔁 Cấu hình chu kỳ lặp lại</h5>
@@ -1308,6 +1553,7 @@ const TaskManager = () => {
                                 </td>
                                 <td style={{...styles.td, color:'#0369a1', fontWeight:'700'}}>
                                     {formatScheduleTimeRange(s.startTime, s.endTime)}
+                                    <div style={{fontSize:'0.72rem', color:'#64748b', fontWeight:'600', marginTop:'4px'}}>📅 {formatVNDateTimeLabel(s.startTime)}</div>
                                 </td>
                                 <td style={styles.td}>
                                     <div style={{fontWeight: '600'}}>{s.assigneeName}</div>
@@ -1353,6 +1599,70 @@ const TaskManager = () => {
                  )}
               </div>
           </>
+      )}
+
+      {/* [MODAL] Hộp thoại pop-up tùy biến — giữa màn hình, tối giản */}
+      {modal && (
+          <div
+              onClick={closeModal}
+              style={{
+                  position: 'fixed', inset: 0, zIndex: 9999,
+                  background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(2px)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+              }}
+          >
+              <div
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                      background: 'white', borderRadius: '18px', width: '100%', maxWidth: '440px',
+                      boxShadow: '0 20px 50px -12px rgba(0,0,0,0.35)', overflow: 'hidden',
+                      animation: 'modalPop 0.18s ease-out'
+                  }}
+              >
+                  <style>{`@keyframes modalPop{from{opacity:0;transform:translateY(8px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}`}</style>
+
+                  {/* Icon + tiêu đề */}
+                  <div style={{ padding: '28px 28px 8px', textAlign: 'center' }}>
+                      <div style={{
+                          width: '56px', height: '56px', borderRadius: '50%', margin: '0 auto 16px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px',
+                          background: modal.tone === 'danger' ? '#fef2f2' : modal.tone === 'success' ? '#ecfdf5' : '#eff6ff',
+                          color: modal.tone === 'danger' ? '#dc2626' : modal.tone === 'success' ? '#059669' : '#0369a1'
+                      }}>
+                          {modal.tone === 'danger' ? '⚠️' : modal.tone === 'success' ? '✓' : modal.kind === 'confirm' ? '❓' : 'ℹ️'}
+                      </div>
+                      <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#111827' }}>{modal.title}</h3>
+                  </div>
+
+                  {/* Nội dung */}
+                  <div style={{ padding: '8px 28px 24px', textAlign: 'center', color: '#475569', fontSize: '0.95rem', lineHeight: '1.6', whiteSpace: 'pre-line' }}>
+                      {modal.message}
+                  </div>
+
+                  {/* Nút hành động */}
+                  <div style={{ display: 'flex', gap: '10px', padding: '0 24px 24px', justifyContent: 'center' }}>
+                      {modal.kind === 'confirm' && (
+                          <button
+                              onClick={closeModal}
+                              style={{ flex: 1, maxWidth: '160px', padding: '12px', borderRadius: '12px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer' }}
+                          >
+                              {modal.cancelText}
+                          </button>
+                      )}
+                      <button
+                          onClick={() => { const fn = modal.onConfirm; closeModal(); if (typeof fn === 'function') fn(); }}
+                          style={{
+                              flex: 1, maxWidth: '160px', padding: '12px', borderRadius: '12px', border: 'none',
+                              color: 'white', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer',
+                              background: modal.tone === 'danger' ? '#dc2626' : modal.tone === 'success' ? '#059669' : '#003366',
+                              boxShadow: '0 4px 6px rgba(0,0,0,0.12)'
+                          }}
+                      >
+                          {modal.kind === 'confirm' ? modal.confirmText : 'OK'}
+                      </button>
+                  </div>
+              </div>
+          </div>
       )}
     </div>
   );

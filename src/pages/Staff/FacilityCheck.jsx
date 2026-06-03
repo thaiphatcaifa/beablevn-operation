@@ -108,21 +108,24 @@ const FacilityCheck = () => {
                 msg = "Báo cáo CSVT thành công!\nCẢNH BÁO: Bạn đã check-in TRỄ quá 3 phút! Hệ thống đã ghi nhận.";
 
                 // Check luật kỷ luật tự động
-                const lateRule = autoDisciplineRules?.find(r => r.triggerType === 'late_attendance');
-                if (lateRule) {
+                // [FIX KỶ LUẬT] Tìm luật có NGƯỠNG ĐÚNG BẰNG số lần trễ hiện tại (đồng bộ với Attendance.jsx).
+                // Bỏ cách cũ (.find lấy luật đầu tiên + modulo) gây sai mức và lặp hồ sơ.
+                const lateRules = (autoDisciplineRules || []).filter(r => r.triggerType === 'late_attendance');
+                if (lateRules.length > 0) {
                     const pastLates = tasks.filter(t => t.assigneeId === user.id && t.checkInStatus === 'Late').length;
-                    const currentLateCount = pastLates + 1; 
+                    const currentLateCount = pastLates + 1;
 
-                    if (currentLateCount > 0 && currentLateCount % lateRule.threshold === 0) {
+                    const matchedRule = lateRules.find(r => Number(r.threshold) === currentLateCount);
+                    if (matchedRule) {
                         addDisciplineRecord({
                             staffId: user.id,
-                            disciplineId: lateRule.disciplineId,
-                            disciplineName: lateRule.disciplineName,
+                            disciplineId: matchedRule.disciplineId,
+                            disciplineName: matchedRule.disciplineName,
                             taskTitle: `Điểm danh trễ lần thứ ${currentLateCount} (Ca: ${targetTask.title})`,
                             date: exactNow.toISOString(),
-                            isAutoAssigned: true 
+                            isAutoAssigned: true
                         });
-                        msg += `\n\n🚨 LƯU Ý: Bạn đã tích lũy đủ ${lateRule.threshold} lần đi trễ. Hệ thống tự động kích hoạt kỷ luật: ${lateRule.disciplineName}.`;
+                        msg += `\n\n🚨 LƯU Ý: Bạn đã tích lũy đủ ${currentLateCount} lần đi trễ. Hệ thống tự động kích hoạt kỷ luật: ${matchedRule.disciplineName}.`;
                     }
                 }
             } else {

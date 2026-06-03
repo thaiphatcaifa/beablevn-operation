@@ -178,7 +178,64 @@ export const DataProvider = ({ children }) => {
   const updateTask = (id, updates) => update(ref(db, 'tasks/' + id), updates);
   const deleteTask = (id) => remove(ref(db, 'tasks/' + id));
   const updateTaskProgress = (id, progress) => update(ref(db, 'tasks/' + id), { progress });
-  const finishTask = (id) => update(ref(db, 'tasks/' + id), { status: 'completed', progress: 100 });
+
+  // [KỶ LUẬT TỰ ĐỘNG] Helper dùng chung: tìm luật có NGƯỠNG ĐÚNG BẰNG số lần vi phạm hiện tại,
+  // rồi tạo hồ sơ kỷ luật đúng mức (không lặp, leo thang đúng cấu hình).
+  const applyAutoDiscipline = ({ triggerType, staffId, currentCount, taskTitle }) => {
+      const rules = (autoDisciplineRules || []).filter(r => r.triggerType === triggerType);
+      const matched = rules.find(r => Number(r.threshold) === currentCount);
+      if (matched) {
+          addDisciplineRecord({
+              staffId,
+              disciplineId: matched.disciplineId,
+              disciplineName: matched.disciplineName,
+              taskTitle,
+              date: new Date().toISOString(),
+              isAutoAssigned: true
+          });
+      }
+      return matched || null;
+  };
+
+  // [FIX] Bàn giao nhiệm vụ: nếu hoàn thành SAU hạn chót -> đánh dấu trễ và xét kỷ luật overdue_task.
+  const finishTask = (id) => {
+      const task = (tasks || []).find(t => t.id === id);
+      const updates = { status: 'completed', progress: 100 };
+
+      if (task && task.endTime && new Date() > new Date(task.endTime)) {
+          updates.finishedLate = true;
+          updates.finishedAt = new Date().toISOString();
+          // Đếm số lần bàn giao trễ của nhân sự (gồm cả lần này)
+          const pastLate = (tasks || []).filter(t => t.assigneeId === task.assigneeId && t.finishedLate && t.id !== id).length;
+          applyAutoDiscipline({
+              triggerType: 'overdue_task',
+              staffId: task.assigneeId,
+              currentCount: pastLate + 1,
+              taskTitle: `Bàn giao trễ hạn lần thứ ${pastLate + 1}: ${task.title}`
+          });
+      }
+
+      return update(ref(db, 'tasks/' + id), updates);
+  };
+
+  // [MỚI] Đánh giá kết quả nhiệm vụ (Đạt / Không đạt). Nếu KHÔNG ĐẠT -> xét kỷ luật failed_task.
+  const evaluateTask = (id, passed) => {
+      const task = (tasks || []).find(t => t.id === id);
+      const updates = { evaluation: passed ? 'passed' : 'failed', evaluatedAt: new Date().toISOString() };
+
+      if (task && !passed) {
+          // Đếm số lần bị đánh giá Không Đạt của nhân sự (gồm cả lần này)
+          const pastFailed = (tasks || []).filter(t => t.assigneeId === task.assigneeId && t.evaluation === 'failed' && t.id !== id).length;
+          applyAutoDiscipline({
+              triggerType: 'failed_task',
+              staffId: task.assigneeId,
+              currentCount: pastFailed + 1,
+              taskTitle: `Nhiệm vụ Không Đạt lần thứ ${pastFailed + 1}: ${task.title}`
+          });
+      }
+
+      return update(ref(db, 'tasks/' + id), updates);
+  };
 
   // Shifts / Attendance
   const addAttendance = (log) => { 
@@ -245,7 +302,7 @@ export const DataProvider = ({ children }) => {
     <DataContext.Provider value={{ 
       loading, 
       staffList, addStaff, deleteStaff, updateStaffInfo, 
-      tasks, addTask, updateTask, deleteTask, updateTaskProgress, finishTask,
+      tasks, addTask, updateTask, deleteTask, updateTaskProgress, finishTask, evaluateTask,
       shifts, attendanceLogs, addAttendance, updateAttendanceLog,
       facilityLogs, addFacilityLog,
       areas, addArea, updateArea, deleteArea, // EXPORT CÁC HÀM CSHT
