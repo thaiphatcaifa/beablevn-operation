@@ -43,6 +43,16 @@
       ".write": "auth != null"
     },
 
+    "autoDisciplineRules": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "areas": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
     "payrollRecords": {
       ".read": "auth != null && root.child('staff').child(auth.uid).child('role').val() == 'admin'",
       ".write": "auth != null && root.child('staff').child(auth.uid).child('role').val() == 'admin'"

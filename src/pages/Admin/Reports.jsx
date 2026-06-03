@@ -13,7 +13,9 @@ const Icons = {
   Print: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" /></svg>),
   ArrowRight: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>),
   Back: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>),
-  Lock: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>)
+  Lock: () => (<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>),
+  ChevronDown: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>),
+  ChevronRight: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7-7" /></svg>)
 };
 
 // --- HELPER FUNCTIONS ---
@@ -116,7 +118,7 @@ const monthYearOptions = generateMonthYearOptions();
 
 const Reports = () => {
   const { user } = useAuth();
-  const { tasks, staffList, facilityLogs, updateTask, payrollRecords, savePayrollRecord } = useData(); 
+  const { tasks, staffList, facilityLogs, updateTask, payrollRecords, savePayrollRecord, areas } = useData(); 
   
   const [activeTab, setActiveTab] = useState('overview'); 
 
@@ -146,6 +148,9 @@ const Reports = () => {
   const [facilityStaffFilter, setFacilityStaffFilter] = useState('all'); 
   const [facilityTimeFilter, setFacilityTimeFilter] = useState('month'); 
   const [facilityMonthFilter, setFacilityMonthFilter] = useState('all'); 
+  
+  // Trạng thái mở rộng cho danh sách báo cáo Cơ sở vật chất
+  const [expandedFacilityGroups, setExpandedFacilityGroups] = useState([]);
   
   const [taskStaffFilter, setTaskStaffFilter] = useState('all');
   const [taskStatusFilter, setTaskStatusFilter] = useState('all');
@@ -337,8 +342,12 @@ const Reports = () => {
   // ==============================================================
   // 2. LOGIC FACILITY
   // ==============================================================
-  const availableAreas = [...new Set(safeFacilityLogs.map(l => l.area).filter(Boolean))];
-  const availableReporters = [...new Set(safeFacilityLogs.map(l => l.staffName).filter(Boolean))];
+  // Chỉ lấy danh sách các khu vực ĐANG CÓ trong thiết lập hiện tại
+  const availableAreas = [...new Set(
+      (Array.isArray(areas) ? areas : []).map(a => a.name).filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b, 'vi-VN'));
+
+  const availableReporters = [...new Set(safeFacilityLogs.map(l => l.staffName).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi-VN'));
 
   const filteredFacilityLogs = safeFacilityLogs.filter(log => {
       if (facilityAreaFilter !== 'all' && log.area !== facilityAreaFilter) return false;
@@ -358,6 +367,36 @@ const Reports = () => {
       }
       return true;
   });
+
+  // Gom nhóm các báo cáo CSVC
+  const groupedFacilityLogs = useMemo(() => {
+      const groups = {};
+      filteredFacilityLogs.forEach(log => {
+          // Lấy đến chuỗi phút để gộp những hạng mục nộp cùng lúc
+          const timeKey = log.timestamp ? log.timestamp.slice(0, 16) : 'unknown';
+          const key = `${log.area}_${log.staffName}_${log.type}_${timeKey}`;
+          
+          if (!groups[key]) {
+              groups[key] = {
+                  id: key,
+                  area: log.area,
+                  staffName: log.staffName,
+                  type: log.type || 'Báo cáo',
+                  timestamp: log.timestamp,
+                  items: []
+              };
+          }
+          groups[key].items.push(log);
+      });
+      
+      return Object.values(groups).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }, [filteredFacilityLogs]);
+
+  const toggleFacilityGroup = (groupId) => {
+      setExpandedFacilityGroups(prev => 
+          prev.includes(groupId) ? prev.filter(id => id !== groupId) : [...prev, groupId]
+      );
+  };
 
   // ==============================================================
   // 3. LOGIC TASKS (OP ADMIN)
@@ -664,33 +703,55 @@ const Reports = () => {
                        <thead>
                          <tr style={styles.tableHeadRow}>
                            <th style={{...styles.th, width: '50px', textAlign: 'center'}}>STT</th>
-                           <th style={styles.th}>Khu vực</th>
-                           <th style={styles.th}>Tình trạng trước</th>
-                           <th style={styles.th}>Tình trạng sau</th>
+                           <th style={styles.th}>Khu vực & Thời gian</th>
+                           <th style={styles.th}>Tình trạng</th>
                            <th style={styles.th}>Nhân sự báo cáo</th>
                          </tr>
                        </thead>
                        <tbody>
-                         {filteredFacilityLogs.length > 0 ? (
-                           [...filteredFacilityLogs].reverse().map((log, index) => (
-                             <tr key={index} className="table-row">
-                               <td style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{index + 1}</td>
-                               <td style={{...styles.td, fontWeight: '700', color: '#1f2937'}} className="text-wrap-name">{log.area || '---'}</td>
-                               <td style={styles.td}>
-                                   <div style={{fontWeight:'700', fontSize:'0.9rem', marginBottom:'4px', color:'#334155'}}>{log.itemName || log.item || log.category || 'Hạng mục'}</div>
-                                   <div style={{color:'#64748b'}}>{log.prevStatus ? log.prevStatus : <span style={{fontStyle:'italic', color:'#9ca3af'}}>---</span>}</div>
-                                   <div style={{fontSize:'0.75rem', color:'#94a3b8', marginTop:'4px'}}>{formatDateTime(log.prevTime)}</div>
-                               </td>
-                               <td style={styles.td}>
-                                   <div style={{fontWeight:'700', fontSize:'0.9rem', marginBottom:'4px', color:'#334155'}}>{log.itemName || log.item || log.category || 'Hạng mục'}</div>
-                                   <div style={{color: '#0369a1', fontWeight:'600'}}>{log.status || log.note || 'Đã kiểm tra'}</div>
-                                   <div style={{fontSize:'0.75rem', color:'#94a3b8', marginTop:'4px'}}>{formatDateTime(log.timestamp)}</div>
-                               </td>
-                               <td style={{...styles.td, fontWeight: '600'}} className="text-wrap-name">{log.staffName || 'Unknown'}</td>
-                             </tr>
-                           ))
+                         {groupedFacilityLogs.length > 0 ? (
+                           groupedFacilityLogs.map((group, index) => {
+                             const isExpanded = expandedFacilityGroups.includes(group.id);
+                             return (
+                               <React.Fragment key={group.id}>
+                                 <tr className="table-row">
+                                   <td style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{index + 1}</td>
+                                   <td style={{...styles.td, cursor: 'pointer'}} className="text-wrap-name" onClick={() => toggleFacilityGroup(group.id)}>
+                                     <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', color: '#0369a1'}}>
+                                         {isExpanded ? <Icons.ChevronDown /> : <Icons.ChevronRight />}
+                                         {group.area || '---'}
+                                     </div>
+                                     <div style={{fontSize: '0.8rem', color: '#64748b', fontWeight: '500', marginTop: '6px', marginLeft: '24px', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                         <span style={{background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', border: '1px solid #e2e8f0'}}>{group.type}</span>
+                                         {formatDateTime(group.timestamp)}
+                                     </div>
+                                   </td>
+                                   <td style={{...styles.td, cursor: 'pointer'}} onClick={() => toggleFacilityGroup(group.id)}>
+                                       <div style={{fontWeight:'600', color:'#334155'}}>Đã ghi nhận {group.items.length} hạng mục</div>
+                                       <div style={{fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '4px'}}>Nhấn để xem chi tiết</div>
+                                   </td>
+                                   <td style={{...styles.td, fontWeight: '600'}} className="text-wrap-name">{group.staffName || 'Unknown'}</td>
+                                 </tr>
+                                 {isExpanded && (
+                                     <tr style={{ background: '#f8fafc' }}>
+                                         <td></td>
+                                         <td colSpan="3" style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0' }}>
+                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px' }}>
+                                                 {group.items.map((log, idx) => (
+                                                     <div key={idx} style={{ background: 'white', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                         <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '0.9rem' }}>{log.itemName || log.item || log.category || 'Hạng mục'}</span>
+                                                         <span style={{ color: '#0369a1', fontWeight: '700', fontSize: '0.85rem' }}>Trạng thái: {log.status || log.note || 'Đã kiểm tra'}</span>
+                                                     </div>
+                                                 ))}
+                                             </div>
+                                         </td>
+                                     </tr>
+                                 )}
+                               </React.Fragment>
+                             );
+                           })
                          ) : (
-                           <tr><td colSpan="5" style={styles.emptyTd}>Chưa có báo cáo kiểm tra phù hợp.</td></tr>
+                           <tr><td colSpan="4" style={styles.emptyTd}>Chưa có báo cáo kiểm tra phù hợp.</td></tr>
                          )}
                        </tbody>
                      </table>

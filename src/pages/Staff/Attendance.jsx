@@ -129,23 +129,23 @@ const Attendance = () => {
       const startTime = new Date(task.startTime);
       const diffMinutes = (exactNow - startTime) / 60000; 
 
-      // YÊU CẦU 2: GIỚI HẠN CHECK-IN SỚM TỐI ĐA 30 PHÚT
+      // GIỚI HẠN CHECK-IN SỚM TỐI ĐA 30 PHÚT
       if (diffMinutes < -30) {
           alert(`Chưa đến giờ điểm danh!\nBạn chỉ được phép vào ca sớm tối đa 30 phút. Giờ bắt đầu ca của bạn là: ${startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}.`);
           return;
       }
 
-      // YÊU CẦU 3: BẮT BUỘC KIỂM TRA CƠ SỞ VẬT CHẤT TRƯỚC KHI VÀO CA (ĐẦU GIỜ)
+      // BẮT BUỘC KIỂM TRA CƠ SỞ VẬT CHẤT TRƯỚC KHI VÀO CA (ĐẦU GIỜ)
       if (task.area) {
           alert("Ca làm việc này yêu cầu bạn kiểm tra cơ sở vật chất trước khi vào ca!");
           // Điều hướng sang FacilityCheck và mang theo toàn bộ Object task để xử lý sau khi nộp form
-          navigate('/facility-check', { 
+          navigate('/staff/facility-check', { 
               state: { isAttendanceFlow: true, action: 'checkin', task: task } 
           });
-          return; // Dừng tiến trình check-in tại đây
+          return; // Dừng tiến trình check-in tại đây nhằm ép buộc nhân sự làm xong bên CSVC mới được gán chấm công
       }
 
-      // LOGIC CHECK-IN CŨ NẾU KHÔNG CẦN FACILITY CHECK
+      // LOGIC CHECK-IN NẾU KHÔNG CẦN FACILITY CHECK
       let updateData = { 
           ...task,
           checkInTime: exactNow.toISOString(),
@@ -200,16 +200,16 @@ const Attendance = () => {
           return;
       }
 
-      // YÊU CẦU 3: BẮT BUỘC BÁO CÁO CƠ SỞ VẬT CHẤT SAU KHI TAN CA (CUỐI GIỜ)
+      // BẮT BUỘC BÁO CÁO CƠ SỞ VẬT CHẤT SAU KHI TAN CA (CUỐI GIỜ)
       if (task.area) {
           alert("Ca làm việc này yêu cầu bạn báo cáo tình trạng cơ sở vật chất cuối ca trước khi ra về!");
-          navigate('/facility-check', { 
+          navigate('/staff/facility-check', { 
               state: { isAttendanceFlow: true, action: 'checkout', task: task } 
           });
-          return; // Dừng tiến trình check-out tại đây
+          return; // Dừng tiến trình check-out tại đây nhằm ép buộc nhân sự báo cáo xong mới hoàn tất
       }
 
-      // LOGIC CHECK-OUT CŨ
+      // LOGIC CHECK-OUT NẾU KHÔNG CẦN BÁO CÁO CSVC
       if(window.confirm("Xác nhận hoàn thành ca làm việc này?")) {
           updateTaskProgress(task.id, 100, "Check-out attendance");
           updateTask(task.id, { 

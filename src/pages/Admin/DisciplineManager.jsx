@@ -14,7 +14,7 @@ const Icons = {
   ProposeDelete: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>),
   Folder: () => (<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>),
   ChevronDown: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>),
-  ChevronRight: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>)
+  ChevronRight: () => (<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7-7" /></svg>)
 };
 
 const DisciplineManager = () => {
@@ -116,23 +116,27 @@ const DisciplineManager = () => {
       alert(isOp ? "Đã gửi đề xuất hình thức kỷ luật!" : "Đã ban hành hình thức kỷ luật mới!");
   };
 
-  const handleAddAutoRule = (e) => {
+  const handleAddAutoRule = async (e) => {
       e.preventDefault();
       if (!newAutoRule.disciplineId) return alert("Vui lòng chọn hình thức kỷ luật áp dụng!");
       if (parseInt(newAutoRule.threshold) <= 0) return alert("Số lần vi phạm phải lớn hơn 0!");
 
       const targetDisc = disciplineTypes.find(d => d.id === newAutoRule.disciplineId);
 
-      addAutoRule({
-          triggerType: newAutoRule.triggerType,
-          threshold: parseInt(newAutoRule.threshold),
-          disciplineId: newAutoRule.disciplineId,
-          disciplineName: targetDisc ? targetDisc.name : 'Unknown',
-          createdBy: user.username
-      });
+      try {
+          await addAutoRule({
+              triggerType: newAutoRule.triggerType,
+              threshold: parseInt(newAutoRule.threshold),
+              disciplineId: newAutoRule.disciplineId,
+              disciplineName: targetDisc ? targetDisc.name : 'Unknown',
+              createdBy: user.username
+          });
 
-      setNewAutoRule({ triggerType: 'late_attendance', threshold: 3, disciplineId: '' });
-      alert("Đã thiết lập quy tắc kỷ luật tự động thành công!");
+          setNewAutoRule({ triggerType: 'late_attendance', threshold: 3, disciplineId: '' });
+          alert("Đã thiết lập quy tắc kỷ luật tự động thành công!");
+      } catch (err) {
+          alert("Lỗi: " + err.message);
+      }
   };
 
   const handleApprove = (id) => {
