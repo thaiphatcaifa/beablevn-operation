@@ -141,7 +141,7 @@ const LoginForm = () => {
       width: '56px', height: '56px', objectFit: 'contain'
     },
     title: {
-      fontSize: '1.5rem', fontWeight: '800', color: '#003366', margin: 0
+      fontSize: '1.5rem', fontWeight: '800', color: 'var(--brand-primary)', margin: 0
     },
     subtitle: {
       color: '#94a3b8', fontSize: '0.875rem', marginTop: '4px', fontWeight: '500'
@@ -153,7 +153,7 @@ const LoginForm = () => {
     },
     formGroup: { marginBottom: '20px' },
     label: {
-      display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#003366',
+      display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--brand-primary)',
       textTransform: 'uppercase', marginBottom: '6px', marginLeft: '4px'
     },
     inputWrapper: { position: 'relative' },
@@ -174,7 +174,7 @@ const LoginForm = () => {
     },
     button: {
       width: '100%', 
-      backgroundColor: '#003366', 
+      backgroundColor: 'var(--brand-primary)', 
       color: 'white', 
       fontWeight: '700',
       padding: '14px', 
@@ -194,8 +194,8 @@ const LoginForm = () => {
       boxShadow: loading 
         ? 'none' 
         : (isHovered 
-            ? '0 12px 20px -3px rgba(0, 51, 102, 0.25)' 
-            : '0 10px 15px -3px rgba(0, 51, 102, 0.1)'),
+            ? '0 12px 20px -3px rgba(43, 104, 48, 0.25)' 
+            : '0 10px 15px -3px rgba(43, 104, 48, 0.1)'),
       transform: !loading && isHovered ? 'translateY(-1px)' : 'none' // Hiệu ứng nổi nhẹ khi rê chuột
     },
     spinner: {

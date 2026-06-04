@@ -177,7 +177,16 @@ export const DataProvider = ({ children }) => {
   };
   const updateTask = (id, updates) => update(ref(db, 'tasks/' + id), updates);
   const deleteTask = (id) => remove(ref(db, 'tasks/' + id));
-  const updateTaskProgress = (id, progress) => update(ref(db, 'tasks/' + id), { progress });
+  // [FIX] Trước đây tham số `reason` (lý do giải trình khi tiến độ < 90%) bị bỏ qua,
+  // khiến giải trình của nhân sự không bao giờ được lưu. Nay lưu kèm reason + mốc thời gian.
+  const updateTaskProgress = (id, progress, reason) => {
+    const updates = { progress, lastProgressUpdate: new Date().toISOString() };
+    // Chỉ ghi đè reason khi thực sự có nội dung, tránh xóa giải trình cũ bằng chuỗi rỗng.
+    if (reason !== undefined && reason !== null && String(reason).trim() !== '') {
+      updates.reason = String(reason).trim();
+    }
+    return update(ref(db, 'tasks/' + id), updates);
+  };
 
   // [KỶ LUẬT TỰ ĐỘNG] Helper dùng chung: tìm luật có NGƯỠNG ĐÚNG BẰNG số lần vi phạm hiện tại,
   // rồi tạo hồ sơ kỷ luật đúng mức (không lặp, leo thang đúng cấu hình).
@@ -266,7 +275,15 @@ export const DataProvider = ({ children }) => {
   const updateDisciplineType = (id, updates) => update(ref(db, 'disciplineTypes/' + id), updates);
   const updateDisciplineTypeStatus = (id, status) => update(ref(db, 'disciplineTypes/' + id), { status });
   const softDeleteDisciplineType = (id) => update(ref(db, 'disciplineTypes/' + id), { status: 'inactive' });
-  const proposeDeleteDisciplineType = (id) => update(ref(db, 'disciplineTypes/' + id), { status: 'pending_delete' });
+  // [FIX] Reg Admin đề xuất xóa: trước đây lý do (payload) bị bỏ qua và status bị đổi thành
+  // 'pending_delete' — khiến mục biến mất khỏi danh sách 'Active' nên Chief không bao giờ duyệt được.
+  // Nay giữ nguyên status 'Active' và gắn cờ đề xuất + lý do để UI hiển thị badge và Chief duyệt.
+  const proposeDeleteDisciplineType = (id, payload = {}) => update(ref(db, 'disciplineTypes/' + id), {
+    isDeleteProposed: true,
+    deleteProposalReason: payload.reason || '',
+    deleteProposedBy: payload.by || '',
+    deleteProposedAt: new Date().toISOString()
+  });
   const deleteDisciplineType = (id) => remove(ref(db, 'disciplineTypes/' + id));
 
   const addDisciplineRecord = (record) => {

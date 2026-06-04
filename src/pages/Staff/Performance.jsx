@@ -247,12 +247,12 @@ const Performance = () => {
                 flex: 1; padding: 12px 16px; border-radius: 12px; border: none; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; gap: 8px; color: #64748b; background: transparent;
             }
             .segmented-btn.active {
-                background: #ffffff; color: #003366; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+                background: #ffffff; color: #2B6830; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
             }
             .filter-modern {
                 padding: 12px 16px; border-radius: 12px; border: 1px solid #e2e8f0; outline: none; font-weight: 600; color: #334155; background: #ffffff; cursor: pointer; font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.02); appearance: none; -webkit-appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill="%239ca3af" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>'); background-repeat: no-repeat; background-position: right 12px center; padding-right: 40px;
             }
-            .filter-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+            .filter-modern:focus { border-color: #2B6830; box-shadow: 0 0 0 3px rgba(43, 104, 48, 0.1); }
             .kpi-card {
                 transition: all 0.25s ease;
             }
@@ -269,7 +269,7 @@ const Performance = () => {
 
       {/* HEADER */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', borderBottom: '2px solid #e5e7eb', paddingBottom: '16px' }}>
-          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#003366' }}>
+          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#2B6830' }}>
               <Icons.Performance />
           </div>
           <div>
@@ -378,7 +378,7 @@ const Performance = () => {
                  </div>
 
                  {/* TỔNG KẾT NET */}
-                 <div style={{...styles.card, background:'linear-gradient(135deg, #003366 0%, #002244 100%)', color:'white', border: 'none', boxShadow: '0 10px 20px -5px rgba(0, 51, 102, 0.4)'}}>
+                 <div style={{...styles.card, background:'linear-gradient(135deg, #2B6830 0%, #1E5225 100%)', color:'white', border: 'none', boxShadow: '0 10px 20px -5px rgba(43, 104, 48, 0.4)'}}>
                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                          <div>
                              <div style={{fontSize: '0.85rem', color: '#bae6fd', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Dự kiến thực nhận</div>

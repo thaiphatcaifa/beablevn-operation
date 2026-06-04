@@ -133,20 +133,21 @@ const FacilityManager = () => {
   };
 
   const handleDelete = (id, name) => {
-      if(window.confirm(`Xác nhận xóa hoàn toàn khu vực "${name}" khỏi hệ thống?\nHành động này không thể hoàn tác.`)) {
+      window.confirmDialog(`Xóa hoàn toàn khu vực "${name}" khỏi hệ thống? Hành động này không thể hoàn tác.`, { title: 'Xóa khu vực', okText: 'Xóa', danger: true, emoji: '🗑️' }).then(ok => {
+          if (!ok) return;
           deleteArea(id).then(() => alert("Đã xóa khu vực!")).catch(err => alert("Lỗi: " + err.message));
-      }
+      });
   };
 
   return (
     <div style={{ paddingBottom: '40px', boxSizing: 'border-box' }}>
       <style>{`
           .input-modern { padding: 12px 16px; border-radius: 10px; border: 1px solid #e5e7eb; outline: none; font-size: 0.95rem; background: white; transition: all 0.2s; box-sizing: border-box; width: 100%; margin-top: 6px; }
-          .input-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+          .input-modern:focus { border-color: #2B6830; box-shadow: 0 0 0 3px rgba(43, 104, 48, 0.1); }
           
           /* --- NÂNG CẤP NÚT BẤM (ĐỒNG BỘ VỚI NÚT THIẾT LẬP LUẬT) --- */
           .btn-primary { 
-              background: #003366; 
+              background: #2B6830; 
               color: white; 
               border: none; 
               padding: 12px 24px; 
@@ -159,14 +160,14 @@ const FacilityManager = () => {
               align-items: center; 
               justify-content: center;
               gap: 8px; 
-              box-shadow: 0 4px 6px rgba(0, 51, 102, 0.2);
+              box-shadow: 0 4px 6px rgba(43, 104, 48, 0.2);
               transition: all 0.2s; 
               box-sizing: border-box;
           }
           .btn-primary:hover { 
-              background: #002244; 
+              background: #1E5225; 
               transform: translateY(-2px); 
-              box-shadow: 0 6px 12px rgba(0, 51, 102, 0.25);
+              box-shadow: 0 6px 12px rgba(43, 104, 48, 0.25);
           }
 
           .action-btn { background: transparent; border: none; cursor: pointer; padding: 6px; border-radius: 6px; display: inline-flex; transition: all 0.2s; }
@@ -182,7 +183,7 @@ const FacilityManager = () => {
       {/* HEADER */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '24px', borderBottom: '2px solid #e5e7eb', paddingBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#003366' }}>
+              <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#2B6830' }}>
                   <Icons.Facility />
               </div>
               <div>

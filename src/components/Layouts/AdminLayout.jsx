@@ -5,28 +5,28 @@ import { useAuth } from '../../context/AuthContext';
 // --- BỘ ICON ADMIN TINH TẾ (MINIMALIST SVG) ---
 const Icons = {
   Staff: ({ active }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#003366" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#2B6830" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
     </svg>
   ),
   Task: ({ active }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#003366" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#2B6830" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.125 2.25h-4.5c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125v-9M10.125 2.25h.375a9 9 0 019 9v.375M10.125 2.25A3.375 3.375 0 0113.5 5.485m1.5 0v.908l4.5 4.5m-4.5-4.5l4.5 4.5" />
     </svg>
   ),
   Discipline: ({ active }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#003366" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#2B6830" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
     </svg>
   ),
   // --- BỔ SUNG ICON CHO THẺ CSHT ---
   Facility: ({ active }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#003366" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#2B6830" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
     </svg>
   ),
   Report: ({ active }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#003366" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#2B6830" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
     </svg>
@@ -57,7 +57,7 @@ const AdminLayout = () => {
   const sidebarLinkStyle = (path) => ({
     display: 'flex', alignItems: 'center', gap: '14px',
     padding: '14px 18px', textDecoration: 'none',
-    color: isActive(path) ? '#003366' : '#4b5563',
+    color: isActive(path) ? '#2B6830' : '#4b5563',
     background: isActive(path) ? '#f0f9ff' : 'transparent',
     borderRadius: '12px', marginBottom: '8px',
     fontWeight: isActive(path) ? '700' : '600',
@@ -71,7 +71,7 @@ const AdminLayout = () => {
   const mobileNavItemStyle = (path) => ({ 
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     textDecoration: 'none', 
-    color: isActive(path) ? '#003366' : '#9ca3af',
+    color: isActive(path) ? '#2B6830' : '#9ca3af',
     flex: 1, padding: '10px 0',
     position: 'relative',
     transition: 'all 0.3s ease'
@@ -95,7 +95,7 @@ const AdminLayout = () => {
         .btn-switch-sidebar {
             display: flex; align-items: center; justify-content: center; gap: 10px;
             padding: 14px 16px; text-decoration: none;
-            color: #003366; background: #ffffff;
+            color: #2B6830; background: #ffffff;
             border-radius: 12px; margin-top: 24px;
             font-weight: 700; font-size: 0.95rem; transition: all 0.2s ease;
             border: 1px solid #e5e7eb;
@@ -213,20 +213,20 @@ const AdminLayout = () => {
       <nav className="admin-bottom-nav">
         {!isScheduler && (
             <Link to="/admin/staff-manager" style={mobileNavItemStyle('staff-manager')}>
-                {isActive('staff-manager') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#003366', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
+                {isActive('staff-manager') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#2B6830', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
                 <Icons.Staff active={isActive('staff-manager')} />
                 <span style={{ fontSize: '0.65rem', marginTop: '6px', fontWeight: isActive('staff-manager') ? '700' : '500' }}>Nhân sự</span>
             </Link>
         )}
         <Link to="/admin/task-manager" style={mobileNavItemStyle('task-manager')}>
-            {isActive('task-manager') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#003366', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
+            {isActive('task-manager') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#2B6830', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
             <Icons.Task active={isActive('task-manager')} />
             <span style={{ fontSize: '0.65rem', marginTop: '6px', fontWeight: isActive('task-manager') ? '700' : '500' }}>Nhiệm vụ</span>
         </Link>
         {!isScheduler && (
            <>
               <Link to="/admin/discipline-manager" style={mobileNavItemStyle('discipline-manager')}>
-                  {isActive('discipline-manager') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#003366', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
+                  {isActive('discipline-manager') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#2B6830', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
                   <Icons.Discipline active={isActive('discipline-manager')} />
                   <span style={{ fontSize: '0.65rem', marginTop: '6px', fontWeight: isActive('discipline-manager') ? '700' : '500' }}>Kỷ luật</span>
               </Link>
@@ -234,14 +234,14 @@ const AdminLayout = () => {
               {/* --- BỔ SUNG THẺ CSHT VÀO BOTTOM NAV --- */}
               {canManageFacility && (
                  <Link to="/admin/facility-manager" style={mobileNavItemStyle('facility-manager')}>
-                    {isActive('facility-manager') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#003366', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
+                    {isActive('facility-manager') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#2B6830', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
                     <Icons.Facility active={isActive('facility-manager')} />
                     <span style={{ fontSize: '0.65rem', marginTop: '6px', fontWeight: isActive('facility-manager') ? '700' : '500' }}>CSHT</span>
                  </Link>
               )}
 
               <Link to="/admin/reports" style={mobileNavItemStyle('reports')}>
-                  {isActive('reports') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#003366', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
+                  {isActive('reports') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#2B6830', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
                   <Icons.Report active={isActive('reports')} />
                   <span style={{ fontSize: '0.65rem', marginTop: '6px', fontWeight: isActive('reports') ? '700' : '500' }}>Báo cáo</span>
               </Link>
@@ -249,8 +249,8 @@ const AdminLayout = () => {
         )}
         {/* NÚT CHUYỂN QUA GIAO DIỆN NHÂN VIÊN TRÊN ĐIỆN THOẠI */}
         <Link to="/staff" style={mobileNavItemStyle('staff')}>
-            <div style={{color: '#003366'}}><Icons.Switch /></div>
-            <span style={{ fontSize: '0.65rem', marginTop: '6px', fontWeight: '700', color: '#003366' }}>Cá nhân</span>
+            <div style={{color: '#2B6830'}}><Icons.Switch /></div>
+            <span style={{ fontSize: '0.65rem', marginTop: '6px', fontWeight: '700', color: '#2B6830' }}>Cá nhân</span>
         </Link>
       </nav>
     </div>

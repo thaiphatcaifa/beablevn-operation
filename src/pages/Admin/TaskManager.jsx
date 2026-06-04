@@ -115,8 +115,16 @@ const TaskManager = () => {
   const [filterSchedTaskDay, setFilterSchedTaskDay] = useState('all');
   const [filterSchedTaskTime, setFilterSchedTaskTime] = useState('all'); 
   const [filterSchedTaskMonth, setFilterSchedTaskMonth] = useState('all'); 
-  const [filterSchedTaskYear, setFilterSchedTaskYear] = useState('all');   
+  const [filterSchedTaskYear, setFilterSchedTaskYear] = useState('all');
   const [scheduleSearchTerm, setScheduleSearchTerm] = useState('');
+
+  // [MỚI] Bộ lọc + sắp xếp cho mục "Cấu hình Lịch gốc" (Template)
+  const [filterTplStaff, setFilterTplStaff] = useState('all');
+  const [filterTplDay, setFilterTplDay] = useState('all');
+  const [filterTplMonth, setFilterTplMonth] = useState('all'); // lọc theo tháng bắt đầu của lịch
+  const [filterTplYear, setFilterTplYear] = useState('all');   // lọc theo năm bắt đầu của lịch
+  const [tplSort, setTplSort] = useState({ key: null, direction: 'ascending' }); // sort theo cột "Thông tin mẫu lịch"
+  const [tplConflicts, setTplConflicts] = useState(null); // kết quả dò lịch trùng (null = chưa dò)
 
   // [TÍNH NĂNG MỚI] Tháng cần sinh ca (mặc định tháng hiện tại) — dùng cho nút "Sinh ca theo tháng"
   const [genMonth, setGenMonth] = useState(() => {
@@ -247,6 +255,15 @@ const TaskManager = () => {
 
     const targetDayVals = daysOfWeek.filter(d => repeatDays.includes(d.key)).map(d => d.val);
 
+    // [FIX CHỐNG TRÙNG] Lập danh sách NGÀY đã có ca ĐÃ CHẤM CÔNG của lịch này.
+    // deleteRelatedTasks đã giữ lại các ca đó; ở đây ta KHÔNG sinh lại cho những ngày này
+    // để tránh tạo ca trùng (1 ca đã chấm công + 1 ca trống cùng ngày).
+    const workedDateKeys = new Set();
+    (tasks || []).filter(t => t.fromScheduleId === schedId && isTaskWorked(t)).forEach(t => {
+        const dt = new Date(t.startTime || t.checkInTime || t.endTime);
+        if (!isNaN(dt.getTime())) workedDateKeys.add(`${dt.getFullYear()}-${dt.getMonth() + 1}-${dt.getDate()}`);
+    });
+
     for (let w = 0; w < repeatWeeks; w++) {
         for (let d = 0; d < 7; d++) {
             const currentCheckDate = new Date(startObj);
@@ -255,6 +272,10 @@ const TaskManager = () => {
             if (targetDayVals.includes(currentCheckDate.getDay())) {
                 const taskStart = new Date(currentCheckDate);
                 const taskEnd = new Date(taskStart.getTime() + duration);
+
+                // Bỏ qua ngày đã có ca đã chấm công -> giữ nguyên ca cũ, không tạo trùng.
+                const dayKey = `${taskStart.getFullYear()}-${taskStart.getMonth() + 1}-${taskStart.getDate()}`;
+                if (workedDateKeys.has(dayKey)) continue;
 
                 const taskPayload = {
                     title: scheduleData.title,
@@ -279,9 +300,16 @@ const TaskManager = () => {
     }
   };
 
+  // [FIX BẢO TOÀN CHẤM CÔNG] Một ca được coi là "ĐÃ CHẤM CÔNG" nếu đã có check-in/out,
+  // đã hoàn thành, hoặc đã có tiến độ. Những ca này TUYỆT ĐỐI không được xóa khi sửa/duyệt lịch.
+  const isTaskWorked = (t) => Boolean(t.checkInTime || t.checkOutTime || t.status === 'completed' || (t.progress > 0));
+
   const deleteRelatedTasks = (schedId) => {
+      // [FIX] Trước đây xóa SẠCH mọi ca của lịch -> ca đã check-in/out của nhân sự bị xóa,
+      // hôm sau khi sinh lại hiện "chưa check-in" và bị xét kỷ luật đi trễ sai.
+      // Nay CHỈ xóa ca CHƯA chấm công; ca đã chấm công được giữ nguyên.
       const relatedTasks = tasks.filter(t => t.fromScheduleId === schedId);
-      relatedTasks.forEach(t => deleteTask(t.id));
+      relatedTasks.forEach(t => { if (!isTaskWorked(t)) deleteTask(t.id); });
   };
 
   // ==============================================================
@@ -436,38 +464,46 @@ const TaskManager = () => {
   };
 
   const handleRequestAdjustmentClick = (sched) => {
-      const action = window.prompt("Bạn muốn thực hiện hành động gì?\n- Nhập 'delete' để xin XÓA\n- Nhập 'edit' để xin SỬA");
-      if (!action) return;
+      // Bước 1: chọn loại yêu cầu (gõ 'delete' hoặc 'edit') — giữ nguyên logic cũ, chỉ đổi sang modal đẹp.
+      window.promptDialog("Bạn muốn yêu cầu gì? Gõ 'delete' để xin XÓA, hoặc 'edit' để xin SỬA lịch này.", {
+          title: 'Yêu cầu điều chỉnh', okText: 'Tiếp tục', placeholder: "delete  hoặc  edit", multiline: false, emoji: '✏️'
+      }).then(action => {
+          if (!action) return;
+          const act = action.toLowerCase().trim();
 
-      if (action.toLowerCase() === 'delete') {
-          const reason = window.prompt("Vui lòng nhập lý do muốn xóa (Bắt buộc):");
-          if (!reason || reason.trim() === "") return showAlert("Bắt buộc phải có lý do để xin xóa!", { tone: 'danger' });
+          if (act === 'delete') {
+              // Bước 2: nhập lý do xóa (bắt buộc)
+              window.promptDialog("Vui lòng nhập lý do muốn xóa lịch này:", {
+                  title: 'Lý do xin xóa', okText: 'Gửi yêu cầu', placeholder: 'Nhập lý do bắt buộc...', emoji: '📝'
+              }).then(reason => {
+                  if (!reason) return; // hủy hoặc để trống
+                  updateSchedule(sched.id, {
+                      request: {
+                          type: 'delete',
+                          reason: reason,
+                          requestedBy: user.username,
+                          requestedAt: new Date().toISOString()
+                      }
+                  });
+                  showAlert("Đã gửi yêu cầu xóa. Vui lòng đợi Admin phê duyệt.", { tone: 'success' });
+              });
 
-          updateSchedule(sched.id, {
-              request: {
-                  type: 'delete',
-                  reason: reason,
-                  requestedBy: user.username,
-                  requestedAt: new Date().toISOString()
-              }
-          });
-          showAlert("Đã gửi yêu cầu xóa. Vui lòng đợi Admin phê duyệt.", { tone: 'success' });
-
-      } else if (action.toLowerCase() === 'edit') {
-          setEditingScheduleId(sched.id);
-          setNewTask({
-              title: sched.title, assigneeId: sched.assigneeId, description: sched.description,
-              startTime: sched.startTime, endTime: sched.endTime, assignedRole: sched.assignedRole,
-              jobCode: sched.jobCode || '',
-              area: sched.area || '', // Load lại area
-              paymentType: '', disciplineId: ''
-          });
-          setScheduleConfig({ repeatWeeks: sched.repeatWeeks, days: sched.repeatDays || [] });
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          showAlert("Dữ liệu đã được tải lên form. Hãy chỉnh sửa và nhấn nút 'Gửi yêu cầu điều chỉnh'.");
-      } else {
-          showAlert("Lệnh không hợp lệ. Vui lòng nhập 'delete' hoặc 'edit'.", { tone: 'danger' });
-      }
+          } else if (act === 'edit') {
+              setEditingScheduleId(sched.id);
+              setNewTask({
+                  title: sched.title, assigneeId: sched.assigneeId, description: sched.description,
+                  startTime: sched.startTime, endTime: sched.endTime, assignedRole: sched.assignedRole,
+                  jobCode: sched.jobCode || '',
+                  area: sched.area || '', // Load lại area
+                  paymentType: '', disciplineId: ''
+              });
+              setScheduleConfig({ repeatWeeks: sched.repeatWeeks, days: sched.repeatDays || [] });
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              showAlert("Dữ liệu đã được tải lên form. Hãy chỉnh sửa và nhấn nút 'Gửi yêu cầu điều chỉnh'.");
+          } else {
+              showAlert("Lệnh không hợp lệ. Vui lòng nhập 'delete' hoặc 'edit'.", { tone: 'danger' });
+          }
+      });
   };
 
   const handleAddTaskAdhoc = (e) => {
@@ -553,10 +589,13 @@ const TaskManager = () => {
   };
 
   const handleRejectRequest = (sched) => {
-      const reason = window.prompt("Lý do từ chối (tùy chọn):");
-      showConfirm("Từ chối yêu cầu này?", () => {
-          updateSchedule(sched.id, { request: null, rejectionReason: reason || '' });
-      }, { tone: 'danger', confirmText: 'Từ chối' });
+      window.promptDialog("Lý do từ chối (có thể để trống):", {
+          title: 'Từ chối yêu cầu', okText: 'Tiếp tục', placeholder: 'Tùy chọn...', required: false, emoji: '✏️'
+      }).then(reason => {
+          showConfirm("Từ chối yêu cầu điều chỉnh này?", () => {
+              updateSchedule(sched.id, { request: null, rejectionReason: reason || '' });
+          }, { tone: 'danger', confirmText: 'Từ chối' });
+      });
   };
 
   const handleDeleteTask = (id) => {
@@ -670,6 +709,116 @@ const TaskManager = () => {
       return matchTitle || matchName;
   });
 
+  // [MỚI] Áp dụng thêm bộ lọc Nhân sự / Ngày (Thứ) và sắp xếp cho danh sách Template.
+  const displayedTemplates = searchedAdminSchedules
+      .filter(s => filterTplStaff === 'all' || s.assigneeId === filterTplStaff)
+      .filter(s => filterTplDay === 'all' || (Array.isArray(s.repeatDays) && s.repeatDays.includes(filterTplDay)))
+      .filter(s => {
+          // Lọc theo tháng/năm BẮT ĐẦU của lịch gốc (startTime)
+          if (filterTplMonth === 'all' && filterTplYear === 'all') return true;
+          const d = new Date(s.startTime);
+          if (isNaN(d.getTime())) return false;
+          if (filterTplMonth !== 'all' && (d.getMonth() + 1).toString() !== filterTplMonth) return false;
+          if (filterTplYear !== 'all' && d.getFullYear().toString() !== filterTplYear) return false;
+          return true;
+      });
+  const sortedTemplates = [...displayedTemplates];
+  if (tplSort.key === 'title') {
+      sortedTemplates.sort((a, b) => {
+          const cmp = (a.title || '').localeCompare(b.title || '', 'vi-VN');
+          return tplSort.direction === 'ascending' ? cmp : -cmp;
+      });
+  } else if (tplSort.key === 'startTime') {
+      // Sắp xếp theo ngày bắt đầu (startTime) của lịch gốc
+      sortedTemplates.sort((a, b) => {
+          const ta = new Date(a.startTime).getTime() || 0;
+          const tb = new Date(b.startTime).getTime() || 0;
+          const cmp = ta - tb;
+          return tplSort.direction === 'ascending' ? cmp : -cmp;
+      });
+  }
+
+  // [MỚI] Dò các lịch gốc bị TRÙNG: cùng nhân sự, ca rơi cùng ngày và trùng khung giờ.
+  // Bung ca theo đúng thiết lập (repeatWeeks × repeatDays) rồi đối chiếu từng cặp lịch.
+  const handleFindTemplateConflicts = () => {
+      const occ = []; // danh sách ca dự kiến của mọi lịch
+      schedules.forEach(s => {
+          if (!s.startTime || !s.endTime || !Array.isArray(s.repeatDays) || s.repeatDays.length === 0) return;
+          const startObj = new Date(s.startTime);
+          const endObj = new Date(s.endTime);
+          if (isNaN(startObj.getTime()) || isNaN(endObj.getTime())) return;
+          const duration = endObj - startObj;
+          const repeatWeeks = Number(s.repeatWeeks) || 1;
+          const targetVals = daysOfWeek.filter(d => s.repeatDays.includes(d.key)).map(d => d.val);
+          for (let w = 0; w < repeatWeeks; w++) {
+              for (let dd = 0; dd < 7; dd++) {
+                  const cur = new Date(startObj);
+                  cur.setDate(startObj.getDate() + (w * 7) + dd);
+                  if (!targetVals.includes(cur.getDay())) continue;
+                  const st = cur.getTime();
+                  occ.push({
+                      sid: s.id, title: s.title, assigneeId: s.assigneeId, assigneeName: s.assigneeName,
+                      dayKey: `${cur.getFullYear()}-${cur.getMonth() + 1}-${cur.getDate()}`,
+                      st, en: st + duration, date: new Date(cur)
+                  });
+              }
+          }
+      });
+
+      // Gom theo nhân sự + ngày, tìm cặp ca khác lịch nhưng trùng khung giờ
+      const groups = {};
+      occ.forEach(o => { const k = `${o.assigneeId}__${o.dayKey}`; (groups[k] = groups[k] || []).push(o); });
+
+      const pairs = {};
+      Object.values(groups).forEach(list => {
+          for (let i = 0; i < list.length; i++) {
+              for (let j = i + 1; j < list.length; j++) {
+                  const a = list[i], b = list[j];
+                  if (a.sid === b.sid) continue;
+                  if (a.st < b.en && b.st < a.en) { // hai khung giờ giao nhau
+                      const key = [a.sid, b.sid].sort().join('__');
+                      if (!pairs[key]) pairs[key] = { sidA: a.sid, sidB: b.sid, titleA: a.title, titleB: b.title, assignee: a.assigneeName, days: new Set(), sample: a.date };
+                      pairs[key].days.add(a.dayKey);
+                  }
+              }
+          }
+      });
+
+      const result = Object.values(pairs).map(p => ({
+          sidA: p.sidA, sidB: p.sidB,
+          titleA: p.titleA, titleB: p.titleB, assignee: p.assignee,
+          count: p.days.size,
+          sample: formatVNDateTimeLabel(p.sample)
+      })).sort((x, y) => y.count - x.count);
+
+      setTplConflicts(result);
+      if (result.length === 0) {
+          showAlert('Không phát hiện lịch trùng (cùng nhân sự, cùng ngày, trùng khung giờ).', { title: 'Kết quả dò trùng', tone: 'success' });
+      }
+  };
+
+  // [MỚI] Xóa nhanh một lịch ngay tại dòng kết quả trùng (có xác nhận).
+  // Xóa lịch + các ca liên quan, đồng thời gỡ các dòng kết quả có chứa lịch vừa xóa.
+  const handleQuickDeleteConflict = (sid, title) => {
+      showConfirm(
+          `Xóa lịch gốc "${title}"?\n\nCác ca làm việc liên quan của lịch này cũng sẽ bị xóa.`,
+          () => {
+              deleteRelatedTasks(sid);
+              deleteSchedule(sid);
+              setTplConflicts(prev => prev ? prev.filter(c => c.sidA !== sid && c.sidB !== sid) : prev);
+          },
+          { tone: 'danger', confirmText: 'Xóa lịch này' }
+      );
+  };
+
+  // Bấm vào tiêu đề cột "Thông tin mẫu lịch" để đổi chiều sắp xếp theo TÊN tăng/giảm dần.
+  const requestTplSort = () => {
+      setTplSort(prev => ({
+          key: 'title',
+          direction: prev.key === 'title' && prev.direction === 'ascending' ? 'descending' : 'ascending'
+      }));
+  };
+
   const generatedTasks = tasks.filter(t => t.fromScheduleId);
   const filteredGeneratedTasks = generatedTasks.filter(t => {
       // [FIX BUG #3] Dùng ngày dự phòng (startTime -> checkInTime -> endTime -> deadline)
@@ -714,7 +863,7 @@ const TaskManager = () => {
         .pill-tab:hover:not(.active) { background: #e5e7eb !important; }
         
         .input-modern { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #e5e7eb; margin-top: 6px; box-sizing: border-box; font-size: 0.95rem; outline: none; transition: border 0.2s, box-shadow 0.2s; background: white; }
-        .input-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+        .input-modern:focus { border-color: #2B6830; box-shadow: 0 0 0 3px rgba(43, 104, 48, 0.1); }
         
         select.input-modern {
             cursor: pointer;
@@ -733,13 +882,13 @@ const TaskManager = () => {
             background-image: url('data:image/svg+xml;utf8,<svg fill="%239ca3af" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
             background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px;
         }
-        .filter-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+        .filter-modern:focus { border-color: #2B6830; box-shadow: 0 0 0 3px rgba(43, 104, 48, 0.1); }
         
         optgroup {
             font-weight: bold;
             font-style: normal;
             background: #f1f5f9;
-            color: #003366;
+            color: #2B6830;
         }
         optgroup option {
             background: white;
@@ -753,10 +902,36 @@ const TaskManager = () => {
             .mobile-padding { padding: 16px !important; }
             .mobile-grid { grid-template-columns: 1fr !important; }
         }
+
+        /* === CARD-VIEW MOBILE cho bảng: bỏ cuộn ngang, mỗi hàng thành 1 thẻ dọc === */
+        @media (max-width: 768px) {
+            .ops-table { min-width: 0 !important; }
+            .ops-table thead { display: none; }
+            .ops-table, .ops-table tbody, .ops-table tr, .ops-table td { display: block; width: 100%; box-sizing: border-box; }
+            .ops-table tr {
+                margin-bottom: 14px; border: 1px solid #e2e8f0; border-radius: 14px;
+                overflow: hidden; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            }
+            .ops-table td {
+                display: flex; justify-content: space-between; align-items: center; gap: 12px;
+                text-align: right !important; padding: 11px 16px !important;
+                border: none !important; border-bottom: 1px solid #f1f5f9 !important;
+                white-space: normal !important; min-width: 0 !important;
+            }
+            .ops-table td:last-child { border-bottom: none !important; }
+            .ops-table td::before {
+                content: attr(data-label);
+                font-weight: 700; color: #64748b; font-size: 0.7rem;
+                text-transform: uppercase; letter-spacing: 0.03em; text-align: left; flex-shrink: 0;
+            }
+            .ops-table td:empty { display: none !important; }
+            .ops-table td[colspan] { display: block; text-align: left !important; }
+            .ops-table td[colspan]::before { content: ''; display: none; }
+        }
       `}</style>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', borderBottom: '2px solid #e5e7eb', paddingBottom: '16px' }}>
-          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#003366' }}>
+          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#2B6830' }}>
               <Icons.Task />
           </div>
           <div>
@@ -774,7 +949,7 @@ const TaskManager = () => {
                   <h4 style={{ color: '#c2410c', margin: 0, fontWeight: '700', fontSize: '1.1rem' }}>Yêu cầu điều chỉnh từ Scheduler</h4>
               </div>
               <div style={{overflowX: 'auto', borderRadius: '12px', border: '1px solid #ffedd5', background: 'white'}}>
-                  <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse', minWidth: '700px' }}>
+                  <table className="ops-table" style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse', minWidth: '700px' }}>
                       <thead>
                           <tr style={{ textAlign: 'left', background: '#fffbeb', color: '#9a3412' }}>
                               <th style={styles.th}>Scheduler</th>
@@ -787,10 +962,10 @@ const TaskManager = () => {
                       <tbody>
                           {schedules.filter(s => s.request).map(s => (
                               <tr key={s.id} style={{ borderBottom: '1px solid #ffedd5' }}>
-                                  <td style={styles.td}><strong>{s.request.requestedBy}</strong></td>
-                                  <td style={styles.td}>{s.title}</td>
-                                  <td style={styles.td}>
-                                      <span style={{ 
+                                  <td data-label="Scheduler" style={styles.td}><strong>{s.request.requestedBy}</strong></td>
+                                  <td data-label="Lịch trình" style={styles.td}>{s.title}</td>
+                                  <td data-label="Loại yêu cầu" style={styles.td}>
+                                      <span style={{
                                           padding: '4px 10px', borderRadius: '20px', fontWeight: '700', fontSize: '0.75rem',
                                           background: s.request.type === 'delete' ? '#fee2e2' : '#dbeafe',
                                           color: s.request.type === 'delete' ? '#b91c1c' : '#1d4ed8'
@@ -798,8 +973,8 @@ const TaskManager = () => {
                                           {s.request.type === 'delete' ? 'XIN XÓA' : 'XIN SỬA'}
                                       </span>
                                   </td>
-                                  <td style={{...styles.td, color: '#4b5563', fontStyle: 'italic'}}>{s.request.reason}</td>
-                                  <td style={{...styles.td, textAlign: 'right'}}>
+                                  <td data-label="Lý do" style={{...styles.td, color: '#4b5563', fontStyle: 'italic'}}>{s.request.reason}</td>
+                                  <td data-label="Hành động" style={{...styles.td, textAlign: 'right'}}>
                                       <div style={{display: 'flex', gap: '8px', justifyContent: 'flex-end'}}>
                                         <button onClick={() => handleApproveRequest(s)} style={{ cursor: 'pointer', background: '#10b981', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: '600', transition: 'all 0.2s' }}>Duyệt</button>
                                         <button onClick={() => handleRejectRequest(s)} style={{ cursor: 'pointer', background: '#ef4444', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: '600', transition: 'all 0.2s' }}>Từ chối</button>
@@ -1029,9 +1204,9 @@ const TaskManager = () => {
                                                     width:'42px', height:'42px', borderRadius:'10px', display:'flex', alignItems:'center', justifyContent:'center', 
                                                     fontSize:'0.85rem', cursor:'pointer', fontWeight:'700', transition: 'all 0.2s', userSelect: 'none',
                                                     border: scheduleConfig.days.includes(d.key) ? 'none' : '1px solid #cbd5e1', 
-                                                    background: scheduleConfig.days.includes(d.key) ? '#003366' : 'white', 
+                                                    background: scheduleConfig.days.includes(d.key) ? '#2B6830' : 'white', 
                                                     color: scheduleConfig.days.includes(d.key) ? 'white' : '#64748b',
-                                                    boxShadow: scheduleConfig.days.includes(d.key) ? '0 4px 6px rgba(0,51,102,0.3)' : 'none'
+                                                    boxShadow: scheduleConfig.days.includes(d.key) ? '0 4px 6px rgba(43,104,48,0.3)' : 'none'
                                                 }}
                                             >
                                                 {d.label}
@@ -1063,7 +1238,7 @@ const TaskManager = () => {
                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'12px', marginBottom:'24px'}}>
                          <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                             <div style={{...styles.iconBox, background: '#ecfdf5', color: '#059669'}}><Icons.Task /></div>
-                            <h3 style={{margin:0, fontSize: '1.25rem', fontWeight: '800', color: '#111827'}}>Quản lý Nhiệm vụ (Adhoc)</h3>
+                            <h3 style={{margin:0, fontSize: '1.25rem', fontWeight: '800', color: '#111827'}}>Quản lý Nhiệm vụ</h3>
                          </div>
                          <button onClick={() => setActiveView('overview')} style={styles.backBtn}><Icons.Back /> Quay lại</button>
                      </div>
@@ -1094,7 +1269,7 @@ const TaskManager = () => {
                      </div>
 
                      <div style={styles.tableWrapper}>
-                         <table style={styles.table}>
+                         <table style={styles.table} className="ops-table">
                             <thead>
                                <tr>
                                  <th style={{...styles.th, width: '50px', textAlign: 'center'}}>STT</th>
@@ -1109,19 +1284,19 @@ const TaskManager = () => {
                             <tbody>
                                {paginatedAdhocTasks.map((t, index) => (
                                  <tr style={{ borderBottom: '1px solid #f1f5f9' }} key={t.id} className="table-row">
-                                    <td style={{...styles.td, textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{(adhocPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
-                                    <td style={styles.td}>
+                                    <td data-label="STT" style={{...styles.td, textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{(adhocPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
+                                    <td data-label="Nhiệm vụ" style={styles.td}>
                                         <div style={{fontWeight:'700', color: '#1f2937', marginBottom: '4px'}}>{t.title}</div>
                                         {t.paymentType && <span style={{fontSize:'0.7rem', background:'#ecfdf5', color:'#059669', padding:'2px 8px', borderRadius:'12px', fontWeight:'700', marginRight: '6px'}}>{t.paymentType}</span>}
                                         {t.area && <span style={{fontSize:'0.7rem', background:'#fef3c7', color:'#b45309', padding:'2px 8px', borderRadius:'12px', fontWeight:'700'}}>📍 {t.area}</span>}
                                     </td>
-                                    <td style={{...styles.td, fontWeight: '600'}}>{t.assigneeName}</td>
-                                    <td style={styles.td}>
+                                    <td data-label="Nhân sự" style={{...styles.td, fontWeight: '600'}}>{t.assigneeName}</td>
+                                    <td data-label="Vai trò / Mã CV" style={styles.td}>
                                         <div style={{fontSize: '0.85rem', color: '#4b5563'}}>{t.assignedRole}</div>
                                         {t.jobCode && <div style={{fontSize:'0.75rem', color:'#0284c7', fontWeight:'700', marginTop: '2px'}}>Mã: {t.jobCode}</div>}
                                     </td>
-                                    <td style={styles.td}>{formatTaskTime(t.startTime, t.endTime)}</td>
-                                    <td style={styles.td}>
+                                    <td data-label="Thời gian" style={styles.td}>{formatTaskTime(t.startTime, t.endTime)}</td>
+                                    <td data-label="Tiến độ" style={styles.td}>
                                         <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                                             <div style={{width:'50px', height:'6px', background:'#e5e7eb', borderRadius:'3px', overflow:'hidden'}}>
                                                 <div style={{width:`${t.progress}%`, height:'100%', background: t.progress===100?'#10b981':'#3b82f6'}}></div>
@@ -1129,7 +1304,7 @@ const TaskManager = () => {
                                             <span style={{fontSize:'0.85rem', fontWeight:'700', color: t.progress===100?'#10b981':'#3b82f6'}}>{t.progress}%</span>
                                         </div>
                                     </td>
-                                    <td style={{...styles.td, textAlign: 'right'}}>
+                                    <td data-label="Hành động" style={{...styles.td, textAlign: 'right'}}>
                                         <button className="btn-action" onClick={()=>handleDeleteTask(t.id)} style={{color:'#ef4444', border:'none', background:'#fef2f2', padding: '8px', borderRadius: '8px', cursor:'pointer'}}>
                                             <Icons.Trash />
                                         </button>
@@ -1170,7 +1345,7 @@ const TaskManager = () => {
                             style={{ 
                                 padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', transition: 'all 0.2s',
                                 background: scheduleTab === 'instances' ? 'white' : 'transparent', 
-                                color: scheduleTab === 'instances' ? '#003366' : '#64748b',
+                                color: scheduleTab === 'instances' ? '#2B6830' : '#64748b',
                                 boxShadow: scheduleTab === 'instances' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
                             }}
                         >
@@ -1182,7 +1357,7 @@ const TaskManager = () => {
                             style={{ 
                                 padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', transition: 'all 0.2s',
                                 background: scheduleTab === 'templates' ? 'white' : 'transparent', 
-                                color: scheduleTab === 'templates' ? '#003366' : '#64748b',
+                                color: scheduleTab === 'templates' ? '#2B6830' : '#64748b',
                                 boxShadow: scheduleTab === 'templates' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
                             }}
                         >
@@ -1220,7 +1395,7 @@ const TaskManager = () => {
                             {/* [FIX BUG #3] Hiển thị tổng số ca thực tế khớp bộ lọc để dễ đối chiếu với số ca đã thiết lập */}
                             <div style={{ marginBottom: '16px', fontSize: '0.9rem', color: '#475569', fontWeight: '600' }}>
                                 Tổng số ca làm việc (theo bộ lọc):{' '}
-                                <span style={{ color: '#003366', fontWeight: '800' }}>{filteredGeneratedTasks.length}</span> ca
+                                <span style={{ color: '#2B6830', fontWeight: '800' }}>{filteredGeneratedTasks.length}</span> ca
                             </div>
 
                             {/* [TÍNH NĂNG MỚI] Bảng điều khiển: Sinh ca theo tháng từ Lịch gốc */}
@@ -1253,7 +1428,7 @@ const TaskManager = () => {
                             </div>
 
                             <div style={styles.tableWrapper}>
-                                <table style={styles.table}>
+                                <table style={styles.table} className="ops-table">
                                    <thead>
                                       <tr>
                                         <th style={{...styles.th, width: '50px', textAlign: 'center'}}>STT</th>
@@ -1268,7 +1443,7 @@ const TaskManager = () => {
                                    <tbody>
                                       {paginatedGeneratedTasks.map((t, index) => (
                                         <tr key={t.id} className="table-row" style={{ background: editingTaskId === t.id ? '#f0fdf4' : 'transparent' }}>
-                                           <td style={{...styles.td, textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{(genTaskPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
+                                           <td data-label="STT" style={{...styles.td, textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{(genTaskPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                                            
                                            {editingTaskId === t.id ? (
                                                <>
@@ -1315,17 +1490,17 @@ const TaskManager = () => {
                                                </>
                                            ) : (
                                                <>
-                                                  <td style={styles.td}>
+                                                  <td data-label="Nhiệm vụ" style={styles.td}>
                                                       <strong style={{color: '#1f2937'}}>{t.title}</strong>
                                                       {t.area && <div style={{fontSize:'0.7rem', background:'#fef3c7', color:'#b45309', padding:'2px 8px', borderRadius:'12px', fontWeight:'700', marginTop: '4px', display: 'inline-block'}}>📍 {t.area}</div>}
                                                   </td>
-                                                  <td style={{...styles.td, fontWeight: '600'}}>{t.assigneeName}</td>
-                                                  <td style={styles.td}>
+                                                  <td data-label="Nhân sự" style={{...styles.td, fontWeight: '600'}}>{t.assigneeName}</td>
+                                                  <td data-label="Vai trò / Mã CV" style={styles.td}>
                                                       <div style={{color: '#4b5563', fontSize: '0.85rem'}}>{t.assignedRole}</div>
                                                       {t.jobCode && <div style={{fontSize:'0.75rem', color:'#be185d', fontWeight:'700', marginTop: '4px', background: '#fdf2f8', display: 'inline-block', padding: '2px 8px', borderRadius: '10px'}}>Mã: {t.jobCode}</div>}
                                                   </td>
-                                                  <td style={styles.td}>{formatTaskTime(t.startTime, t.endTime)}</td>
-                                                  <td style={styles.td}>
+                                                  <td data-label="Thời gian gốc" style={styles.td}>{formatTaskTime(t.startTime, t.endTime)}</td>
+                                                  <td data-label="Tiến độ" style={styles.td}>
                                                       <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                                                           <div style={{width:'40px', height:'6px', background:'#e5e7eb', borderRadius:'3px', overflow:'hidden'}}>
                                                               <div style={{width:`${t.progress}%`, height:'100%', background: t.progress===100?'#10b981':'#3b82f6'}}></div>
@@ -1333,7 +1508,7 @@ const TaskManager = () => {
                                                           <span style={{fontSize:'0.85rem', fontWeight:'700', color: t.progress===100?'#10b981':'#3b82f6'}}>{t.progress}%</span>
                                                       </div>
                                                   </td>
-                                                  <td style={{...styles.td, textAlign: 'right'}}>
+                                                  <td data-label="Hành động" style={{...styles.td, textAlign: 'right'}}>
                                                       <div style={{display: 'flex', gap: '10px', justifyContent: 'flex-end'}}>
                                                           <button className="btn-action" onClick={()=>startEditTask(t)} style={{color:'#0ea5e9', border:'none', background:'#e0f2fe', padding: '6px 12px', borderRadius: '8px', cursor:'pointer', fontWeight:'700', fontSize: '0.8rem'}}>Sửa ca</button>
                                                           <button className="btn-action" onClick={()=>handleDeleteTask(t.id)} style={{color:'#ef4444', border:'none', background:'#fef2f2', padding: '6px', borderRadius: '8px', cursor:'pointer'}}><Icons.Trash /></button>
@@ -1364,29 +1539,113 @@ const TaskManager = () => {
                         <div>
                             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'12px', marginBottom:'20px'}}>
                                 <span style={{color:'#4b5563', fontWeight:'500', fontSize: '0.95rem'}}>Cấu hình lịch chạy tự động định kỳ</span>
-                                <input 
-                                    className="input-modern" 
-                                    type="text" 
-                                    placeholder="🔍 Tìm tiêu đề, nhân sự..." 
-                                    value={scheduleSearchTerm} 
-                                    onChange={(e) => setScheduleSearchTerm(e.target.value)} 
-                                    style={{ width: '100%', maxWidth: '250px', marginTop: 0, padding:'10px 14px' }} 
-                                />
+                                <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'center'}}>
+                                    <button
+                                        onClick={handleFindTemplateConflicts}
+                                        style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', padding: '10px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', whiteSpace: 'nowrap' }}
+                                        title="Tìm các lịch gốc tạo ca trùng giờ cùng một nhân sự"
+                                    >
+                                        🔎 Trích xuất lịch trùng
+                                    </button>
+                                    <input
+                                        className="input-modern"
+                                        type="text"
+                                        placeholder="🔍 Tìm tiêu đề, nhân sự..."
+                                        value={scheduleSearchTerm}
+                                        onChange={(e) => setScheduleSearchTerm(e.target.value)}
+                                        style={{ width: '100%', maxWidth: '250px', marginTop: 0, padding:'10px 14px' }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* [MỚI] Kết quả dò lịch trùng */}
+                            {tplConflicts && tplConflicts.length > 0 && (
+                                <div style={{ marginBottom: '20px', padding: '16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                        <span style={{ fontWeight: '800', color: '#b45309', fontSize: '0.95rem' }}>
+                                            ⚠️ Phát hiện {tplConflicts.length} cặp lịch trùng (cùng nhân sự, trùng khung giờ)
+                                        </span>
+                                        <button onClick={() => setTplConflicts(null)} style={{ background: 'transparent', border: 'none', color: '#92400e', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem' }}>Đóng ✕</button>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        {tplConflicts.map((c, i) => (
+                                            <div key={i} style={{ background: 'white', borderRadius: '8px', border: '1px solid #fde68a', padding: '10px 12px', fontSize: '0.85rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                                <div style={{ flex: 1, minWidth: '220px' }}>
+                                                    <span style={{ fontWeight: '700' }}>👤 {c.assignee || 'Unknown'}</span> —{' '}
+                                                    <span style={{ fontWeight: '700', color: '#b45309' }}>{c.titleA}</span> ⨯ <span style={{ fontWeight: '700', color: '#b45309' }}>{c.titleB}</span>{' '}
+                                                    trùng <span style={{ fontWeight: '800', color: '#dc2626' }}>{c.count}</span> ngày (vd: {c.sample})
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                                    <button
+                                                        onClick={() => handleQuickDeleteConflict(c.sidA, c.titleA)}
+                                                        style={{ color: '#dc2626', border: '1px solid #fecaca', background: '#fef2f2', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.78rem', whiteSpace: 'nowrap' }}
+                                                        title={`Xóa lịch "${c.titleA}"`}
+                                                    >🗑 Xóa "{c.titleA}"</button>
+                                                    <button
+                                                        onClick={() => handleQuickDeleteConflict(c.sidB, c.titleB)}
+                                                        style={{ color: '#dc2626', border: '1px solid #fecaca', background: '#fef2f2', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.78rem', whiteSpace: 'nowrap' }}
+                                                        title={`Xóa lịch "${c.titleB}"`}
+                                                    >🗑 Xóa "{c.titleB}"</button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* [MỚI] Bộ lọc Template tương tự "Ca làm việc thực tế" */}
+                            <div style={{display:'flex', gap:'12px', flexWrap:'wrap', marginBottom:'20px'}}>
+                                <select className="filter-modern" value={filterTplStaff} onChange={e => setFilterTplStaff(e.target.value)}>
+                                    <option value="all">Nhân sự: Tất cả</option>
+                                    {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                                <select className="filter-modern" value={filterTplDay} onChange={e => setFilterTplDay(e.target.value)}>
+                                    <option value="all">Ngày: Tất cả</option>
+                                    {daysOfWeek.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
+                                </select>
+                                <select className="filter-modern" value={filterTplMonth} onChange={e => setFilterTplMonth(e.target.value)}>
+                                    <option value="all">Tháng: Tất cả</option>
+                                    {[...Array(12).keys()].map(i => <option key={i+1} value={i+1}>Tháng {i+1}</option>)}
+                                </select>
+                                <select className="filter-modern" value={filterTplYear} onChange={e => setFilterTplYear(e.target.value)}>
+                                    <option value="all">Năm: Tất cả</option>
+                                    {availableYears.map(y => <option key={y} value={y}>Năm {y}</option>)}
+                                </select>
+                                <select
+                                    className="filter-modern"
+                                    value={tplSort.key ? `${tplSort.key}_${tplSort.direction}` : 'none'}
+                                    onChange={e => {
+                                        const v = e.target.value;
+                                        if (v === 'none') setTplSort({ key: null, direction: 'ascending' });
+                                        else {
+                                            const [key, direction] = v.split('_');
+                                            setTplSort({ key, direction });
+                                        }
+                                    }}
+                                >
+                                    <option value="none">Sắp xếp: Mặc định</option>
+                                    <option value="title_ascending">Tên: A → Z</option>
+                                    <option value="title_descending">Tên: Z → A</option>
+                                    <option value="startTime_ascending">Ngày: Tăng dần</option>
+                                    <option value="startTime_descending">Ngày: Giảm dần</option>
+                                </select>
                             </div>
                             <div style={styles.tableWrapper}>
-                                <table style={styles.table}>
+                                <table style={styles.table} className="ops-table">
                                   <thead>
                                      <tr>
                                        <th style={{...styles.th, width: '50px', textAlign: 'center'}}>STT</th>
-                                       <th style={styles.th}>Thông tin mẫu lịch (Template)</th>
+                                       <th style={{...styles.th, cursor: 'pointer', userSelect: 'none'}} onClick={requestTplSort} title="Bấm để sắp xếp tăng/giảm dần">
+                                           Thông tin mẫu lịch (Template) {tplSort.key ? (tplSort.direction === 'ascending' ? '▲' : '▼') : '⇅'}{tplSort.key === 'startTime' ? ' (ngày)' : ''}
+                                       </th>
                                        <th style={{...styles.th, textAlign: 'right'}}>Hành động</th>
                                      </tr>
                                   </thead>
                                   <tbody>
-                                     {searchedAdminSchedules.map((s, index) => (
+                                     {sortedTemplates.map((s, index) => (
                                        <tr key={s.id} className="table-row">
-                                          <td style={{...styles.td, textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{index + 1}</td>
-                                          <td style={styles.td}>
+                                          <td data-label="STT" style={{...styles.td, textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{index + 1}</td>
+                                          <td data-label="Thông tin mẫu lịch" style={styles.td}>
                                               <div style={{fontWeight:'700', color: '#111827', fontSize: '1.05rem', marginBottom: '4px'}}>{s.title} {s.area && <span style={{fontSize:'0.7rem', background:'#fef3c7', color:'#b45309', padding:'2px 8px', borderRadius:'12px', fontWeight:'700', marginLeft: '6px', verticalAlign: 'middle'}}>📍 {s.area}</span>}</div>
                                               {s.assigneeName && <div style={{fontSize:'0.85rem', color:'#4b5563'}}>👤 <span style={{fontWeight:'600'}}>{s.assigneeName}</span> {s.assignedRole ? `(${s.assignedRole})` : ''}</div>}
                                               <div style={{fontSize:'0.8rem', color:'#0369a1', marginTop: '6px', fontWeight: '700'}}>
@@ -1396,7 +1655,7 @@ const TaskManager = () => {
                                                   🔁 Lặp lại {s.repeatWeeks} tuần vào các ngày: {s.repeatDays?.join(', ')}
                                               </div>
                                           </td>
-                                          <td style={{...styles.td, textAlign: 'right'}}>
+                                          <td data-label="Hành động" style={{...styles.td, textAlign: 'right'}}>
                                               <div style={{display:'flex', gap:'8px', justifyContent: 'flex-end'}}>
                                                   <button className="btn-action" onClick={()=>handleEditSchedule(s)} style={{color:'#0ea5e9', border:'none', background:'#e0f2fe', padding:'8px 16px', borderRadius:'8px', cursor:'pointer', fontWeight:'700', fontSize: '0.85rem'}}>Chỉnh sửa</button>
                                                   <button className="btn-action" onClick={()=>handleDeleteSchedule(s.id)} style={{color:'#ef4444', border:'none', background:'#fef2f2', padding:'8px', borderRadius:'8px', cursor:'pointer'}}><Icons.Trash /></button>
@@ -1404,7 +1663,7 @@ const TaskManager = () => {
                                           </td>
                                        </tr>
                                      ))}
-                                     {searchedAdminSchedules.length === 0 && (
+                                     {sortedTemplates.length === 0 && (
                                          <tr><td colSpan="3" style={styles.emptyTd}>Trống. Chưa có template nào được lưu.</td></tr>
                                      )}
                                   </tbody>
@@ -1488,9 +1747,9 @@ const TaskManager = () => {
                                                 width:'42px', height:'42px', borderRadius:'10px', display:'flex', alignItems:'center', justifyContent:'center', 
                                                 fontSize:'0.85rem', cursor:'pointer', fontWeight:'700', transition: 'all 0.2s', userSelect: 'none',
                                                 border: scheduleConfig.days.includes(d.key) ? 'none' : '1px solid #cbd5e1', 
-                                                background: scheduleConfig.days.includes(d.key) ? '#003366' : 'white', 
+                                                background: scheduleConfig.days.includes(d.key) ? '#2B6830' : 'white', 
                                                 color: scheduleConfig.days.includes(d.key) ? 'white' : '#64748b',
-                                                boxShadow: scheduleConfig.days.includes(d.key) ? '0 4px 6px rgba(0,51,102,0.3)' : 'none'
+                                                boxShadow: scheduleConfig.days.includes(d.key) ? '0 4px 6px rgba(43,104,48,0.3)' : 'none'
                                             }}
                                         >
                                             {d.label}
@@ -1531,7 +1790,7 @@ const TaskManager = () => {
                  </div>
 
                  <div style={styles.tableWrapper}>
-                     <table style={styles.table}>
+                     <table style={styles.table} className="ops-table">
                         <thead>
                            <tr>
                              <th style={{...styles.th, width:'50px', textAlign: 'center'}}>STT</th>
@@ -1545,22 +1804,22 @@ const TaskManager = () => {
                         <tbody>
                            {paginatedSchedules.map((s, index) => (
                              <tr key={s.id} className="table-row" style={{ background: s.request ? '#fefce8' : 'transparent' }}>
-                                <td style={{...styles.td, textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{(schedulerPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
-                                <td style={styles.td}>
+                                <td data-label="STT" style={{...styles.td, textAlign:'center', fontWeight:'bold', color:'#9ca3af'}}>{(schedulerPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
+                                <td data-label="Thông tin Lịch" style={styles.td}>
                                     <div style={{fontWeight:'700', color: '#1f2937', marginBottom: '4px'}}>{s.title} {s.area && <span style={{fontSize:'0.7rem', background:'#fef3c7', color:'#b45309', padding:'2px 8px', borderRadius:'12px', fontWeight:'700', marginLeft: '6px', verticalAlign: 'middle'}}>📍 {s.area}</span>}</div>
                                     <div style={{fontSize:'0.8rem', color:'#6b7280'}}>{s.description?.substring(0, 40)}...</div>
                                     {s.request && <div style={{fontSize:'0.75rem', color:'#ea580c', fontWeight:'bold', marginTop:'6px', background: '#ffedd5', display: 'inline-block', padding: '2px 8px', borderRadius: '10px'}}>⏳ Đang chờ duyệt: {s.request.type === 'delete' ? 'XÓA' : 'SỬA'}</div>}
                                 </td>
-                                <td style={{...styles.td, color:'#0369a1', fontWeight:'700'}}>
+                                <td data-label="Thời gian" style={{...styles.td, color:'#0369a1', fontWeight:'700'}}>
                                     {formatScheduleTimeRange(s.startTime, s.endTime)}
                                     <div style={{fontSize:'0.72rem', color:'#64748b', fontWeight:'600', marginTop:'4px'}}>📅 {formatVNDateTimeLabel(s.startTime)}</div>
                                 </td>
-                                <td style={styles.td}>
+                                <td data-label="Nhân sự" style={styles.td}>
                                     <div style={{fontWeight: '600'}}>{s.assigneeName}</div>
                                     <div style={{fontSize: '0.8rem', color: '#6b7280'}}>{s.assignedRole}</div>
                                 </td>
-                                
-                                <td style={styles.td}>
+
+                                <td data-label="Chu kỳ Lặp lại" style={styles.td}>
                                     <div style={{marginBottom: '6px', fontWeight: '600', color: '#059669'}}>{s.repeatWeeks} tuần</div>
                                     <div style={{display:'flex', gap:'6px', flexWrap: 'wrap'}}>
                                         {s.repeatDays && s.repeatDays.map(d => (
@@ -1572,7 +1831,7 @@ const TaskManager = () => {
                                     </div>
                                 </td>
                                 
-                                <td style={{...styles.td, textAlign: 'right'}}>
+                                <td data-label="Hành động" style={{...styles.td, textAlign: 'right'}}>
                                     {!s.request ? (
                                         <button className="btn-action" onClick={() => handleRequestAdjustmentClick(s)} style={{color:'#d97706', border:'none', background:'#fef3c7', cursor:'pointer', fontWeight:'700', padding:'8px 16px', borderRadius:'8px', fontSize:'0.85rem', whiteSpace: 'nowrap'}}>
                                             Xin điều chỉnh
@@ -1654,7 +1913,7 @@ const TaskManager = () => {
                           style={{
                               flex: 1, maxWidth: '160px', padding: '12px', borderRadius: '12px', border: 'none',
                               color: 'white', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer',
-                              background: modal.tone === 'danger' ? '#dc2626' : modal.tone === 'success' ? '#059669' : '#003366',
+                              background: modal.tone === 'danger' ? '#dc2626' : modal.tone === 'success' ? '#059669' : '#2B6830',
                               boxShadow: '0 4px 6px rgba(0,0,0,0.12)'
                           }}
                       >
@@ -1672,7 +1931,7 @@ const styles = {
     formContainer: { background: '#ffffff', padding: '28px', borderRadius: '20px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.03)', marginBottom: '32px', border: '1px solid rgba(0,0,0,0.05)', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' },
     formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '20px', width: '100%', boxSizing: 'border-box' },
     label: { display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#374151', marginBottom: '4px' },
-    btnSubmit: { gridColumn: '1 / -1', padding: '16px', background: '#003366', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', fontSize: '1rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(0,51,102,0.2)' },
+    btnSubmit: { gridColumn: '1 / -1', padding: '16px', background: '#2B6830', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', fontSize: '1rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(43,104,48,0.2)' },
     
     menuCard: { background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', minHeight: '180px' },
     iconBox: { width: '48px', height: '48px', background: '#e0f2fe', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0369a1' },

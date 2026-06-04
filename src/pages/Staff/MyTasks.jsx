@@ -5,18 +5,18 @@ import { useData } from '../../context/DataContext';
 // --- BỘ ICON MINIMALIST ĐỒNG BỘ ---
 const Icons = {
   InProgress: () => (
-    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.75">
+    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#2B6830" strokeWidth="1.75">
       <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
     </svg>
   ),
   Upcoming: () => (
-    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.75">
+    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#2B6830" strokeWidth="1.75">
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
   Completed: () => (
-    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#003366" strokeWidth="1.75">
+    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#2B6830" strokeWidth="1.75">
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
@@ -90,7 +90,7 @@ const TaskCard = ({ task, isCompletedMode, onUpdate, onFinish }) => {
                 
                 <label style={{fontSize: '0.95rem', fontWeight: '800', color: '#111827', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap'}}>
                     Tiến độ công việc: 
-                    <span style={{color: '#003366'}}>{progressInput}%</span>
+                    <span style={{color: '#2B6830'}}>{progressInput}%</span>
                 </label>
                 
                 <input 
@@ -98,7 +98,7 @@ const TaskCard = ({ task, isCompletedMode, onUpdate, onFinish }) => {
                     value={progressInput} 
                     onChange={(e) => setProgressInput(Number(e.target.value))}
                     disabled={isCompletedMode}
-                    style={{width:'100%', opacity: isCompletedMode ? 0.6 : 1, margin: '16px 0 24px 0', accentColor: '#003366', cursor: isCompletedMode ? 'not-allowed' : 'pointer'}} 
+                    style={{width:'100%', opacity: isCompletedMode ? 0.6 : 1, margin: '16px 0 24px 0', accentColor: '#2B6830', cursor: isCompletedMode ? 'not-allowed' : 'pointer'}} 
                 />
                 
                 {!isCompletedMode && (
@@ -130,7 +130,7 @@ const TaskCard = ({ task, isCompletedMode, onUpdate, onFinish }) => {
                         )}
 
                         <div style={{display:'flex', gap:'12px', marginTop:'24px', flexWrap: 'wrap'}}>
-                            <button className="btn-modern-primary" onClick={handleUpdate} style={{flex:1, background:'#003366', color:'white', padding:'14px', border:'none', borderRadius:'10px', cursor:'pointer', fontWeight:'700', fontSize: '0.95rem', boxShadow: '0 4px 6px rgba(0, 51, 102, 0.2)', minWidth: '100px', boxSizing: 'border-box'}}>
+                            <button className="btn-modern-primary" onClick={handleUpdate} style={{flex:1, background:'#2B6830', color:'white', padding:'14px', border:'none', borderRadius:'10px', cursor:'pointer', fontWeight:'700', fontSize: '0.95rem', boxShadow: '0 4px 6px rgba(43, 104, 48, 0.2)', minWidth: '100px', boxSizing: 'border-box'}}>
                                 Lưu cập nhật
                             </button>
                             <button className="btn-modern-success" onClick={() => onFinish(task)} style={{flex:1, background:'#10b981', color:'white', padding:'14px', border:'none', borderRadius:'10px', cursor:'pointer', fontWeight:'700', fontSize: '0.95rem', boxShadow: '0 4px 6px rgba(16, 185, 129, 0.2)', minWidth: '100px', boxSizing: 'border-box'}}>
@@ -185,9 +185,9 @@ const MyTasks = () => {
   };
 
   const handleFinishClick = (task) => {
-    if(window.confirm(`Xác nhận hoàn thành nhiệm vụ "${task.title}"?`)){
-      finishTask(task.id);
-    }
+    window.confirmDialog(`Xác nhận hoàn thành nhiệm vụ "${task.title}"?`, { title: 'Hoàn thành nhiệm vụ', okText: 'Hoàn thành', emoji: '✅' }).then(ok => {
+      if (ok) finishTask(task.id);
+    });
   };
 
   return (
@@ -198,10 +198,10 @@ const MyTasks = () => {
           .task-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -8px rgba(0,0,0,0.1) !important; }
           
           .input-modern { padding: 12px 14px; border-radius: 10px; border: 1px solid #e2e8f0; outline: none; font-size: 0.95rem; background: white; transition: all 0.2s; box-sizing: border-box; }
-          .input-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+          .input-modern:focus { border-color: #2B6830; box-shadow: 0 0 0 3px rgba(43, 104, 48, 0.1); }
           
           .btn-modern-primary { transition: all 0.2s; }
-          .btn-modern-primary:hover { background: #002244 !important; transform: translateY(-1px); }
+          .btn-modern-primary:hover { background: #1E5225 !important; transform: translateY(-1px); }
           
           .btn-modern-success { transition: all 0.2s; }
           .btn-modern-success:hover { background: #059669 !important; transform: translateY(-1px); }
@@ -209,7 +209,7 @@ const MyTasks = () => {
 
       {/* ĐỒNG BỘ MARGIN CỦA HEADER ĐỂ TRÁNH NHẢY TRANG */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', borderBottom: '2px solid #e5e7eb', paddingBottom: '16px' }}>
-          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#003366' }}>
+          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#2B6830' }}>
               <Icons.InProgress />
           </div>
           <div>
@@ -221,7 +221,7 @@ const MyTasks = () => {
       {/* 1. ĐANG DIỄN RA */}
       <div style={{marginBottom: '40px'}}>
           <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', background: '#f8fafc', padding: '12px 16px', borderRadius: '12px', border: '1px solid #f1f5f9'}}>
-             <div style={{color: '#003366'}}><Icons.InProgress /></div>
+             <div style={{color: '#2B6830'}}><Icons.InProgress /></div>
              <h3 style={{color:'#111827', margin: 0, fontSize: '1.15rem', fontWeight: '800'}}>Đang diễn ra <span style={{color: '#64748b', fontSize: '1rem', fontWeight: '600'}}>({categorizedTasks.inProgress.length})</span></h3>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '20px' }}>
@@ -241,7 +241,7 @@ const MyTasks = () => {
       {/* 2. SẮP ĐẾN */}
       <div style={{marginBottom: '40px'}}>
           <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', background: '#f8fafc', padding: '12px 16px', borderRadius: '12px', border: '1px solid #f1f5f9'}}>
-             <div style={{color: '#003366'}}><Icons.Upcoming /></div>
+             <div style={{color: '#2B6830'}}><Icons.Upcoming /></div>
              <h3 style={{color:'#111827', margin: 0, fontSize: '1.15rem', fontWeight: '800'}}>Sắp đến <span style={{color: '#64748b', fontSize: '1rem', fontWeight: '600'}}>({categorizedTasks.upcoming.length})</span></h3>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '20px' }}>
@@ -261,7 +261,7 @@ const MyTasks = () => {
       {/* 3. ĐÃ HOÀN THÀNH */}
       <div style={{marginBottom: '20px'}}>
           <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', background: '#f8fafc', padding: '12px 16px', borderRadius: '12px', border: '1px solid #f1f5f9'}}>
-             <div style={{color: '#003366'}}><Icons.Completed /></div>
+             <div style={{color: '#2B6830'}}><Icons.Completed /></div>
              <h3 style={{color:'#111827', margin: 0, fontSize: '1.15rem', fontWeight: '800'}}>Đã hoàn thành <span style={{color: '#64748b', fontSize: '1rem', fontWeight: '600'}}>({categorizedTasks.completed.length})</span></h3>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '20px' }}>

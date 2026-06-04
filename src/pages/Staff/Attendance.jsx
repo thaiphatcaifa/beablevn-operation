@@ -215,22 +215,25 @@ const Attendance = () => {
       }
 
       // LOGIC CHECK-OUT NẾU KHÔNG CẦN BÁO CÁO CSVC
-      if(window.confirm("Xác nhận hoàn thành ca làm việc này?")) {
+      window.confirmDialog("Xác nhận hoàn thành ca làm việc này?", { title: 'Check-out', okText: 'Hoàn thành ca', emoji: '✅' }).then(ok => {
+          if (!ok) return;
           updateTaskProgress(task.id, 100, "Check-out attendance");
-          updateTask(task.id, { 
-              ...task, 
+          updateTask(task.id, {
+              ...task,
               checkOutTime: exactNow.toISOString(),
               status: 'completed'
           });
           alert("Check-out thành công!");
-      }
+      });
   };
 
   // --- 3. XỬ LÝ GIẢI TRÌNH ---
   const handleSchedulerExplain = (task) => {
       const exactNow = new Date();
-      const reason = window.prompt("Đã quá giờ check-out quy định. Vui lòng nhập lý do:");
-      if (reason && reason.trim() !== "") {
+      window.promptDialog("Đã quá giờ check-out quy định. Vui lòng nhập lý do giải trình:", {
+          title: 'Giải trình check-out', okText: 'Gửi giải trình', placeholder: 'Nhập lý do thực tế...', emoji: '🕒'
+      }).then(reason => {
+          if (!reason) return;
           updateTask(task.id, {
               ...task,
               checkOutTime: exactNow.toISOString(),
@@ -240,20 +243,20 @@ const Attendance = () => {
               explanation: reason
           });
           alert("Đã gửi giải trình. Vui lòng đợi Admin duyệt.");
-      }
+      });
   };
 
   // --- CA LÀM VIỆC CỐ ĐỊNH (HỆ CŨ) ---
   const myShifts = shifts.filter(s => s.staffId === user.id);
-  const handleCheckInOld = (shiftId) => { 
-      if (window.confirm('Xác nhận Check-in?')) {
-          addAttendance({ shiftId, staffId: user.id, date: new Date().toISOString(), checkIn: new Date().toISOString(), status: 'Present' }); 
-      }
+  const handleCheckInOld = (shiftId) => {
+      window.confirmDialog('Xác nhận Check-in vào ca?', { title: 'Check-in', okText: 'Check-in', emoji: '🟢' }).then(ok => {
+          if (ok) addAttendance({ shiftId, staffId: user.id, date: new Date().toISOString(), checkIn: new Date().toISOString(), status: 'Present' });
+      });
   };
-  const handleCheckOutOld = (logId) => { 
-      if (window.confirm('Xác nhận Check-out?')) {
-          updateAttendanceLog(logId, { checkOut: new Date().toISOString() }); 
-      }
+  const handleCheckOutOld = (logId) => {
+      window.confirmDialog('Xác nhận Check-out tan ca?', { title: 'Check-out', okText: 'Check-out', emoji: '🔵' }).then(ok => {
+          if (ok) updateAttendanceLog(logId, { checkOut: new Date().toISOString() });
+      });
   };
 
   // --- RENDER NÚT BẤM ---
@@ -310,7 +313,7 @@ const Attendance = () => {
               transform: translateY(-4px);
               box-shadow: 0 12px 20px -8px rgba(0,0,0,0.1) !important;
           }
-          .btn-primary:hover { background: #002244 !important; transform: translateY(-1px); }
+          .btn-primary:hover { background: #1E5225 !important; transform: translateY(-1px); }
           .btn-danger:hover { background: #dc2626 !important; transform: translateY(-1px); }
           .btn-warning:hover { background: #ffedd5 !important; border-color: #ea580c !important; transform: translateY(-1px); }
           .btn-danger-outline:hover { background: #fef2f2 !important; transform: translateY(-1px); }
@@ -322,7 +325,7 @@ const Attendance = () => {
               background-image: url('data:image/svg+xml;utf8,<svg fill="%239ca3af" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
               background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px;
           }
-          .filter-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+          .filter-modern:focus { border-color: #2B6830; box-shadow: 0 0 0 3px rgba(43, 104, 48, 0.1); }
 
           @media (max-width: 500px) {
               .filter-container { flex-direction: column; width: 100%; }
@@ -334,7 +337,7 @@ const Attendance = () => {
 
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap: 'wrap', gap: '16px', marginBottom:'24px', borderBottom: '2px solid #e5e7eb', paddingBottom:'16px'}}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#003366' }}>
+              <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#2B6830' }}>
                   <Icons.Schedule />
               </div>
               <div>
@@ -475,8 +478,8 @@ const Attendance = () => {
 
 const styles = {
     scheduleItem: { background: 'white', padding: '24px', borderRadius: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', gap: '16px', border: '1px solid #f1f5f9' },
-    shiftCard: { background: 'white', padding: '24px', borderRadius: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9', borderTop: '5px solid #003366' },
-    mainBtn: { background: '#003366', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem', boxShadow: '0 4px 6px rgba(0, 51, 102, 0.2)', whiteSpace: 'nowrap', transition: 'all 0.2s', boxSizing: 'border-box' },
+    shiftCard: { background: 'white', padding: '24px', borderRadius: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9', borderTop: '5px solid #2B6830' },
+    mainBtn: { background: '#2B6830', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem', boxShadow: '0 4px 6px rgba(43, 104, 48, 0.2)', whiteSpace: 'nowrap', transition: 'all 0.2s', boxSizing: 'border-box' },
     outBtn: { background: 'white', border: '1px solid #ef4444', color: '#ef4444', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', whiteSpace: 'nowrap', transition: 'all 0.2s', boxSizing: 'border-box' },
     explainBtn: { background: '#fff7ed', border: '1px solid #fed7aa', color: '#ea580c', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', display:'flex', alignItems:'center', gap:'6px', whiteSpace: 'nowrap', transition: 'all 0.2s', boxSizing: 'border-box' },
     roleBadge: { fontSize: '0.75rem', background: '#f1f5f9', padding: '6px 12px', borderRadius: '8px', color: '#334155', fontWeight: '700', letterSpacing: '0.01em' },

@@ -135,6 +135,12 @@ const Reports = () => {
   const [editingAttendanceId, setEditingAttendanceId] = useState(null);
   const [editAttForm, setEditAttForm] = useState({ checkIn: '', checkOut: '', reason: '' });
 
+  // [MỚI] Phân trang + chọn hàng loạt cho Báo cáo Chấm công
+  const ATT_ITEMS_PER_PAGE = 50;
+  const [attendancePage, setAttendancePage] = useState(1);
+  const [selectedAttIds, setSelectedAttIds] = useState([]);
+  const [bulkReason, setBulkReason] = useState('');
+
   const [financeStaffFilter, setFinanceStaffFilter] = useState('all'); 
   const [financeMonthFilter, setFinanceMonthFilter] = useState(() => {
     const d = new Date();
@@ -167,6 +173,88 @@ const Reports = () => {
   const isChief = user?.role === 'chief';
 
   const handlePrint = () => { window.print(); };
+
+  // ==============================================================
+  // XUẤT EXCEL (.xls) — KHÔNG cần thư viện ngoài.
+  // Tạo file HTML-table mà Excel mở trực tiếp được (kèm BOM UTF-8 để giữ tiếng Việt).
+  // Mỗi lần xuất = dữ liệu của TAB báo cáo đang mở.
+  // ==============================================================
+  const downloadXls = (headers, rows, filename, sheetTitle) => {
+      const esc = (v) => String(v === undefined || v === null ? '' : v)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const headHtml = `<tr>${headers.map(h => `<th style="background:#2B6830;color:#ffffff;font-weight:bold;border:1px solid #999;padding:6px;">${esc(h)}</th>`).join('')}</tr>`;
+      const bodyHtml = rows.map(r => `<tr>${r.map(c => `<td style="border:1px solid #ccc;padding:5px;mso-number-format:'\\@';">${esc(c)}</td>`).join('')}</tr>`).join('');
+      const titleHtml = sheetTitle ? `<tr><td colspan="${headers.length}" style="font-size:15px;font-weight:bold;color:#2B6830;padding:8px;">${esc(sheetTitle)}</td></tr>` : '';
+      const html =
+          `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">` +
+          `<head><meta charset="UTF-8"></head><body>` +
+          `<table border="1">${titleHtml}${headHtml}${bodyHtml}</table>` +
+          `</body></html>`;
+      const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+  };
+
+  const handleExportExcel = () => {
+      const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString('vi-VN') : '';
+      const fmtDateTime = (iso) => iso ? new Date(iso).toLocaleString('vi-VN') : '';
+      const monthTag = `${String(selMonth).padStart(2, '0')}-${selYear}`;
+
+      if (activeTab === 'finance') {
+          const headers = ['STT', 'Nhân sự', 'Thông tin', 'Thu nhập Gộp (Gross)', 'BHXH (10.5%)', 'Thuế TNCN (5%)', 'Thực nhận (Net)'];
+          const rows = financeRows.map((r, i) => [
+              i + 1, r.item, r.type,
+              Math.round(r.gross || 0), Math.round(r.bhxh || 0), Math.round(r.tax || 0),
+              Math.round(r.net || r.amount || 0)
+          ]);
+          rows.push(['', 'TỔNG CỘNG', '', '', '', '', Math.round(totalEstimatedCost)]);
+          return downloadXls(headers, rows, `BaoCao_TaiChinh_T${monthTag}.xls`, `BÁO CÁO TÀI CHÍNH — Tháng ${Number(selMonth)}/${selYear}`);
+      }
+
+      if (activeTab === 'facility') {
+          const headers = ['STT', 'Khu vực', 'Loại', 'Thời gian', 'Số hạng mục', 'Nhân sự báo cáo', 'Chi tiết hạng mục'];
+          const rows = groupedFacilityLogs.map((g, i) => [
+              i + 1, g.area || '', g.type || '', formatDateTime(g.timestamp),
+              (g.items || []).length, g.staffName || 'Unknown',
+              (g.items || []).map(it => `${it.itemName || it.item || it.category || 'Hạng mục'}: ${it.status || it.note || 'OK'}`).join(' | ')
+          ]);
+          return downloadXls(headers, rows, `BaoCao_CoSoVatChat.xls`, 'BÁO CÁO CƠ SỞ VẬT CHẤT');
+      }
+
+      if (activeTab === 'attendance') {
+          const headers = ['STT', 'Nhân sự', 'Ca làm việc', 'Ngày', 'Giờ vào (lịch)', 'Giờ ra (lịch)', 'Check-in thực tế', 'Check-out thực tế', 'Số giờ công', 'Trạng thái', 'Tiến độ', 'Admin sửa'];
+          const rows = sortedAttendance.map((t, i) => {
+              const hrs = calculateWorkHoursDecimal(t.startTime, t.endTime, t.checkInTime, t.checkOutTime, t.adminEdited);
+              const completed = t.status === 'completed' || t.progress === 100;
+              return [
+                  i + 1, t.assigneeName || '', t.title || '', fmtDate(t.startTime),
+                  fmtDateTime(t.startTime), fmtDateTime(t.endTime),
+                  t.checkInTime ? fmtDateTime(t.checkInTime) : 'Chưa check-in',
+                  t.checkOutTime ? fmtDateTime(t.checkOutTime) : 'Chưa check-out',
+                  hrs ? hrs.toFixed(2) : '0', completed ? 'Đã chấm công' : 'Chưa hoàn thành',
+                  `${t.progress || 0}%`, t.adminEdited ? `Có: ${t.adminEditReason || ''}` : ''
+              ];
+          });
+          return downloadXls(headers, rows, `BaoCao_ChamCong.xls`, 'BÁO CÁO CHẤM CÔNG');
+      }
+
+      if (activeTab === 'tasks') {
+          const headers = ['STT', 'Nhiệm vụ', 'Phụ trách', 'Hạn chót', 'Tiến độ', 'Trạng thái', 'Đánh giá kết quả'];
+          const rows = filteredOpTasks.map((t, i) => [
+              i + 1, t.title || '', t.assigneeName || '', fmtDate(t.endTime),
+              `${t.progress || 0}%`,
+              t.status === 'completed' ? 'Hoàn thành' : (new Date() > new Date(t.endTime) ? 'Quá hạn' : 'Đang làm'),
+              t.status !== 'completed' ? 'Chưa hoàn thành' : (t.evaluation === 'passed' ? 'Đạt' : (t.evaluation === 'failed' ? 'Không đạt' : 'Chưa đánh giá'))
+          ]);
+          return downloadXls(headers, rows, `BaoCao_NhiemVu.xls`, 'BÁO CÁO TIẾN ĐỘ NHIỆM VỤ');
+      }
+
+      // Tab tổng quan: chưa chọn báo cáo cụ thể
+      window.toast("Hãy mở một báo cáo cụ thể (Tài chính / Chấm công / Cơ sở vật chất / Nhiệm vụ) rồi bấm Xuất Excel.", 'info');
+  };
 
   const handleSaveAttendanceEdit = (task) => {
       if (!editAttForm.checkIn || !editAttForm.checkOut || !editAttForm.reason.trim()) {
@@ -336,7 +424,8 @@ const Reports = () => {
           alert("Lỗi: Hệ thống chưa được cấu hình API savePayrollRecord trong DataContext.");
           return;
       }
-      if(window.confirm(`Bạn có chắc chắn muốn CHỐT BÁO CÁO tháng ${financeMonthFilter} không?\n\nCảnh báo: Dữ liệu này sẽ được lưu thành bản cứng (Snapshot) để ngăn chặn các thay đổi lịch sử lương trong tương lai. Bạn không thể hoàn tác hành động này!`)) {
+      window.confirmDialog(`Chốt báo cáo lương tháng ${financeMonthFilter}? Dữ liệu sẽ được lưu thành bản cứng (Snapshot) để khóa lịch sử lương. KHÔNG THỂ hoàn tác!`, { title: 'Chốt báo cáo', okText: 'Chốt sổ', danger: true, emoji: '🔒' }).then(ok => {
+          if (!ok) return;
           savePayrollRecord({
               month: financeMonthFilter,
               data: financeRows,
@@ -345,7 +434,7 @@ const Reports = () => {
               lockedBy: user?.username || 'Admin'
           });
           alert("Đã chốt báo cáo thành công!");
-      }
+      });
   };
 
   // ==============================================================
@@ -486,6 +575,60 @@ const Reports = () => {
     return sortableItems;
   }, [filteredAttendance, sortConfig]);
 
+  // [MỚI] Phân trang cho Báo cáo Chấm công (tối đa 50 dòng/trang)
+  const totalAttPages = Math.max(1, Math.ceil(sortedAttendance.length / ATT_ITEMS_PER_PAGE));
+  const currentAttPage = Math.min(attendancePage, totalAttPages);
+  const paginatedAttendance = sortedAttendance.slice((currentAttPage - 1) * ATT_ITEMS_PER_PAGE, currentAttPage * ATT_ITEMS_PER_PAGE);
+
+  // Danh sách ca trên trang hiện tại mà Admin được phép sửa (quá hạn, chưa do nhân sự tự chấm công thành công)
+  const editableOnPage = paginatedAttendance.filter(t => {
+      const isOverdue = new Date() > new Date(t.endTime);
+      const workedHoursDecimal = calculateWorkHoursDecimal(t.startTime, t.endTime, t.checkInTime, t.checkOutTime, t.adminEdited);
+      const isCompleted = t.status === 'completed' || t.progress === 100;
+      const isStaffSuccess = isCompleted && !t.adminEdited && workedHoursDecimal > 0;
+      return isChief && isOverdue && !isStaffSuccess;
+  });
+  const allPageSelected = editableOnPage.length > 0 && editableOnPage.every(t => selectedAttIds.includes(t.id));
+
+  const toggleSelectAtt = (id) => {
+      setSelectedAttIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const toggleSelectAllAtt = () => {
+      if (allPageSelected) {
+          setSelectedAttIds(prev => prev.filter(id => !editableOnPage.some(t => t.id === id)));
+      } else {
+          setSelectedAttIds(prev => [...new Set([...prev, ...editableOnPage.map(t => t.id)])]);
+      }
+  };
+
+  // [MỚI] Sửa ca HÀNG LOẠT: bù công theo giờ lịch (check-in = giờ bắt đầu, check-out = giờ kết thúc)
+  // cho tất cả ca đã chọn, kèm 1 lý do chung. Giữ nguyên dữ liệu cũ của từng task.
+  const handleBulkSaveAttendance = () => {
+      if (selectedAttIds.length === 0) return alert("Vui lòng chọn ít nhất một ca!");
+      if (!bulkReason.trim()) return alert("Vui lòng nhập Lý do chỉnh sửa cho thao tác hàng loạt!");
+      window.confirmDialog(`Bù công theo giờ lịch cho ${selectedAttIds.length} ca đã chọn? Hệ thống sẽ đặt Giờ vào = giờ bắt đầu ca, Giờ ra = giờ kết thúc ca và đánh dấu hoàn thành.`, { title: 'Bù công hàng loạt', okText: 'Bù công', emoji: '🕒' }).then(ok => {
+          if (!ok) return;
+          selectedAttIds.forEach(id => {
+              const task = scheduleTasks.find(t => t.id === id);
+              if (!task) return;
+              updateTask(id, {
+                  ...task,
+                  checkInTime: new Date(task.startTime).toISOString(),
+                  checkOutTime: new Date(task.endTime).toISOString(),
+                  status: 'completed',
+                  progress: 100,
+                  adminEdited: true,
+                  adminEditReason: bulkReason,
+                  adminEditTime: new Date().toISOString()
+              });
+          });
+
+          alert(`Đã cập nhật ${selectedAttIds.length} ca thành công!`);
+          setSelectedAttIds([]);
+          setBulkReason('');
+      });
+  };
+
   const renderDashboard = () => (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
           {isChief && (
@@ -562,11 +705,11 @@ const Reports = () => {
             background-image: url('data:image/svg+xml;utf8,<svg fill="%239ca3af" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
             background-repeat: no-repeat; background-position: right 12px center; padding-right: 40px; min-width: 150px;
         }
-        .filter-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+        .filter-modern:focus { border-color: #2B6830; box-shadow: 0 0 0 3px rgba(43, 104, 48, 0.1); }
         .input-modern {
             padding: 12px 14px; border-radius: 10px; border: 1px solid #e2e8f0; outline: none; font-size: 0.95rem; width: 100%; box-sizing: border-box; transition: all 0.2s; background: white;
         }
-        .input-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+        .input-modern:focus { border-color: #2B6830; box-shadow: 0 0 0 3px rgba(43, 104, 48, 0.1); }
         
         .menu-card { transition: all 0.25s ease; cursor: pointer; }
         .menu-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -8px rgba(0,0,0,0.1) !important; border-color: #bae6fd !important; }
@@ -590,19 +733,50 @@ const Reports = () => {
             line-height: 1.5; 
         }
         .text-wrap-name {
-            word-break: break-word; 
-            white-space: normal; 
-            min-width: 150px; 
+            word-break: break-word;
+            white-space: normal;
+            min-width: 150px;
             line-height: 1.5;
+        }
+
+        /* === CARD-VIEW MOBILE cho bảng: bỏ cuộn ngang, mỗi hàng thành 1 thẻ dọc === */
+        @media (max-width: 768px) {
+            .ops-table { min-width: 0 !important; }
+            .ops-table thead { display: none; }
+            .ops-table, .ops-table tbody, .ops-table tr, .ops-table td { display: block; width: 100%; box-sizing: border-box; }
+            .ops-table tr {
+                margin-bottom: 14px; border: 1px solid #e2e8f0; border-radius: 14px;
+                overflow: hidden; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            }
+            .ops-table td {
+                display: flex; justify-content: space-between; align-items: center; gap: 12px;
+                text-align: right !important; padding: 11px 16px !important;
+                border: none !important; border-bottom: 1px solid #f1f5f9 !important;
+                white-space: normal !important; min-width: 0 !important;
+            }
+            .ops-table td:last-child { border-bottom: none !important; }
+            .ops-table td::before {
+                content: attr(data-label);
+                font-weight: 700; color: #64748b; font-size: 0.7rem;
+                text-transform: uppercase; letter-spacing: 0.03em; text-align: left; flex-shrink: 0;
+            }
+            .ops-table td:empty { display: none !important; }            /* Ẩn ô rỗng của hàng mở rộng */
+            .ops-table td[colspan] { display: block; text-align: left !important; }
+            .ops-table td[colspan]::before { content: ''; display: none; }
         }
       `}</style>
 
       {/* HEADER + NÚT IN */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e5e7eb', paddingBottom: '16px', marginBottom: '32px' }}>
          <h2 style={{ color: '#111827', margin: 0, fontWeight: '800', fontSize: '1.5rem', letterSpacing: '-0.02em' }}>BÁO CÁO QUẢN TRỊ</h2>
-         <button onClick={handlePrint} className="btn-print" style={styles.printBtn}>
-            <Icons.Print /> Xuất Báo cáo
-         </button>
+         <div className="btn-print" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button onClick={handleExportExcel} style={styles.printBtn} title="Xuất dữ liệu báo cáo đang xem ra file Excel">
+               <Icons.Print /> Xuất Excel
+            </button>
+            <button onClick={handlePrint} style={{ ...styles.printBtn, background: '#ffffff', color: '#2B6830', border: '1px solid #2B6830' }} title="In / lưu PDF báo cáo đang xem">
+               In
+            </button>
+         </div>
       </div>
 
       {activeTab === 'overview' && renderDashboard()}
@@ -644,7 +818,7 @@ const Reports = () => {
                </div>
                <div style={styles.cardBody}>
                   <div className="table-responsive">
-                    <table style={styles.table}>
+                    <table style={styles.table} className="ops-table">
                       <thead>
                         <tr style={styles.tableHeadRow}>
                           <th style={{...styles.th, width: '50px', textAlign: 'center'}}>STT</th>
@@ -659,13 +833,13 @@ const Reports = () => {
                       <tbody>
                         {financeRows.length > 0 ? financeRows.map((row, idx) => (
                           <tr key={idx} className="table-row">
-                              <td style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{idx + 1}</td>
-                              <td style={{...styles.td, fontWeight:'700', color:'#1f2937'}} className="text-wrap-name">{row.item}</td>
-                              <td style={{...styles.td, fontSize:'0.85rem', color:'#64748b'}}>{row.type}</td>
-                              <td style={{...styles.td, fontWeight: '700', textAlign: 'right'}}>{Math.round(row.gross || 0).toLocaleString()}</td>
-                              <td style={{...styles.td, color: '#ef4444', textAlign: 'right'}}>-{Math.round(row.bhxh || 0).toLocaleString()}</td>
-                              <td style={{...styles.td, color: '#ef4444', textAlign: 'right'}}>-{Math.round(row.tax || 0).toLocaleString()}</td>
-                              <td style={{...styles.td, fontWeight: '800', color: '#059669', textAlign: 'right', paddingRight: '20px', fontSize: '1.05rem'}}>{Math.round(row.net || row.amount).toLocaleString()}</td>
+                              <td data-label="STT" style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{idx + 1}</td>
+                              <td data-label="Nhân sự" style={{...styles.td, fontWeight:'700', color:'#1f2937'}} className="text-wrap-name">{row.item}</td>
+                              <td data-label="Thông tin" style={{...styles.td, fontSize:'0.85rem', color:'#64748b'}}>{row.type}</td>
+                              <td data-label="Gộp (Gross)" style={{...styles.td, fontWeight: '700', textAlign: 'right'}}>{Math.round(row.gross || 0).toLocaleString()}</td>
+                              <td data-label="BHXH (10.5%)" style={{...styles.td, color: '#ef4444', textAlign: 'right'}}>-{Math.round(row.bhxh || 0).toLocaleString()}</td>
+                              <td data-label="Thuế TNCN (5%)" style={{...styles.td, color: '#ef4444', textAlign: 'right'}}>-{Math.round(row.tax || 0).toLocaleString()}</td>
+                              <td data-label="Thực nhận (Net)" style={{...styles.td, fontWeight: '800', color: '#059669', textAlign: 'right', paddingRight: '20px', fontSize: '1.05rem'}}>{Math.round(row.net || row.amount).toLocaleString()}</td>
                           </tr>
                         )) : (
                           <tr><td colSpan="7" style={styles.emptyTd}>Không có dữ liệu thu nhập hiển thị.</td></tr>
@@ -711,7 +885,7 @@ const Reports = () => {
              </div>
              <div style={styles.cardBody}>
                  <div className="table-responsive">
-                     <table style={styles.table}>
+                     <table style={styles.table} className="ops-table">
                        <thead>
                          <tr style={styles.tableHeadRow}>
                            <th style={{...styles.th, width: '50px', textAlign: 'center'}}>STT</th>
@@ -727,8 +901,8 @@ const Reports = () => {
                              return (
                                <React.Fragment key={group.id}>
                                  <tr className="table-row">
-                                   <td style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{index + 1}</td>
-                                   <td style={{...styles.td, cursor: 'pointer'}} className="text-wrap-name" onClick={() => toggleFacilityGroup(group.id)}>
+                                   <td data-label="STT" style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{index + 1}</td>
+                                   <td data-label="Khu vực & Thời gian" style={{...styles.td, cursor: 'pointer'}} className="text-wrap-name" onClick={() => toggleFacilityGroup(group.id)}>
                                      <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', color: '#0369a1'}}>
                                          {isExpanded ? <Icons.ChevronDown /> : <Icons.ChevronRight />}
                                          {group.area || '---'}
@@ -738,11 +912,11 @@ const Reports = () => {
                                          {formatDateTime(group.timestamp)}
                                      </div>
                                    </td>
-                                   <td style={{...styles.td, cursor: 'pointer'}} onClick={() => toggleFacilityGroup(group.id)}>
+                                   <td data-label="Tình trạng" style={{...styles.td, cursor: 'pointer'}} onClick={() => toggleFacilityGroup(group.id)}>
                                        <div style={{fontWeight:'600', color:'#334155'}}>Đã ghi nhận {group.items.length} hạng mục</div>
                                        <div style={{fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '4px'}}>Nhấn để xem chi tiết</div>
                                    </td>
-                                   <td style={{...styles.td, fontWeight: '600'}} className="text-wrap-name">{group.staffName || 'Unknown'}</td>
+                                   <td data-label="Nhân sự báo cáo" style={{...styles.td, fontWeight: '600'}} className="text-wrap-name">{group.staffName || 'Unknown'}</td>
                                  </tr>
                                  {isExpanded && (
                                      <tr style={{ background: '#f8fafc' }}>
@@ -810,10 +984,35 @@ const Reports = () => {
                </div>
             </div>
             <div style={styles.cardBody}>
+               {/* [MỚI] Thanh thao tác hàng loạt — hiện khi có ca được chọn */}
+               {isChief && selectedAttIds.length > 0 && (
+                   <div className="action-col" style={{ marginBottom: '16px', padding: '14px 16px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                       <span style={{ fontWeight: '800', color: '#059669', fontSize: '0.9rem' }}>Đã chọn {selectedAttIds.length} ca</span>
+                       <input
+                           className="input-modern"
+                           type="text"
+                           placeholder="Lý do chỉnh sửa (bắt buộc) — vd: Bù công theo lịch"
+                           value={bulkReason}
+                           onChange={e => setBulkReason(e.target.value)}
+                           style={{ flex: 1, minWidth: '220px', marginLeft: 'auto', maxWidth: '420px' }}
+                       />
+                       <button onClick={handleBulkSaveAttendance} style={{ background: '#059669', color: 'white', border: 'none', padding: '11px 18px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', whiteSpace: 'nowrap', boxShadow: '0 4px 6px rgba(16,185,129,0.2)' }}>
+                           Sửa ca hàng loạt ({selectedAttIds.length})
+                       </button>
+                       <button onClick={() => { setSelectedAttIds([]); setBulkReason(''); }} style={{ background: 'white', color: '#475569', border: '1px solid #cbd5e1', padding: '11px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                           Bỏ chọn
+                       </button>
+                   </div>
+               )}
                <div className="table-responsive">
-                   <table style={styles.table}>
+                   <table style={styles.table} className="ops-table">
                       <thead>
                          <tr style={styles.tableHeadRow}>
+                           {isChief && (
+                               <th style={{ ...styles.th, width: '40px', textAlign: 'center' }} className="action-col">
+                                   <input type="checkbox" checked={allPageSelected} onChange={toggleSelectAllAtt} title="Chọn tất cả ca có thể sửa trên trang này" style={{ cursor: 'pointer', width: '16px', height: '16px' }} />
+                               </th>
+                           )}
                            <th style={{ ...styles.th, width: '50px', textAlign: 'center' }}>STT</th>
                            <th onClick={() => requestSort('assigneeName')} style={{...styles.th, cursor: 'pointer'}}>
                                Nhân sự {sortConfig.key === 'assigneeName' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
@@ -836,9 +1035,10 @@ const Reports = () => {
                            <th style={{ ...styles.th, textAlign: 'right' }} className="action-col">Hành động</th>
                          </tr>
                       </thead>
-                      {/* SỬ DỤNG sortedAttendance MAP VÀO BẢNG CHẤM CÔNG */}
+                      {/* SỬ DỤNG paginatedAttendance MAP VÀO BẢNG CHẤM CÔNG (tối đa 50 dòng/trang) */}
                       <tbody>
-                         {sortedAttendance.length > 0 ? sortedAttendance.map((t, index) => {
+                         {paginatedAttendance.length > 0 ? paginatedAttendance.map((t, index) => {
+                           const globalIndex = (currentAttPage - 1) * ATT_ITEMS_PER_PAGE + index;
                            const isCompleted = t.status === 'completed' || t.progress === 100;
                            const isOverdue = new Date() > new Date(t.endTime);
                            
@@ -875,9 +1075,16 @@ const Reports = () => {
                            const displayEnd = t.adminEdited && t.checkOutTime ? t.checkOutTime : t.endTime;
 
                            return (
-                               <tr key={t.id} className={editingAttendanceId !== t.id ? "table-row" : ""} style={{ background: editingAttendanceId === t.id ? '#f0fdf4' : 'transparent' }}>
-                                  <td style={{ ...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af' }}>{index + 1}</td>
-                                  
+                               <tr key={t.id} className={editingAttendanceId !== t.id ? "table-row" : ""} style={{ background: selectedAttIds.includes(t.id) ? '#ecfdf5' : (editingAttendanceId === t.id ? '#f0fdf4' : 'transparent') }}>
+                                  {isChief && (
+                                      <td style={{ ...styles.td, textAlign: 'center' }} className="action-col">
+                                          {canEdit ? (
+                                              <input type="checkbox" checked={selectedAttIds.includes(t.id)} onChange={() => toggleSelectAtt(t.id)} style={{ cursor: 'pointer', width: '16px', height: '16px' }} />
+                                          ) : null}
+                                      </td>
+                                  )}
+                                  <td data-label="STT" style={{ ...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af' }}>{globalIndex + 1}</td>
+
                                   {editingAttendanceId === t.id ? (
                                       <>
                                           <td style={{ ...styles.td, fontWeight: '700' }} className="text-wrap-name">{t.assigneeName}</td>
@@ -928,22 +1135,22 @@ const Reports = () => {
                                       </>
                                   ) : (
                                       <>
-                                          <td style={{ ...styles.td, fontWeight: '700' }} className="text-wrap-name">{t.assigneeName}</td>
-                                          <td style={styles.td}>
+                                          <td data-label="Nhân sự" style={{ ...styles.td, fontWeight: '700' }} className="text-wrap-name">{t.assigneeName}</td>
+                                          <td data-label="Ca làm việc" style={styles.td}>
                                               <div style={{fontWeight: '700', color: '#1f2937'}} className="text-wrap-title">{t.title}</div>
                                               <div style={{fontSize:'0.8rem', color:'#64748b', marginTop:'4px'}}>{t.assignedRole}</div>
                                           </td>
-                                          <td style={styles.td}>
+                                          <td data-label="Thời gian" style={styles.td}>
                                              <div style={{fontWeight: '600', color: '#334155'}}>{new Date(displayStart).toLocaleDateString('vi-VN')}</div>
                                              <div style={{fontSize:'0.85rem', color:'#64748b', marginTop:'4px'}}>
                                                {new Date(displayStart).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - {new Date(displayEnd).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                                              </div>
                                           </td>
-                                          <td style={{...styles.td, fontWeight: '800', color: '#059669', whiteSpace: 'nowrap'}}>
+                                          <td data-label="Số giờ" style={{...styles.td, fontWeight: '800', color: '#059669', whiteSpace: 'nowrap'}}>
                                               {calculateWorkHours(t.startTime, t.endTime, t.checkInTime, t.checkOutTime, t.adminEdited)}
                                           </td>
-                                          <td style={styles.td}>
-                                             {isCompleted ? 
+                                          <td data-label="Trạng thái" style={styles.td}>
+                                             {isCompleted ?
                                                <span style={styles.badgeSuccess}>Đã chấm công</span> : 
                                                <span style={styles.badgePending}>Chưa hoàn thành</span>
                                              }
@@ -960,8 +1167,8 @@ const Reports = () => {
                                                  </div>
                                              )}
                                           </td>
-                                          <td style={{...styles.td, textAlign: 'center', fontWeight: '800', color: t.progress === 100 ? '#10b981' : '#3b82f6'}}>{t.progress}%</td>
-                                          <td style={{...styles.td, textAlign: 'right'}} className="action-col">
+                                          <td data-label="Tiến độ" style={{...styles.td, textAlign: 'center', fontWeight: '800', color: t.progress === 100 ? '#10b981' : '#3b82f6'}}>{t.progress}%</td>
+                                          <td data-label="Hành động" style={{...styles.td, textAlign: 'right'}} className="action-col">
                                               {canEdit ? (
                                                   <button 
                                                       onClick={() => {
@@ -985,11 +1192,20 @@ const Reports = () => {
                                </tr>
                            );
                          }) : (
-                           <tr><td colSpan="8" style={styles.emptyTd}>Không có dữ liệu chấm công phù hợp.</td></tr>
+                           <tr><td colSpan={isChief ? "9" : "8"} style={styles.emptyTd}>Không có dữ liệu chấm công phù hợp.</td></tr>
                          )}
                       </tbody>
                    </table>
                </div>
+
+               {/* [MỚI] Phân trang Báo cáo Chấm công */}
+               {totalAttPages > 1 && (
+                   <div className="action-col" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '20px' }}>
+                       <button onClick={() => setAttendancePage(p => Math.max(1, p - 1))} disabled={currentAttPage === 1} style={{ padding: '8px 16px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white', cursor: currentAttPage === 1 ? 'not-allowed' : 'pointer', fontWeight: '700', color: '#475569', opacity: currentAttPage === 1 ? 0.5 : 1 }}>Trang trước</button>
+                       <span style={{ fontSize: '0.9rem', color: '#4b5563', fontWeight: '600' }}>Trang {currentAttPage} / {totalAttPages} ({sortedAttendance.length} ca)</span>
+                       <button onClick={() => setAttendancePage(p => Math.min(totalAttPages, p + 1))} disabled={currentAttPage === totalAttPages} style={{ padding: '8px 16px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white', cursor: currentAttPage === totalAttPages ? 'not-allowed' : 'pointer', fontWeight: '700', color: '#475569', opacity: currentAttPage === totalAttPages ? 0.5 : 1 }}>Trang sau</button>
+                   </div>
+               )}
             </div>
           </div>
       )}
@@ -1047,7 +1263,7 @@ const Reports = () => {
                 </div>
 
                 <div className="table-responsive">
-                  <table style={styles.table}>
+                  <table style={styles.table} className="ops-table">
                     <thead>
                       <tr style={styles.tableHeadRow}>
                         <th style={{...styles.th, width: '50px', textAlign: 'center'}}>STT</th>
@@ -1074,11 +1290,11 @@ const Reports = () => {
 
                           return (
                             <tr key={task.id} className="table-row">
-                              <td style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{index + 1}</td>
-                              <td style={{ ...styles.td, fontWeight: '700', color: '#1f2937' }} className="text-wrap-title">{task.title}</td>
-                              <td style={{...styles.td, fontWeight: '600'}} className="text-wrap-name">{task.assigneeName}</td>
-                              <td style={{...styles.td, color: '#475569'}}>{new Date(task.endTime).toLocaleDateString('vi-VN')}</td>
-                              <td style={styles.td}>
+                              <td data-label="STT" style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{index + 1}</td>
+                              <td data-label="Nhiệm vụ" style={{ ...styles.td, fontWeight: '700', color: '#1f2937' }} className="text-wrap-title">{task.title}</td>
+                              <td data-label="Phụ trách" style={{...styles.td, fontWeight: '600'}} className="text-wrap-name">{task.assigneeName}</td>
+                              <td data-label="Hạn chót" style={{...styles.td, color: '#475569'}}>{new Date(task.endTime).toLocaleDateString('vi-VN')}</td>
+                              <td data-label="Tiến độ" style={styles.td}>
                                 <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
                                     <div style={{flex:1, height:'8px', background:'#e2e8f0', borderRadius:'4px', minWidth:'80px', overflow:'hidden'}}>
                                       <div style={{width:`${task.progress}%`, background: task.progress === 100 ? '#10b981' : '#3b82f6', height:'100%', borderRadius:'4px', transition: 'width 0.5s ease'}}></div>
@@ -1086,10 +1302,10 @@ const Reports = () => {
                                     <span style={{fontSize:'0.85rem', fontWeight:'800', color: task.progress === 100 ? '#10b981' : '#3b82f6'}}>{task.progress}%</span>
                                 </div>
                               </td>
-                              <td style={styles.td}>
+                              <td data-label="Trạng thái" style={styles.td}>
                                   <div style={{ display: 'inline-flex' }}>{statusElement}</div>
                               </td>
-                              <td style={{...styles.td, textAlign: 'center'}}>
+                              <td data-label="Đánh giá" style={{...styles.td, textAlign: 'center'}}>
                                   {task.status !== 'completed' ? (
                                       <span style={{fontSize:'0.85rem', color:'#cbd5e1', fontStyle: 'italic'}}>Chưa hoàn thành</span>
                                   ) : task.evaluation === 'passed' ? (
@@ -1103,7 +1319,7 @@ const Reports = () => {
                                               style={{color:'#059669', border:'1px solid #a7f3d0', background:'#ecfdf5', padding:'6px 12px', borderRadius:'8px', cursor:'pointer', fontWeight:'700', fontSize:'0.8rem', whiteSpace:'nowrap'}}
                                           >Đạt</button>
                                           <button
-                                              onClick={() => { if (window.confirm(`Đánh giá "${task.title}" là KHÔNG ĐẠT?\n\nHệ thống sẽ tự động xét kỷ luật theo số lần tích lũy nếu chạm ngưỡng.`)) evaluateTask(task.id, false); }}
+                                              onClick={() => { window.confirmDialog(`Đánh giá "${task.title}" là KHÔNG ĐẠT? Hệ thống sẽ tự động xét kỷ luật theo số lần tích lũy nếu chạm ngưỡng.`, { title: 'Đánh giá Không đạt', okText: 'Không đạt', danger: true, emoji: '✕' }).then(ok => { if (ok) evaluateTask(task.id, false); }); }}
                                               style={{color:'#dc2626', border:'1px solid #fecaca', background:'#fef2f2', padding:'6px 12px', borderRadius:'8px', cursor:'pointer', fontWeight:'700', fontSize:'0.8rem', whiteSpace:'nowrap'}}
                                           >Không đạt</button>
                                       </div>
@@ -1126,10 +1342,10 @@ const Reports = () => {
 const styles = {
   card: { background: 'white', borderRadius: '20px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9', marginBottom: '32px', overflow: 'hidden' },
   cardHeader: { padding: '24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '12px', background: '#ffffff' },
-  iconBox: { width: '48px', height: '48px', background: '#f0f9ff', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#003366' },
+  iconBox: { width: '48px', height: '48px', background: '#f0f9ff', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2B6830' },
   cardTitle: { margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#111827', letterSpacing: '-0.01em' },
   cardBody: { padding: '24px' },
-  printBtn: { display: 'flex', alignItems: 'center', gap: '8px', background: '#ffffff', color: '#003366', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 20px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', fontSize: '0.95rem' },
+  printBtn: { display: 'flex', alignItems: 'center', gap: '8px', background: '#ffffff', color: '#2B6830', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 20px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', fontSize: '0.95rem' },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: '900px' },
   tableHeadRow: { background: '#f8fafc' },
   th: { padding: '16px 20px', textAlign: 'left', color: '#475569', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' },
@@ -1142,7 +1358,7 @@ const styles = {
   badgeInfo: { background: '#eff6ff', color: '#1d4ed8', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', border: '1px solid #bfdbfe', display: 'inline-block', whiteSpace: 'nowrap' },
   
   menuCard: { background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '180px' },
-  accessBtn: { marginTop: 'auto', background: '#003366', color: 'white', border: 'none', padding: '12px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', fontSize: '0.95rem' },
+  accessBtn: { marginTop: 'auto', background: '#2B6830', color: 'white', border: 'none', padding: '12px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', fontSize: '0.95rem' },
   backBtn: { background: 'white', color: '#64748b', border: '1px solid #cbd5e1', padding: '10px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', transition: 'all 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' },
 };
 

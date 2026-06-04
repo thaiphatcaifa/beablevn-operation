@@ -273,14 +273,14 @@ const StaffManager = () => {
         .modal-footer { padding: 16px 24px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; gap: 12px; justify-content: flex-end; background: #ffffff; }
         
         .input-modern { padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem; outline: none; background: white; transition: all 0.2s; box-sizing: border-box; width: 100%; }
-        .input-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+        .input-modern:focus { border-color: #2B6830; box-shadow: 0 0 0 3px rgba(43, 104, 48, 0.1); }
         
         .staff-card { transition: all 0.25s ease; cursor: default; }
         .staff-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -8px rgba(0,0,0,0.1) !important; border-color: #bae6fd !important; }
       `}</style>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', borderBottom: '2px solid #e5e7eb', paddingBottom: '16px' }}>
-          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#003366' }}>
+          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#2B6830' }}>
               <Icons.Staff active={true} />
           </div>
           <div>
@@ -295,7 +295,7 @@ const StaffManager = () => {
           <input className="input-modern" placeholder="Họ và Tên" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
           <input className="input-modern" placeholder="ID Đăng nhập" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} required />
           <input className="input-modern" placeholder="Mật khẩu" type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required />
-          <button type="submit" className="add-staff-btn" style={{...styles.btnAdd, background: '#003366', color: 'white'}}><Icons.Add /> <span>Tạo mới</span></button>
+          <button type="submit" className="add-staff-btn" style={{...styles.btnAdd, background: '#2B6830', color: 'white'}}><Icons.Add /> <span>Tạo mới</span></button>
         </form>
       </div>
 
@@ -447,7 +447,7 @@ const StaffManager = () => {
                   <div style={{display:'flex', flexWrap:'wrap', gap:'8px', marginTop:'16px'}}>
                       {POSITIONS.map(r => (
                           <label key={r} style={styles.checkboxLabel}>
-                              <input type="checkbox" checked={editForm.positions?.includes(r)} onChange={() => handlePositionToggle(r)} style={{accentColor: '#003366'}} /> {r}
+                              <input type="checkbox" checked={editForm.positions?.includes(r)} onChange={() => handlePositionToggle(r)} style={{accentColor: '#2B6830'}} /> {r}
                           </label>
                       ))}
                   </div>
@@ -635,15 +635,15 @@ const StaffManager = () => {
 
 const styles = {
     sectionBox: { background: '#ffffff', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box' },
-    sectionTitle: { fontSize: '0.85rem', fontWeight: '800', color: '#003366', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' },
+    sectionTitle: { fontSize: '0.85rem', fontWeight: '800', color: '#2B6830', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' },
     checkboxLabel: { fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', background: 'white', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: '#334155', transition: 'all 0.2s' },
     financeRow: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', width: '100%' },
     financeLabel: { fontSize: '0.85rem', fontWeight: '700', color: '#334155', width: '150px', minWidth: '150px' },
-    btnAdd: { border: 'none', borderRadius: '10px', padding: '12px 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '700', fontSize: '0.95rem', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(0, 51, 102, 0.2)' },
+    btnAdd: { border: 'none', borderRadius: '10px', padding: '12px 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '700', fontSize: '0.95rem', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(43, 104, 48, 0.2)' },
     label: { fontSize: '0.8rem', fontWeight: '700', color: '#475569', marginBottom: '4px', display: 'block' },
     closeBtn: { background: '#f1f5f9', border: 'none', color: '#64748b', borderRadius: '50%', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' },
     btnModalCancel: { background: 'white', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '10px', padding: '12px 20px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '700', transition: 'all 0.2s', WebkitTapHighlightColor: 'transparent' },
-    btnModalSave: { background: '#003366', border: 'none', color: 'white', borderRadius: '10px', padding: '12px 24px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(0, 51, 102, 0.2)', WebkitTapHighlightColor: 'transparent' },
+    btnModalSave: { background: '#2B6830', border: 'none', color: 'white', borderRadius: '10px', padding: '12px 24px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(43, 104, 48, 0.2)', WebkitTapHighlightColor: 'transparent' },
     btnDangerConfirm: { background: '#dc2626', border: 'none', color: 'white', borderRadius: '10px', padding: '12px 20px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '700', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(220, 38, 38, 0.2)', WebkitTapHighlightColor: 'transparent' },
     
     cardActions: { 

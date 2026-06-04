@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './index.css';
+import './utils/notify'; // Ghi đè window.alert -> toast nổi (áp dụng toàn app, không chặn luồng)
 import App from './App';
 
 // KHẮC PHỤC LỖI IOS SAFARI PWA: Tự động xóa bộ nhớ đệm cũ mỗi khi mở app

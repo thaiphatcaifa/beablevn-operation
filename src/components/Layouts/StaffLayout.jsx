@@ -10,27 +10,27 @@ import { requestForToken, onMessageListener } from '../../firebase';
 // --- BỘ ICON TINH TẾ (MINIMALIST SVG) ĐỒNG BỘ ADMIN ---
 const Icons = {
   Bell: ({ active }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#003366" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#2B6830" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
     </svg>
   ),
   Task: ({ active }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#003366" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#2B6830" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
     </svg>
   ),
   Attendance: ({ active }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#003366" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#2B6830" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
     </svg>
   ),
   Facility: ({ active }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#003366" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#2B6830" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
     </svg>
   ),
   Performance: ({ active }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#003366" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke={active ? "#2B6830" : "#9ca3af"} width="22" height="22" style={{ transition: 'all 0.3s ease' }}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
     </svg>
   ),
@@ -45,7 +45,7 @@ const Icons = {
     </svg>
   ),
   Edit: () => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#003366" width="14" height="14">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#2B6830" width="14" height="14">
       <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
     </svg>
   )
@@ -140,7 +140,7 @@ const StaffLayout = () => {
   const sidebarLinkStyle = (path) => ({
     display: 'flex', alignItems: 'center', gap: '14px',
     padding: '14px 18px', textDecoration: 'none',
-    color: isActive(path) ? '#003366' : '#4b5563',
+    color: isActive(path) ? '#2B6830' : '#4b5563',
     background: isActive(path) ? '#f0f9ff' : 'transparent',
     borderRadius: '12px', marginBottom: '8px',
     fontWeight: isActive(path) ? '700' : '600',
@@ -154,7 +154,7 @@ const StaffLayout = () => {
   const mobileNavItemStyle = (path) => ({ 
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     textDecoration: 'none', 
-    color: isActive(path) ? '#003366' : '#9ca3af',
+    color: isActive(path) ? '#2B6830' : '#9ca3af',
     flex: 1, padding: '10px 0',
     position: 'relative',
     transition: 'all 0.3s ease'
@@ -173,7 +173,7 @@ const StaffLayout = () => {
 
         .sidebar-link:hover:not(.active) { background: #f8fafc !important; transform: translateX(4px); }
 
-        .btn-switch-sidebar { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 16px; text-decoration: none; color: #003366; background: #ffffff; border-radius: 12px; margin-top: 24px; font-weight: 700; font-size: 0.95rem; transition: all 0.2s ease; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .btn-switch-sidebar { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 16px; text-decoration: none; color: #2B6830; background: #ffffff; border-radius: 12px; margin-top: 24px; font-weight: 700; font-size: 0.95rem; transition: all 0.2s ease; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
         .btn-switch-sidebar:hover { background: #f0f9ff; border-color: #bae6fd; transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
 
         .btn-logout-sidebar { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px; background: #fef2f2; color: #dc2626; border: 1px solid #fee2e2; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 0.95rem; transition: all 0.2s ease; }
@@ -246,7 +246,7 @@ const StaffLayout = () => {
          </div>
          <div style={{ display: 'flex', gap: '8px' }}>
              {isAdminRole && (
-                 <Link to="/admin" style={{ padding: '8px', background: '#f0f9ff', color: '#003366', border: '1px solid #bae6fd', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <Link to="/admin" style={{ padding: '8px', background: '#f0f9ff', color: '#2B6830', border: '1px solid #bae6fd', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Icons.Switch />
                  </Link>
              )}
@@ -302,13 +302,13 @@ const StaffLayout = () => {
             <div className="pwd-modal-content" onClick={(e) => e.stopPropagation()}>
                 <h3 style={{ margin: '0 0 24px 0', color: '#111827', textAlign: 'center', fontSize: '1.35rem', fontWeight: '800', letterSpacing: '-0.01em' }}>Đổi mật khẩu</h3>
                 <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <input type="password" placeholder="Mật khẩu hiện tại" required value={pwdForm.current} onChange={e => setPwdForm({...pwdForm, current: e.target.value})} style={{ width: '100%', padding: '14px', border: '1px solid #e2e8f0', borderRadius: '10px', outline: 'none', boxSizing: 'border-box', fontSize: '0.95rem', background: '#f8fafc', transition: 'all 0.2s' }} onFocus={e=>{e.target.style.borderColor='#003366'; e.target.style.boxShadow='0 0 0 3px rgba(0, 51, 102, 0.1)'}} onBlur={e=>{e.target.style.borderColor='#e2e8f0'; e.target.style.boxShadow='none'}}/>
-                    <input type="password" placeholder="Mật khẩu mới" required value={pwdForm.new} onChange={e => setPwdForm({...pwdForm, new: e.target.value})} style={{ width: '100%', padding: '14px', border: '1px solid #e2e8f0', borderRadius: '10px', outline: 'none', boxSizing: 'border-box', fontSize: '0.95rem', background: '#f8fafc', transition: 'all 0.2s' }} onFocus={e=>{e.target.style.borderColor='#003366'; e.target.style.boxShadow='0 0 0 3px rgba(0, 51, 102, 0.1)'}} onBlur={e=>{e.target.style.borderColor='#e2e8f0'; e.target.style.boxShadow='none'}}/>
-                    <input type="password" placeholder="Xác nhận mật khẩu mới" required value={pwdForm.confirm} onChange={e => setPwdForm({...pwdForm, confirm: e.target.value})} style={{ width: '100%', padding: '14px', border: '1px solid #e2e8f0', borderRadius: '10px', outline: 'none', boxSizing: 'border-box', fontSize: '0.95rem', background: '#f8fafc', transition: 'all 0.2s' }} onFocus={e=>{e.target.style.borderColor='#003366'; e.target.style.boxShadow='0 0 0 3px rgba(0, 51, 102, 0.1)'}} onBlur={e=>{e.target.style.borderColor='#e2e8f0'; e.target.style.boxShadow='none'}}/>
+                    <input type="password" placeholder="Mật khẩu hiện tại" required value={pwdForm.current} onChange={e => setPwdForm({...pwdForm, current: e.target.value})} style={{ width: '100%', padding: '14px', border: '1px solid #e2e8f0', borderRadius: '10px', outline: 'none', boxSizing: 'border-box', fontSize: '0.95rem', background: '#f8fafc', transition: 'all 0.2s' }} onFocus={e=>{e.target.style.borderColor='#2B6830'; e.target.style.boxShadow='0 0 0 3px rgba(43, 104, 48, 0.1)'}} onBlur={e=>{e.target.style.borderColor='#e2e8f0'; e.target.style.boxShadow='none'}}/>
+                    <input type="password" placeholder="Mật khẩu mới" required value={pwdForm.new} onChange={e => setPwdForm({...pwdForm, new: e.target.value})} style={{ width: '100%', padding: '14px', border: '1px solid #e2e8f0', borderRadius: '10px', outline: 'none', boxSizing: 'border-box', fontSize: '0.95rem', background: '#f8fafc', transition: 'all 0.2s' }} onFocus={e=>{e.target.style.borderColor='#2B6830'; e.target.style.boxShadow='0 0 0 3px rgba(43, 104, 48, 0.1)'}} onBlur={e=>{e.target.style.borderColor='#e2e8f0'; e.target.style.boxShadow='none'}}/>
+                    <input type="password" placeholder="Xác nhận mật khẩu mới" required value={pwdForm.confirm} onChange={e => setPwdForm({...pwdForm, confirm: e.target.value})} style={{ width: '100%', padding: '14px', border: '1px solid #e2e8f0', borderRadius: '10px', outline: 'none', boxSizing: 'border-box', fontSize: '0.95rem', background: '#f8fafc', transition: 'all 0.2s' }} onFocus={e=>{e.target.style.borderColor='#2B6830'; e.target.style.boxShadow='0 0 0 3px rgba(43, 104, 48, 0.1)'}} onBlur={e=>{e.target.style.borderColor='#e2e8f0'; e.target.style.boxShadow='none'}}/>
                     
                     <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                         <button type="button" onClick={() => setShowPwdModal(false)} style={{ flex: 1, background: 'white', color: '#475569', padding: '14px', border: '1px solid #cbd5e1', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem', transition: 'all 0.2s' }} onMouseOver={e=>e.target.style.background='#f1f5f9'} onMouseOut={e=>e.target.style.background='white'}>Hủy</button>
-                        <button type="submit" style={{ flex: 1, background: '#003366', color: 'white', padding: '14px', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(0, 51, 102, 0.2)' }} onMouseOver={e=>{e.target.style.background='#002244'; e.target.style.transform='translateY(-1px)'}} onMouseOut={e=>{e.target.style.background='#003366'; e.target.style.transform='translateY(0)'}}>Lưu thay đổi</button>
+                        <button type="submit" style={{ flex: 1, background: '#2B6830', color: 'white', padding: '14px', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(43, 104, 48, 0.2)' }} onMouseOver={e=>{e.target.style.background='#1E5225'; e.target.style.transform='translateY(-1px)'}} onMouseOut={e=>{e.target.style.background='#2B6830'; e.target.style.transform='translateY(0)'}}>Lưu thay đổi</button>
                     </div>
                 </form>
             </div>
@@ -318,27 +318,27 @@ const StaffLayout = () => {
       {/* 5. MOBILE BOTTOM NAVIGATION */}
       <nav className="staff-bottom-nav">
         <Link to="/staff/dashboard" style={mobileNavItemStyle('/staff/dashboard')}>
-            {isActive('/staff/dashboard') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#003366', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
+            {isActive('/staff/dashboard') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#2B6830', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
             <Icons.Bell active={isActive('/staff/dashboard')} />
             <span style={{ fontSize: '0.65rem', marginTop: '6px', fontWeight: isActive('/staff/dashboard') ? '700' : '500' }}>Thông báo</span>
         </Link>
         <Link to="/staff/my-tasks" style={mobileNavItemStyle('/staff/my-tasks')}>
-            {isActive('/staff/my-tasks') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#003366', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
+            {isActive('/staff/my-tasks') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#2B6830', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
             <Icons.Task active={isActive('/staff/my-tasks')} />
             <span style={{ fontSize: '0.65rem', marginTop: '6px', fontWeight: isActive('/staff/my-tasks') ? '700' : '500' }}>Nhiệm vụ</span>
         </Link>
         <Link to="/staff/attendance" style={mobileNavItemStyle('/staff/attendance')}>
-            {isActive('/staff/attendance') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#003366', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
+            {isActive('/staff/attendance') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#2B6830', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
             <Icons.Attendance active={isActive('/staff/attendance')} />
             <span style={{ fontSize: '0.65rem', marginTop: '6px', fontWeight: isActive('/staff/attendance') ? '700' : '500' }}>Chấm công</span>
         </Link>
         <Link to="/staff/facility-check" style={mobileNavItemStyle('/staff/facility-check')}>
-            {isActive('/staff/facility-check') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#003366', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
+            {isActive('/staff/facility-check') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#2B6830', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
             <Icons.Facility active={isActive('/staff/facility-check')} />
             <span style={{ fontSize: '0.65rem', marginTop: '6px', fontWeight: isActive('/staff/facility-check') ? '700' : '500' }}>CSVC</span>
         </Link>
         <Link to="/staff/performance" style={mobileNavItemStyle('/staff/performance')}>
-            {isActive('/staff/performance') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#003366', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
+            {isActive('/staff/performance') && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', background: '#2B6830', borderBottomLeftRadius: '4px', borderBottomRightRadius: '4px' }} />}
             <Icons.Performance active={isActive('/staff/performance')} />
             <span style={{ fontSize: '0.65rem', marginTop: '6px', fontWeight: isActive('/staff/performance') ? '700' : '500' }}>Hiệu suất</span>
         </Link>

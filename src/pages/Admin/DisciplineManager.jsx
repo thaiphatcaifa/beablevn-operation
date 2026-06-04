@@ -140,29 +140,27 @@ const DisciplineManager = () => {
   };
 
   const handleApprove = (id) => {
-      if(window.confirm("Phê duyệt hình thức này?")) {
-          updateDisciplineTypeStatus(id, 'Active');
-      }
+      window.confirmDialog("Phê duyệt hình thức kỷ luật này?", { title: 'Phê duyệt', okText: 'Phê duyệt', emoji: '✅' }).then(ok => {
+          if (ok) updateDisciplineTypeStatus(id, 'Active');
+      });
   };
 
   const handleReject = (id) => {
-      if(window.confirm("Đình chỉ (Từ chối) hình thức này?")) {
-          updateDisciplineTypeStatus(id, 'Suspended');
-      }
+      window.confirmDialog("Đình chỉ (Từ chối) hình thức này?", { title: 'Đình chỉ', okText: 'Đình chỉ', danger: true, emoji: '⛔' }).then(ok => {
+          if (ok) updateDisciplineTypeStatus(id, 'Suspended');
+      });
   };
 
   // Regulatory Đề xuất xóa
   const handleDeleteAction = (type) => {
-      if (isReg) {
-          const reason = window.prompt("Nhập lý do ĐỀ XUẤT XÓA hình thức này:");
-          if (!reason) return;
-          
-          proposeDeleteDisciplineType(type.id, {
-              reason: reason,
-              by: user.username
-          });
+      if (!isReg) return;
+      window.promptDialog("Nhập lý do đề xuất xóa hình thức kỷ luật này (gửi lên Chief Admin duyệt):", {
+          title: 'Đề xuất xóa', okText: 'Gửi đề xuất', placeholder: 'VD: Quy định đã lỗi thời, trùng lặp...', emoji: '📝'
+      }).then(reason => {
+          if (!reason) return; // null = hủy hoặc để trống
+          proposeDeleteDisciplineType(type.id, { reason: reason, by: user.username });
           alert("Đã gửi đề xuất xóa lên Chief Admin.");
-      }
+      });
   };
 
   // Chief Admin Sửa trực tiếp
@@ -192,37 +190,48 @@ const DisciplineManager = () => {
           ? `Duyệt đề xuất xóa từ Reg Admin?\nLý do: ${type.deleteProposalReason}` 
           : `[QUYỀN CHIEF ADMIN] - Xác nhận XÓA TRỰC TIẾP hình thức kỷ luật này?`;
           
-      if(window.confirm(msg)) {
+      window.confirmDialog(msg, { title: type.isDeleteProposed ? 'Duyệt đề xuất xóa' : 'Xóa hình thức', okText: 'Xác nhận xóa', danger: true, emoji: '🗑️' }).then(ok => {
+          if (!ok) return;
           updateDisciplineType(type.id, {
               status: 'Deleted',
               deletedBy: user.username,
               deleteReason: type.isDeleteProposed ? type.deleteProposalReason : "Chief Admin xóa trực tiếp"
           });
-      }
+      });
   };
 
   const handleRestore = (id) => {
-      if(window.confirm("Khôi phục hình thức này?")) {
-          updateDisciplineTypeStatus(id, 'Active');
-      }
+      window.confirmDialog("Khôi phục hình thức kỷ luật này về trạng thái hoạt động?", { title: 'Khôi phục', okText: 'Khôi phục', emoji: '♻️' }).then(ok => {
+          if (!ok) return;
+          // Khôi phục về Active đồng thời dọn các cờ đề xuất/xóa cũ để tránh badge kẹt sai trạng thái.
+          updateDisciplineType(id, {
+              status: 'Active',
+              isDeleteProposed: false,
+              deleteProposalReason: '',
+              deleteReason: '',
+              deletedBy: ''
+          });
+      });
   };
 
   const handleHardDelete = (id) => {
-      if(window.confirm("CẢNH BÁO: Hành động này sẽ xóa vĩnh viễn dữ liệu này khỏi hệ thống.\nBạn có chắc chắn muốn tiếp tục?")) {
+      window.confirmDialog("Hành động này sẽ xóa VĨNH VIỄN dữ liệu khỏi hệ thống và không thể hoàn tác. Bạn chắc chắn?", { title: 'Xóa vĩnh viễn', okText: 'Xóa vĩnh viễn', danger: true, emoji: '⚠️' }).then(ok => {
+          if (!ok) return;
           if (deleteDisciplineType) {
               deleteDisciplineType(id);
           } else {
               alert("Lỗi: Hàm xóa vĩnh viễn chưa được cấu hình trong DataContext!");
           }
-      }
+      });
   };
 
   const handleRemoveRecord = (id) => {
-      if (window.confirm("Xác nhận gỡ bỏ hồ sơ vi phạm này khỏi hệ thống nhân sự?")) {
+      window.confirmDialog("Gỡ bỏ hồ sơ vi phạm này khỏi hệ thống nhân sự?", { title: 'Gỡ hồ sơ', okText: 'Gỡ bỏ', danger: true, emoji: '🗑️' }).then(ok => {
+          if (!ok) return;
           deleteDisciplineRecord(id)
               .then(() => alert("Đã gỡ bỏ hồ sơ kỷ luật thành công!"))
               .catch(err => alert("Lỗi hệ thống: " + err.message));
-      }
+      });
   };
 
   const renderStatusBadge = (t) => {
@@ -238,7 +247,7 @@ const DisciplineManager = () => {
           .input-modern {
               padding: 12px 16px; border-radius: 10px; border: 1px solid #e5e7eb; outline: none; font-size: 0.95rem; background: white; transition: all 0.2s; box-sizing: border-box; width: 100%;
           }
-          .input-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+          .input-modern:focus { border-color: #2B6830; box-shadow: 0 0 0 3px rgba(43, 104, 48, 0.1); }
           .table-row { transition: background 0.2s; }
           .table-row:hover { background: #f1f5f9 !important; }
           .action-btn { transition: all 0.2s; flex-shrink: 0; }
@@ -278,12 +287,53 @@ const DisciplineManager = () => {
                   align-items: flex-start !important;
                   gap: 12px;
               }
+
+              /* === CARD-VIEW MOBILE cho bảng: bỏ cuộn ngang, mỗi hàng thành 1 thẻ dọc === */
+              .ops-table { min-width: 0 !important; }
+              .ops-table thead { display: none; }            /* Ẩn header bảng, dùng nhãn trên từng dòng */
+              .ops-table, .ops-table tbody, .ops-table tr, .ops-table td { display: block; width: 100%; box-sizing: border-box; }
+              .ops-table tr {
+                  margin-bottom: 14px;
+                  border: 1px solid #e2e8f0;
+                  border-radius: 14px;
+                  overflow: hidden;
+                  background: #fff;
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+              }
+              /* Mỗi ô = 1 dòng: nhãn bên trái, giá trị bên phải */
+              .ops-table td {
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  gap: 12px;
+                  text-align: right !important;
+                  padding: 11px 16px !important;
+                  border: none !important;
+                  border-bottom: 1px solid #f1f5f9 !important;
+                  white-space: normal !important;
+                  min-width: 0 !important;
+              }
+              .ops-table td:last-child { border-bottom: none !important; }
+              /* Nhãn cột lấy từ thuộc tính data-label */
+              .ops-table td::before {
+                  content: attr(data-label);
+                  font-weight: 700;
+                  color: #64748b;
+                  font-size: 0.7rem;
+                  text-transform: uppercase;
+                  letter-spacing: 0.03em;
+                  text-align: left;
+                  flex-shrink: 0;
+              }
+              /* Hàng tiêu đề nhóm / hàng trống (dùng colSpan): chiếm trọn chiều ngang, không nhãn */
+              .ops-table td[colspan] { display: block; text-align: left !important; }
+              .ops-table td[colspan]::before { content: ''; display: none; }
           }
       `}</style>
 
       {/* HEADER */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', borderBottom: '2px solid #e5e7eb', paddingBottom: '16px' }}>
-          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#003366' }}>
+          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#2B6830' }}>
               <Icons.Discipline />
           </div>
           <div>
@@ -363,7 +413,7 @@ const DisciplineManager = () => {
 
                   <h4 style={{ margin: '0 0 12px 0', color: '#111827', fontWeight: '700', fontSize: '1rem' }}>Luật tự động đang hoạt động</h4>
                   <div className="table-responsive">
-                      <table style={styles.table}>
+                      <table style={styles.table} className="ops-table">
                           <thead>
                               <tr style={styles.tableHeadRow}>
                                   <th style={styles.th}>Hành vi hệ thống theo dõi</th>
@@ -375,17 +425,17 @@ const DisciplineManager = () => {
                           <tbody>
                               {autoDisciplineRules && autoDisciplineRules.map(rule => (
                                   <tr key={rule.id} className="table-row">
-                                      <td style={{...styles.td, fontWeight: '700', color: '#1e293b'}}>
+                                      <td data-label="Hành vi" style={{...styles.td, fontWeight: '700', color: '#1e293b'}}>
                                           {rule.triggerType === 'late_attendance' && 'Điểm danh vào ca muộn'}
                                           {rule.triggerType === 'overdue_task' && 'Bàn giao nhiệm vụ trễ hạn'}
                                           {rule.triggerType === 'failed_task' && 'Nhiệm vụ Không Đạt yêu cầu'}
                                       </td>
-                                      <td style={styles.td}>
+                                      <td data-label="Ngưỡng phạt" style={styles.td}>
                                           Đủ <span style={{ fontWeight: '800', color: '#dc2626' }}>{rule.threshold}</span> lần
                                       </td>
-                                      <td style={{...styles.td, color: '#003366', fontWeight: '700'}}>{rule.disciplineName}</td>
-                                      <td style={{...styles.td, textAlign: 'right', paddingRight: '24px'}}>
-                                          <button className="action-btn" onClick={() => { if(window.confirm("Hủy quy tắc tự động gán này?")) deleteAutoRule(rule.id); }} style={styles.btnActionRed} title="Hủy quy tắc">
+                                      <td data-label="Hình thức" style={{...styles.td, color: '#2B6830', fontWeight: '700'}}>{rule.disciplineName}</td>
+                                      <td data-label="Hành động" style={{...styles.td, textAlign: 'right', paddingRight: '24px'}}>
+                                          <button className="action-btn" onClick={() => { window.confirmDialog("Hủy quy tắc tự động gán này?", { title: 'Hủy quy tắc', okText: 'Hủy quy tắc', danger: true, emoji: '🗑️' }).then(ok => { if (ok) deleteAutoRule(rule.id); }); }} style={styles.btnActionRed} title="Hủy quy tắc">
                                               <Icons.Trash />
                                           </button>
                                       </td>
@@ -417,7 +467,7 @@ const DisciplineManager = () => {
               />
           </div>
           <div className="table-responsive">
-              <table style={styles.table}>
+              <table style={styles.table} className="ops-table">
                   <thead>
                       <tr style={styles.tableHeadRow}>
                           <th style={{...styles.th, minWidth: '220px'}}>Vi phạm</th>
@@ -437,7 +487,7 @@ const DisciplineManager = () => {
                               <React.Fragment key={lvl}>
                                   <tr className="folder-row" onClick={() => toggleFolder(lvl)} style={{ cursor: 'pointer', background: '#f8fafc', transition: 'background 0.2s' }}>
                                       <td colSpan="5" style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#003366', fontWeight: '800', fontSize: '1.05rem' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#2B6830', fontWeight: '800', fontSize: '1.05rem' }}>
                                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px' }}>
                                                   {isExpanded ? <Icons.ChevronDown /> : <Icons.ChevronRight />}
                                               </div>
@@ -451,12 +501,12 @@ const DisciplineManager = () => {
                                   </tr>
                                   {isExpanded && items.map(t => (
                                       <tr key={t.id} className="table-row">
-                                          <td style={{...styles.td, fontWeight:'700', color: '#111827'}} className="td-wrap">{t.name}</td>
-                                          <td style={styles.td}>
+                                          <td data-label="Vi phạm" style={{...styles.td, fontWeight:'700', color: '#111827'}} className="td-wrap">{t.name}</td>
+                                          <td data-label="Mức độ" style={styles.td}>
                                               <span style={styles.levelBadge}>{t.level || '---'}</span>
                                           </td>
-                                          <td style={{...styles.td, color:'#475569'}} className="td-wrap">{t.description}</td>
-                                          <td style={styles.td}>
+                                          <td data-label="Mô tả" style={{...styles.td, color:'#475569'}} className="td-wrap">{t.description}</td>
+                                          <td data-label="Tình trạng" style={styles.td}>
                                               <div style={{display:'flex', flexDirection:'column', gap:'6px', alignItems:'flex-start'}}>
                                                   {renderStatusBadge(t)}
                                                   {t.isDeleteProposed && (
@@ -466,7 +516,7 @@ const DisciplineManager = () => {
                                                   )}
                                               </div>
                                           </td>
-                                          <td style={{...styles.td, textAlign: 'right', paddingRight: '24px'}}>
+                                          <td data-label="Hành động" style={{...styles.td, textAlign: 'right', paddingRight: '24px'}}>
                                               <div style={{display:'flex', gap:'8px', justifyContent: 'flex-end', flexWrap: 'wrap'}}>
                                                   {canApprove && t.status === 'Pending' && (
                                                       <>
@@ -532,17 +582,17 @@ const DisciplineManager = () => {
                                   </tr>
                                   {isExpanded && otherItems.map(t => (
                                       <tr key={t.id} className="table-row">
-                                          <td style={{...styles.td, fontWeight:'700', color: '#111827'}} className="td-wrap">{t.name}</td>
-                                          <td style={styles.td}>
+                                          <td data-label="Vi phạm" style={{...styles.td, fontWeight:'700', color: '#111827'}} className="td-wrap">{t.name}</td>
+                                          <td data-label="Mức độ" style={styles.td}>
                                               <span style={styles.levelBadge}>{t.level || '---'}</span>
                                           </td>
-                                          <td style={{...styles.td, color:'#475569'}} className="td-wrap">{t.description}</td>
-                                          <td style={styles.td}>
+                                          <td data-label="Mô tả" style={{...styles.td, color:'#475569'}} className="td-wrap">{t.description}</td>
+                                          <td data-label="Tình trạng" style={styles.td}>
                                               <div style={{display:'flex', flexDirection:'column', gap:'6px', alignItems:'flex-start'}}>
                                                   {renderStatusBadge(t)}
                                               </div>
                                           </td>
-                                          <td style={{...styles.td, textAlign: 'right', paddingRight: '24px'}}>
+                                          <td data-label="Hành động" style={{...styles.td, textAlign: 'right', paddingRight: '24px'}}>
                                               <div style={{display:'flex', gap:'8px', justifyContent: 'flex-end', flexWrap: 'wrap'}}>
                                                   {canApprove && t.status === 'Pending' && (
                                                       <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleApprove(t.id); }} style={styles.btnActionGreen} title="Phê duyệt"><Icons.Check /></button>
@@ -579,7 +629,7 @@ const DisciplineManager = () => {
               <h3 style={styles.cardTitle}>2. Hồ sơ nhân sự vi phạm</h3>
           </div>
           <div className="table-responsive">
-              <table style={styles.table}>
+              <table style={styles.table} className="ops-table">
                   <thead>
                       <tr style={styles.tableHeadRow}>
                           <th style={{...styles.th, width: '50px'}}>STT</th>
@@ -596,8 +646,8 @@ const DisciplineManager = () => {
                           const discType = disciplineTypes.find(d => d.id === rec.disciplineId);
                           return (
                               <tr key={rec.id} className="table-row">
-                                  <td style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{idx + 1}</td>
-                                  <td style={{...styles.td, fontWeight:'700', color: '#111827'}} className="td-wrap">
+                                  <td data-label="STT" style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{idx + 1}</td>
+                                  <td data-label="Nhân sự" style={{...styles.td, fontWeight:'700', color: '#111827'}} className="td-wrap">
                                       <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
                                           <div style={{width:'32px', height:'32px', background:'#f1f5f9', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', color:'#475569', fontWeight:'800', fontSize:'0.9rem', flexShrink: 0}}>
                                               {(staff ? staff.name : 'U').charAt(0).toUpperCase()}
@@ -605,19 +655,19 @@ const DisciplineManager = () => {
                                           {staff ? staff.name : 'Unknown'}
                                       </div>
                                   </td>
-                                  <td style={{...styles.td, color: '#475569', fontWeight: '600'}} className="td-wrap">
+                                  <td data-label="Nhiệm vụ / Ca làm" style={{...styles.td, color: '#475569', fontWeight: '600'}} className="td-wrap">
                                       {rec.taskTitle || '---'} {rec.isAutoAssigned && <span style={{color: '#2563eb', fontSize: '0.8rem', display: 'block'}}>🤖 Tự động gán</span>}
                                   </td>
-                                  <td style={styles.td}>
+                                  <td data-label="Mức độ" style={styles.td}>
                                       <span style={{...styles.levelBadge, background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', whiteSpace: 'nowrap'}}>
                                           {discType ? discType.level : (rec.disciplineName || '---')}
                                       </span>
                                   </td>
-                                  <td style={{...styles.td, color:'#64748b'}}>
+                                  <td data-label="Ngày ghi nhận" style={{...styles.td, color:'#64748b'}}>
                                       {new Date(rec.date).toLocaleDateString('vi-VN')}
                                   </td>
                                   {canApprove && (
-                                      <td style={{...styles.td, textAlign: 'right', paddingRight: '24px'}}>
+                                      <td data-label="Quản lý" style={{...styles.td, textAlign: 'right', paddingRight: '24px'}}>
                                           <button className="action-btn" onClick={() => handleRemoveRecord(rec.id)} style={{...styles.btnActionRed, padding: '6px 12px', fontSize: '0.85rem', fontWeight: '700', display: 'inline-flex', gap: '4px', alignItems: 'center'}} title="Xóa bản ghi kỷ luật gán sai">
                                               <Icons.Trash /> <span>Gỡ lỗi</span>
                                           </button>
@@ -639,7 +689,7 @@ const DisciplineManager = () => {
                   <h3 style={{...styles.cardTitle, color: '#b91c1c'}}>3. Thùng rác (Hình thức đã hiệu chỉnh/xóa)</h3>
               </div>
               <div className="table-responsive">
-                  <table style={styles.table}>
+                  <table style={styles.table} className="ops-table">
                       <thead>
                           <tr style={{background: '#fff5f5'}}>
                               <th style={{...styles.th, color: '#991b1b'}}>Hình thức</th>
@@ -652,11 +702,11 @@ const DisciplineManager = () => {
                       <tbody>
                           {deletedTypes.map(t => (
                               <tr key={t.id} className="table-row">
-                                  <td style={{...styles.td, fontWeight:'700', color: '#4b5563', textDecoration: 'line-through'}} className="td-wrap">{t.name}</td>
-                                  <td style={styles.td}><span style={{...styles.levelBadge, opacity: 0.7}}>{t.level}</span></td>
-                                  <td style={{...styles.td, fontStyle:'italic', color: '#ef4444'}} className="td-wrap">{t.deleteReason}</td>
-                                  <td style={{...styles.td, color: '#64748b'}}>{t.deletedBy}</td>
-                                  <td style={{...styles.td, textAlign: 'right', paddingRight: '24px'}}>
+                                  <td data-label="Hình thức" style={{...styles.td, fontWeight:'700', color: '#4b5563', textDecoration: 'line-through'}} className="td-wrap">{t.name}</td>
+                                  <td data-label="Mức độ" style={styles.td}><span style={{...styles.levelBadge, opacity: 0.7}}>{t.level}</span></td>
+                                  <td data-label="Lý do hủy/xóa" style={{...styles.td, fontStyle:'italic', color: '#ef4444'}} className="td-wrap">{t.deleteReason}</td>
+                                  <td data-label="Người hủy/xóa" style={{...styles.td, color: '#64748b'}}>{t.deletedBy}</td>
+                                  <td data-label="Hành động" style={{...styles.td, textAlign: 'right', paddingRight: '24px'}}>
                                       {isChief ? (
                                           <div style={{display:'flex', gap:'8px', justifyContent: 'flex-end', flexWrap:'wrap'}}>
                                               <button className="action-btn" onClick={() => handleRestore(t.id)} style={styles.btnActionBlue} title="Khôi phục">
@@ -720,7 +770,7 @@ const styles = {
     cardBody: { padding: '24px' },
     
     label: { display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#475569', marginBottom: '8px' },
-    btnAdd: { background: '#003366', color: 'white', border: 'none', borderRadius: '10px', padding: '12px 24px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '700', fontSize: '0.95rem', boxShadow: '0 4px 6px rgba(0, 51, 102, 0.2)', transition: 'all 0.2s', height: '46px' },
+    btnAdd: { background: '#2B6830', color: 'white', border: 'none', borderRadius: '10px', padding: '12px 24px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '700', fontSize: '0.95rem', boxShadow: '0 4px 6px rgba(43, 104, 48, 0.2)', transition: 'all 0.2s', height: '46px' },
     
     table: { width: '100%', borderCollapse: 'collapse', minWidth: '800px', tableLayout: 'auto' },
     tableHeadRow: { background: '#f8fafc' },
@@ -744,7 +794,7 @@ const styles = {
     modalContent: { background: 'white', borderRadius: '20px', width: '100%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', overflow: 'hidden' },
     modalHeader: { padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     btnActionGray: { background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#475569', padding: '10px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem' },
-    btnActionSave: { background: '#003366', border: 'none', color: 'white', padding: '10px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem' }
+    btnActionSave: { background: '#2B6830', border: 'none', color: 'white', padding: '10px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem' }
 };
 
 export default DisciplineManager;

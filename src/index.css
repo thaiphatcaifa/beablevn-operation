@@ -1,3 +1,48 @@
+/* =============================================================================
+   DESIGN TOKENS — nguồn màu/spacing dùng chung cho toàn app 2SOL Operations.
+   Cách dùng trong inline style React: color: 'var(--brand-primary)'  (var() chạy
+   được trong style object, KHÔNG dùng được trong thuộc tính SVG như stroke="...").
+
+   ✅ ĐÃ CHUYỂN sang đúng màu thương hiệu Forest Green (#2B6830) theo Brand Guideline.
+   Toàn bộ navy #003366 cũ đã được thay bằng Forest Green. Muốn tinh chỉnh tông xanh
+   chủ đạo cho toàn app: chỉ cần đổi --brand-primary bên dưới.
+   ============================================================================= */
+:root {
+  /* Màu chính — Forest Green (Brand Guideline Be Able VN) */
+  --brand-primary: #2B6830;
+  --brand-primary-dark: #1E5225;   /* trạng thái hover/nhấn */
+  --brand-primary-tint: #E8F4EC;   /* nền nhạt của màu chính */
+
+  /* Bí danh bộ xanh thương hiệu (tham chiếu) */
+  --forest-green: #2B6830;
+  --forest-green-dark: #1E5225;
+  --forest-green-light: #3D8B47;
+  --forest-green-tint: #E8F4EC;
+
+  /* Màu ngữ nghĩa */
+  --success: #059669;
+  --danger: #dc2626;
+  --warning: #f59e0b;
+  --info: #0369a1;
+
+  /* Trung tính (slate) */
+  --text-strong: #111827;
+  --text: #334155;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+  --border: #e2e8f0;
+  --border-soft: #f1f5f9;
+  --surface: #ffffff;
+  --surface-alt: #f8fafc;
+
+  /* Bo góc & đổ bóng */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 20px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
+}
+
 body {
   margin: 0;
   /* Cập nhật font chính thành Josefin Sans */

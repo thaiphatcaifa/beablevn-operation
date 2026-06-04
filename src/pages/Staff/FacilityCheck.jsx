@@ -172,7 +172,7 @@ const FacilityCheck = () => {
               background-image: url('data:image/svg+xml;utf8,<svg fill="%239ca3af" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
               background-repeat: no-repeat; background-position: right 12px center; padding-right: 40px;
           }
-          .filter-modern:focus { border-color: #003366; box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
+          .filter-modern:focus { border-color: #2B6830; box-shadow: 0 0 0 3px rgba(43, 104, 48, 0.1); }
           .filter-modern:disabled { background: #f1f5f9; cursor: not-allowed; color: #64748b; }
           
           .radio-pill {
@@ -195,12 +195,12 @@ const FacilityCheck = () => {
               .item-label { width: 35%; flex-shrink: 0; margin-top: 8px; }
           }
           
-          .btn-submit { background: #003366; color: white; border: none; padding: 16px; border-radius: 12px; font-size: 1rem; font-weight: 800; cursor: pointer; width: 100%; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0, 51, 102, 0.2); letter-spacing: 0.02em; margin-top: 24px; display: flex; align-items: center; justify-content: center; gap: 8px;}
-          .btn-submit:hover { background: #002244; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0, 51, 102, 0.25); }
+          .btn-submit { background: #2B6830; color: white; border: none; padding: 16px; border-radius: 12px; font-size: 1rem; font-weight: 800; cursor: pointer; width: 100%; transition: all 0.2s; box-shadow: 0 4px 6px rgba(43, 104, 48, 0.2); letter-spacing: 0.02em; margin-top: 24px; display: flex; align-items: center; justify-content: center; gap: 8px;}
+          .btn-submit:hover { background: #1E5225; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(43, 104, 48, 0.25); }
       `}</style>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', borderBottom: '2px solid #e5e7eb', paddingBottom: '16px' }}>
-          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#003366' }}>
+          <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px', display: 'flex', color: '#2B6830' }}>
               <Icons.Facility />
           </div>
           <div>
