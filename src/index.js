@@ -14,12 +14,18 @@ if ('caches' in window) {
   });
 }
 
-// Xóa Service Worker cũ nếu bị kẹt trên iPhone
+// Gỡ Service Worker CŨ bị kẹt (vd PWA cache trên iPhone), NHƯNG giữ lại
+// service worker của Firebase Messaging — cần cho thông báo nhắc ca chạy nền.
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(function(registrations) {
-    for(let registration of registrations) {
-      registration.unregister();
-    } 
+    registrations.forEach(function(registration) {
+      const url = (registration.active && registration.active.scriptURL) || '';
+      const scope = registration.scope || '';
+      const isMessagingSW = url.includes('firebase-messaging-sw') || scope.includes('firebase-cloud-messaging');
+      if (!isMessagingSW) {
+        registration.unregister();
+      }
+    });
   });
 }
 

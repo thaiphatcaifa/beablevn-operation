@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; // Bổ sung để điều hướng
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
+import { verifyAtWorkplace } from '../../utils/geofence'; // Kiểm tra vị trí khi điểm danh
 
 // --- HELPER FUNCTIONS ---
 const isSameDay = (d1, d2) => d1.toDateString() === d2.toDateString();
@@ -124,7 +125,11 @@ const Attendance = () => {
   filteredScheduleTasks.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
   // --- 1. XỬ LÝ CHECK-IN & GÁN KỶ LUẬT TỰ ĐỘNG ---
-  const handleSchedulerCheckIn = (task) => {
+  const handleSchedulerCheckIn = async (task) => {
+      // [GEOFENCE] Chỉ cho điểm danh khi nhân sự ĐANG Ở trong khu vực Be Able VN (theo vị trí GPS).
+      const geo = await verifyAtWorkplace();
+      if (!geo.ok) { window.toast(geo.message, 'error'); return; }
+
       const exactNow = new Date();
       const startTime = new Date(task.startTime);
       const diffMinutes = (exactNow - startTime) / 60000; 
@@ -190,7 +195,11 @@ const Attendance = () => {
   };
 
   // --- 2. XỬ LÝ CHECK-OUT ---
-  const handleSchedulerCheckOut = (task) => {
+  const handleSchedulerCheckOut = async (task) => {
+      // [GEOFENCE] Chỉ cho tan ca (check-out) khi nhân sự ĐANG Ở trong khu vực Be Able VN.
+      const geo = await verifyAtWorkplace();
+      if (!geo.ok) { window.toast(geo.message, 'error'); return; }
+
       const exactNow = new Date();
       const endTime = new Date(task.endTime);
       const diffMinutes = (endTime - exactNow) / 60000; 

@@ -234,6 +234,42 @@ const TaskManager = () => {
       return roles;
   };
 
+  // [LƯƠNG] Các vai trò mà nhân sự THỰC SỰ được tính lương theo giờ:
+  //  - primaryRole (tính qua UBI1), hoặc
+  //  - vai trò có trong remunerations kèm mức tiền > 0 (tính qua R).
+  // Nếu lịch gán 1 vai trò KHÔNG nằm trong danh sách này (vd Bartender trong khi nhân sự là Waiter),
+  // giờ công vẫn được đếm nhưng KHÔNG ra lương.
+  const getPayableRoles = (staffId) => {
+      const st = staffList.find(s => s.id === staffId);
+      if (!st) return [];
+      const roles = new Set();
+      if (st.primaryRole) roles.add(st.primaryRole);
+      (Array.isArray(st.remunerations) ? st.remunerations : []).forEach(r => {
+          if (r.position && Number(r.amount) > 0) roles.add(r.position);
+      });
+      return [...roles];
+  };
+  const isAssignedRolePayable = (staffId, role) => {
+      if (!staffId || !role) return true; // thiếu dữ liệu -> không cảnh báo
+      return getPayableRoles(staffId).includes(role);
+  };
+
+  // [SỬA NHANH] Đổi vai trò của lịch gốc VÀ toàn bộ ca con liên quan sang vai trò mới.
+  // Cập nhật cả ca đã chấm công để lương các tháng CHƯA chốt được tính lại đúng.
+  const handleFixScheduleRole = (sched, newRole) => {
+      const related = tasks.filter(t => t.fromScheduleId === sched.id);
+      window.confirmDialog(
+          `Đổi vai trò của lịch "${sched.title}" và toàn bộ ${related.length} ca liên quan sang "${newRole}"? ` +
+          `Lương các tháng CHƯA chốt sẽ được tính lại theo vai trò mới.`,
+          { title: 'Đổi vai trò lịch', okText: 'Đổi vai trò', emoji: '🔧' }
+      ).then(ok => {
+          if (!ok) return;
+          updateSchedule(sched.id, { assignedRole: newRole });
+          related.forEach(t => updateTask(t.id, { assignedRole: newRole }));
+          window.toast(`Đã đổi vai trò sang "${newRole}" cho lịch và ${related.length} ca.`, 'success');
+      });
+  };
+
   // --- HANDLER THAY ĐỔI NHÂN SỰ & AUTOFILL KHU VỰC ---
   const handleAssigneeChange = (e) => {
       const selectedId = e.target.value;
@@ -1648,6 +1684,21 @@ const TaskManager = () => {
                                           <td data-label="Thông tin mẫu lịch" style={styles.td}>
                                               <div style={{fontWeight:'700', color: '#111827', fontSize: '1.05rem', marginBottom: '4px'}}>{s.title} {s.area && <span style={{fontSize:'0.7rem', background:'#fef3c7', color:'#b45309', padding:'2px 8px', borderRadius:'12px', fontWeight:'700', marginLeft: '6px', verticalAlign: 'middle'}}>📍 {s.area}</span>}</div>
                                               {s.assigneeName && <div style={{fontSize:'0.85rem', color:'#4b5563'}}>👤 <span style={{fontWeight:'600'}}>{s.assigneeName}</span> {s.assignedRole ? `(${s.assignedRole})` : ''}</div>}
+                                              {s.assigneeName && s.assignedRole && !isAssignedRolePayable(s.assigneeId, s.assignedRole) && (
+                                                  <div style={{ marginTop: '6px', fontSize: '0.75rem', color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '8px 10px', lineHeight: 1.45 }}>
+                                                      <div>⚠️ Vai trò "{s.assignedRole}" KHÔNG có mức lương theo giờ cho nhân sự này → giờ công sẽ không ra lương. (Sửa vị trí ở thẻ Nhân sự KHÔNG tự cập nhật lịch cũ — phải đổi ngay trên lịch này.)</div>
+                                                      {getPayableRoles(s.assigneeId).length > 0 ? (
+                                                          <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                                                              <span style={{ fontWeight: '800' }}>Sửa nhanh sang:</span>
+                                                              {getPayableRoles(s.assigneeId).map(role => (
+                                                                  <button key={role} onClick={() => handleFixScheduleRole(s, role)} style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' }}>{role}</button>
+                                                              ))}
+                                                          </div>
+                                                      ) : (
+                                                          <div style={{ marginTop: '6px' }}>Nhân sự này chưa có vai trò nào kèm mức thù lao R — hãy bổ sung mức R trong thẻ Nhân sự trước.</div>
+                                                      )}
+                                                  </div>
+                                              )}
                                               <div style={{fontSize:'0.8rem', color:'#0369a1', marginTop: '6px', fontWeight: '700'}}>
                                                   📅 Bắt đầu: {formatVNDateTimeLabel(s.startTime)}
                                               </div>

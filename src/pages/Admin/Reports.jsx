@@ -26,6 +26,19 @@ const parseAmount = (val) => {
     return isNaN(num) ? 0 : num;
 };
 
+// Sắp xếp mảng theo cột. sort = { key, direction: 'asc' | 'desc' }.
+// getVal(row, key) trả về giá trị so sánh (số hoặc chuỗi). Không có key -> giữ nguyên thứ tự.
+const applySort = (rows, sort, getVal) => {
+    if (!sort || !sort.key) return rows;
+    const arr = [...rows].sort((a, b) => {
+        const va = getVal(a, sort.key);
+        const vb = getVal(b, sort.key);
+        if (typeof va === 'number' && typeof vb === 'number') return va - vb;
+        return String(va ?? '').localeCompare(String(vb ?? ''), 'vi', { numeric: true });
+    });
+    return sort.direction === 'desc' ? arr.reverse() : arr;
+};
+
 const isSameDay = (d1, d2) => d1 && d2 && d1.toDateString() === d2.toDateString();
 const isSameMonth = (d1, d2) => d1 && d2 && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
 const isSameWeek = (d1, d2) => {
@@ -118,7 +131,8 @@ const monthYearOptions = generateMonthYearOptions();
 
 const Reports = () => {
   const { user } = useAuth();
-  const { tasks, staffList, facilityLogs, updateTask, payrollRecords, savePayrollRecord, areas, evaluateTask } = useData();
+  const { tasks, staffList, facilityLogs, updateTask, payrollRecords, savePayrollRecord, areas, evaluateTask,
+          payrollHistory, addPayrollHistory, deletePayrollHistory, deletePayrollRecord } = useData();
   
   const [activeTab, setActiveTab] = useState('overview'); 
 
@@ -131,6 +145,14 @@ const Reports = () => {
 
   // Thêm state cấu hình sắp xếp cho báo cáo chấm công
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+  const [financeSort, setFinanceSort] = useState({ key: null, direction: 'asc' }); // sort bảng Tài chính
+  const [taskSort, setTaskSort] = useState({ key: null, direction: 'asc' });        // sort bảng Nhiệm vụ
+
+  // Đổi chiều khi bấm lại cùng cột; bấm cột mới -> tăng dần.
+  const toggleSort = (cur, setter, key) =>
+      setter(cur.key === key ? { key, direction: cur.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' });
+  // Mũi tên trạng thái sort trên tiêu đề cột.
+  const sortArrow = (cur, key) => (cur.key === key ? (cur.direction === 'asc' ? ' ▲' : ' ▼') : ' ⇅');
 
   const [editingAttendanceId, setEditingAttendanceId] = useState(null);
   const [editAttForm, setEditAttForm] = useState({ checkIn: '', checkOut: '', reason: '' });
@@ -157,6 +179,7 @@ const Reports = () => {
   
   // Trạng thái mở rộng cho danh sách báo cáo Cơ sở vật chất
   const [expandedFacilityGroups, setExpandedFacilityGroups] = useState([]);
+  const [expandedHistoryId, setExpandedHistoryId] = useState(null); // bản chốt đang mở xem chi tiết
   
   const [taskStaffFilter, setTaskStaffFilter] = useState('all');
   const [taskStatusFilter, setTaskStatusFilter] = useState('all');
@@ -324,7 +347,8 @@ const Reports = () => {
           let ubi1Tasks = [];
 
           let R_Secondary = 0;
-          let hoursSecondaryPartTime = 0;
+          let hoursSecondaryPartTime = 0;   // giờ làm ở vai trò part-time (sinh R thứ cấp)
+          let hoursUBI2 = 0;                 // giờ làm ở các vai trò UBI phụ (UBI2, lương cố định)
 
           // [FIX BUG #2] Tổng giờ công thực tế trong tháng (đếm MỌI vai trò),
           // dùng để hiển thị ở cột "Thông tin thêm" — không ảnh hưởng logic tính lương.
@@ -361,6 +385,9 @@ const Reports = () => {
                   if (!ubiRoles.includes(task.assignedRole)) {
                       R_Secondary += workedHours * taskRate;
                       hoursSecondaryPartTime += workedHours;
+                  } else {
+                      // Vai trò UBI phụ (UBI2): lương cố định, nhưng vẫn đếm giờ để hiển thị thông tin.
+                      hoursUBI2 += workedHours;
                   }
               }
           });
@@ -387,26 +414,47 @@ const Reports = () => {
               });
           }
 
-          const baseUbi = staff.ubiBase !== undefined ? parseAmount(staff.ubiBase) : (parseAmount(staff.ubi1Base) * (parseAmount(staff.ubi1Percent)/100 || 1));
+          // [FIX] LUÔN ưu tiên `ubi1Base` — đúng field mà form/thẻ Nhân sự đang dùng (calculateFixedSalary
+          // cũng dùng ubi1Base). Chỉ khi `ubi1Base` CHƯA thiết lập (= 0) mới rơi về field cũ `ubiBase`.
+          // (Trước đây ưu tiên ubiBase nên nhân sự có ubiBase cũ còn sót bị lấy SAI số — vd Bak Cai
+          //  lấy 10.000.000 thay vì 14.875.070 theo thiết lập.)
+          // UBI cố định gốc = ĐÚNG bằng ubi1Base — giống hệt calculateFixedSalary của thẻ Nhân sự.
+          // KHÔNG nhân ubi1Percent, KHÔNG dùng field cũ ubiBase, để tài chính LUÔN khớp với thẻ.
+          const baseUbi = parseAmount(staff.ubi1Base);
           const allowance = parseAmount(staff.specificAllowance);
           
           const totalFixedSalary = baseUbi + secUbiTotal + allowance;
 
-          const incomeForBHXH = baseUbi + R_UBI1;
-          const bhxhDeduction = incomeForBHXH * 0.105;
-
+          // Tính TỔNG (Gross) trước để dùng cho quy tắc BHXH theo ngưỡng.
           const grossIncome = totalFixedSalary + R_UBI1 + R_Secondary;
 
+          // [QUY TẮC BHXH theo ngưỡng 2.500.000]
+          //  - UBI1 cố định (baseUbi) >= 2.5M: GIỮ cách cũ -> BHXH 10.5% trên (UBI1 + R vượt giờ).
+          //  - UBI1 < 2.5M:
+          //      * nếu TỔNG (Gross: UBI1 + UBI2 + phụ cấp + R + Part-time) >= 2.5M -> BHXH 10.5% trên Gross;
+          //      * nếu Gross < 2.5M -> KHÔNG tính BHXH (= 0).
+          const BHXH_THRESHOLD = 2500000;
+          let bhxhDeduction;
+          if (baseUbi >= BHXH_THRESHOLD) {
+              bhxhDeduction = (baseUbi + R_UBI1) * 0.105;
+          } else {
+              bhxhDeduction = grossIncome >= BHXH_THRESHOLD ? grossIncome * 0.105 : 0;
+          }
+
+          // [THUẾ TNCN] Tính trên thu nhập SAU KHI TRỪ BHXH. Chỉ tính khi phần này > 15.500.000,
+          // và thuế = 5% trên phần vượt ngưỡng.
           const taxThreshold = 15500000;
-          const taxDeduction = grossIncome > taxThreshold ? (grossIncome - taxThreshold) * 0.05 : 0;
+          const incomeAfterBHXH = grossIncome - bhxhDeduction;
+          const taxDeduction = incomeAfterBHXH > taxThreshold ? (incomeAfterBHXH - taxThreshold) * 0.05 : 0;
 
           const netIncome = grossIncome - bhxhDeduction - taxDeduction;
 
           if (grossIncome > 0 || minHours > 0 || totalWorkedHours > 0) {
               financeRows.push({
                   item: staff.name,
-                  // [FIX BUG #2] Hiển thị tổng giờ công của tháng + giờ UBI 1 (giữ nguyên thông tin cũ)
-                  type: `Giờ công T${Number(selMonth)}: ${totalWorkedHours.toFixed(1)}h • UBI 1: ${hoursUBI1.toFixed(1)}/${minHours}h`,
+                  // Hiển thị ĐẦY ĐỦ cơ cấu giờ công: tổng giờ, giờ UBI1 (kèm phần R vượt định mức),
+                  // giờ UBI2 (nếu có), và giờ Task R part-time.
+                  type: `Tổng: ${totalWorkedHours.toFixed(1)}h • UBI1: ${hoursUBI1.toFixed(1)}/${minHours}h${(hoursUBI1 - minHours) > 0 ? ` (R ${(hoursUBI1 - minHours).toFixed(1)}h)` : ''}${hoursUBI2 > 0 ? ` • UBI2: ${hoursUBI2.toFixed(1)}h` : ''} • Task R: ${hoursSecondaryPartTime.toFixed(1)}h`,
                   gross: grossIncome,
                   bhxh: bhxhDeduction,
                   tax: taxDeduction,
@@ -424,16 +472,63 @@ const Reports = () => {
           alert("Lỗi: Hệ thống chưa được cấu hình API savePayrollRecord trong DataContext.");
           return;
       }
-      window.confirmDialog(`Chốt báo cáo lương tháng ${financeMonthFilter}? Dữ liệu sẽ được lưu thành bản cứng (Snapshot) để khóa lịch sử lương. KHÔNG THỂ hoàn tác!`, { title: 'Chốt báo cáo', okText: 'Chốt sổ', danger: true, emoji: '🔒' }).then(ok => {
+      window.confirmDialog(`Chốt báo cáo lương tháng ${financeMonthFilter}? Dữ liệu sẽ được lưu thành 1 bản chốt và thêm vào Lịch sử chốt để xem lại / khôi phục sau.`, { title: 'Chốt báo cáo', okText: 'Chốt sổ', emoji: '🔒' }).then(ok => {
           if (!ok) return;
-          savePayrollRecord({
+          const snapshot = {
               month: financeMonthFilter,
               data: financeRows,
               totalCost: totalEstimatedCost,
               lockedAt: new Date().toISOString(),
               lockedBy: user?.username || 'Admin'
+          };
+          // Khoá sổ hiện hành của tháng
+          Promise.resolve(savePayrollRecord(snapshot))
+              .catch(err => window.toast('Chốt sổ thất bại: ' + (err?.message || 'lỗi quyền ghi'), 'error'));
+
+          // Lưu thêm vào Lịch sử chốt (node mới payrollHistory) — BÁO LỖI RÕ nếu chưa deploy rules.
+          if (addPayrollHistory) {
+              Promise.resolve(addPayrollHistory(snapshot))
+                  .then(() => window.toast('Đã chốt báo cáo và lưu vào Lịch sử chốt!', 'success'))
+                  .catch(err => window.toast(
+                      'Đã khoá sổ, nhưng LƯU LỊCH SỬ thất bại (' + (err?.message || 'permission denied') +
+                      '). Cần deploy quyền: chạy "firebase deploy --only database".', 'error'
+                  ));
+          } else {
+              window.toast('Đã chốt báo cáo!', 'success');
+          }
+      });
+  };
+
+  // Mở lại sổ (gỡ chốt) tháng đang xem -> quay lại chế độ tính trực tiếp, cho phép chốt lại.
+  const handleUnlockPayroll = () => {
+      window.confirmDialog(`Mở lại sổ lương tháng ${financeMonthFilter}? Báo cáo quay lại chế độ tính trực tiếp. Các bản chốt cũ VẪN được giữ trong Lịch sử chốt.`, { title: 'Mở lại sổ', okText: 'Mở lại', emoji: '🔓' }).then(ok => {
+          if (ok && deletePayrollRecord) deletePayrollRecord(financeMonthFilter);
+      });
+  };
+
+  // Khôi phục: lấy 1 bản trong Lịch sử chốt làm dữ liệu lương hiện hành cho tháng của nó.
+  const handleRestorePayroll = (snap) => {
+      const when = new Date(snap.lockedAt || snap.savedAt).toLocaleString('vi-VN');
+      window.confirmDialog(`Khôi phục bản chốt tháng ${snap.month} (chốt lúc ${when})? Bản này sẽ trở thành dữ liệu lương hiện hành của tháng ${snap.month}.`, { title: 'Khôi phục bản chốt', okText: 'Khôi phục', emoji: '♻️' }).then(ok => {
+          if (!ok) return;
+          savePayrollRecord({
+              month: snap.month,
+              data: snap.data || [],
+              totalCost: snap.totalCost || 0,
+              lockedAt: new Date().toISOString(),
+              lockedBy: user?.username || 'Admin',
+              restoredFrom: snap.lockedAt || snap.savedAt || null
           });
-          alert("Đã chốt báo cáo thành công!");
+          setFinanceMonthFilter(snap.month); // chuyển bộ lọc về đúng tháng vừa khôi phục để thấy ngay
+          alert(`Đã khôi phục bản chốt tháng ${snap.month}.`);
+      });
+  };
+
+  // Xóa 1 bản ghi khỏi Lịch sử chốt (không ảnh hưởng bản chốt hiện hành của tháng).
+  const handleDeleteHistory = (snap) => {
+      const when = new Date(snap.lockedAt || snap.savedAt).toLocaleString('vi-VN');
+      window.confirmDialog(`Xóa bản ghi lịch sử chốt tháng ${snap.month} (lúc ${when})? Chỉ xóa khỏi Lịch sử, không ảnh hưởng bản chốt hiện hành.`, { title: 'Xóa lịch sử', okText: 'Xóa', danger: true, emoji: '🗑️' }).then(ok => {
+          if (ok && deletePayrollHistory) deletePayrollHistory(snap.id);
       });
   };
 
@@ -687,6 +782,20 @@ const Reports = () => {
       </div>
   );
 
+  // --- DỮ LIỆU ĐÃ SẮP XẾP THEO CỘT (click tiêu đề để đổi) ---
+  const sortedFinanceRows = applySort(financeRows, financeSort, (r, key) => {
+      if (key === 'net') return parseAmount(r.net !== undefined ? r.net : r.amount);
+      if (key === 'gross' || key === 'bhxh' || key === 'tax') return parseAmount(r[key]);
+      return r[key] || ''; // item (tên), type (thông tin) -> chuỗi
+  });
+  const sortedOpTasks = applySort(filteredOpTasks, taskSort, (t, key) => {
+      if (key === 'progress') return Number(t.progress) || 0;
+      if (key === 'endTime') return new Date(t.endTime).getTime() || 0;
+      if (key === 'statusCol') return t.status === 'completed' ? 2 : (new Date() > new Date(t.endTime) ? 1 : 0);
+      if (key === 'evalCol') return t.evaluation === 'passed' ? 2 : (t.evaluation === 'failed' ? 1 : 0);
+      return t[key] || ''; // title (nhiệm vụ), assigneeName (phụ trách)
+  });
+
   return (
     <div style={{ paddingBottom: '40px', boxSizing: 'border-box' }} className="reports-page">
       <style>{`
@@ -813,6 +922,14 @@ const Reports = () => {
                           </div>
                       )}
 
+                      {isLocked && (
+                          <div className="lock-btn-container">
+                              <button onClick={handleUnlockPayroll} style={{...styles.printBtn, background:'#ffffff', color:'#b45309', border:'1px solid #f59e0b'}} title="Gỡ chốt để tính lại / chốt lại">
+                                  🔓 Mở lại sổ
+                              </button>
+                          </div>
+                      )}
+
                       <button onClick={() => setActiveTab('overview')} style={styles.backBtn} className="nav-back-btn"><Icons.Back /> Ẩn</button>
                   </div>
                </div>
@@ -822,16 +939,16 @@ const Reports = () => {
                       <thead>
                         <tr style={styles.tableHeadRow}>
                           <th style={{...styles.th, width: '50px', textAlign: 'center'}}>STT</th>
-                          <th style={styles.th}>Nhân sự</th>
-                          <th style={styles.th}>Thông tin thêm</th>
-                          <th style={{...styles.th, textAlign: 'right'}}>Thu nhập Gộp (Gross)</th>
-                          <th style={{...styles.th, textAlign: 'right'}}>BHXH (10.5%)</th>
-                          <th style={{...styles.th, textAlign: 'right'}}>Thuế TNCN (5%)</th>
-                          <th style={{...styles.th, textAlign: 'right', paddingRight: '20px'}}>Thực nhận (Net)</th>
+                          <th onClick={() => toggleSort(financeSort, setFinanceSort, 'item')} style={{...styles.th, cursor: 'pointer', userSelect: 'none'}}>Nhân sự{sortArrow(financeSort, 'item')}</th>
+                          <th onClick={() => toggleSort(financeSort, setFinanceSort, 'type')} style={{...styles.th, cursor: 'pointer', userSelect: 'none'}}>Thông tin thêm{sortArrow(financeSort, 'type')}</th>
+                          <th onClick={() => toggleSort(financeSort, setFinanceSort, 'gross')} style={{...styles.th, textAlign: 'right', cursor: 'pointer', userSelect: 'none'}}>Thu nhập Gộp (Gross){sortArrow(financeSort, 'gross')}</th>
+                          <th onClick={() => toggleSort(financeSort, setFinanceSort, 'bhxh')} style={{...styles.th, textAlign: 'right', cursor: 'pointer', userSelect: 'none'}}>BHXH (10.5%){sortArrow(financeSort, 'bhxh')}</th>
+                          <th onClick={() => toggleSort(financeSort, setFinanceSort, 'tax')} style={{...styles.th, textAlign: 'right', cursor: 'pointer', userSelect: 'none'}}>Thuế TNCN (5%){sortArrow(financeSort, 'tax')}</th>
+                          <th onClick={() => toggleSort(financeSort, setFinanceSort, 'net')} style={{...styles.th, textAlign: 'right', paddingRight: '20px', cursor: 'pointer', userSelect: 'none'}}>Thực nhận (Net){sortArrow(financeSort, 'net')}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {financeRows.length > 0 ? financeRows.map((row, idx) => (
+                        {sortedFinanceRows.length > 0 ? sortedFinanceRows.map((row, idx) => (
                           <tr key={idx} className="table-row">
                               <td data-label="STT" style={{...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#9ca3af'}}>{idx + 1}</td>
                               <td data-label="Nhân sự" style={{...styles.td, fontWeight:'700', color:'#1f2937'}} className="text-wrap-name">{row.item}</td>
@@ -845,7 +962,100 @@ const Reports = () => {
                           <tr><td colSpan="7" style={styles.emptyTd}>Không có dữ liệu thu nhập hiển thị.</td></tr>
                         )}
                       </tbody>
+                      {financeRows.length > 0 && (
+                        <tfoot>
+                          <tr style={{ background: '#E8F4EC', borderTop: '2px solid #2B6830' }}>
+                            <td colSpan="3" style={{ ...styles.td, fontWeight: '800', color: '#111827', textAlign: 'right', paddingRight: '16px' }}>TỔNG CỘNG</td>
+                            <td data-label="Tổng Gộp" style={{ ...styles.td, fontWeight: '800', textAlign: 'right', color: '#111827' }}>{Math.round(financeRows.reduce((s, r) => s + (r.gross || 0), 0)).toLocaleString()}</td>
+                            <td data-label="Tổng BHXH" style={{ ...styles.td, fontWeight: '800', textAlign: 'right', color: '#dc2626' }}>-{Math.round(financeRows.reduce((s, r) => s + (r.bhxh || 0), 0)).toLocaleString()}</td>
+                            <td data-label="Tổng Thuế" style={{ ...styles.td, fontWeight: '800', textAlign: 'right', color: '#dc2626' }}>-{Math.round(financeRows.reduce((s, r) => s + (r.tax || 0), 0)).toLocaleString()}</td>
+                            <td data-label="Tổng Thực nhận" style={{ ...styles.td, fontWeight: '900', textAlign: 'right', color: '#2B6830', paddingRight: '20px', fontSize: '1.1rem' }}>{Math.round(financeRows.reduce((s, r) => s + (r.net || r.amount || 0), 0)).toLocaleString()}</td>
+                          </tr>
+                        </tfoot>
+                      )}
                     </table>
+                  </div>
+
+                  {/* === LỊCH SỬ CHỐT SỔ === */}
+                  <div style={{ marginTop: '28px', borderTop: '1px dashed #e2e8f0', paddingTop: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                          <h4 style={{ margin: 0, fontWeight: '800', color: '#111827', fontSize: '1.05rem' }}>Lịch sử chốt sổ</h4>
+                          <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>({(payrollHistory || []).length} bản)</span>
+                      </div>
+
+                      {(!payrollHistory || payrollHistory.length === 0) ? (
+                          <div style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic', padding: '14px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                              Chưa có bản chốt nào. Bấm "Chốt Báo Cáo" để lưu bản đầu tiên.
+                          </div>
+                      ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {[...payrollHistory].sort((a, b) => new Date(b.lockedAt || b.savedAt || 0) - new Date(a.lockedAt || a.savedAt || 0)).map(snap => (
+                                  <div key={snap.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
+                                          <div onClick={() => setExpandedHistoryId(expandedHistoryId === snap.id ? null : snap.id)} style={{ minWidth: '200px', flex: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }} title="Bấm để xem chi tiết">
+                                              <span style={{ color: '#64748b', flexShrink: 0, display: 'flex' }}>{expandedHistoryId === snap.id ? <Icons.ChevronDown /> : <Icons.ChevronRight />}</span>
+                                              <div>
+                                                  <div style={{ fontWeight: '800', color: '#111827' }}>
+                                                      Tháng {snap.month}
+                                                      <span style={{ marginLeft: '8px', fontWeight: '700', color: '#2B6830' }}>{Math.round(snap.totalCost || 0).toLocaleString()}đ</span>
+                                                  </div>
+                                                  <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
+                                                      Chốt lúc {new Date(snap.lockedAt || snap.savedAt).toLocaleString('vi-VN')} • bởi {snap.lockedBy || '—'} • {(snap.data || []).length} nhân sự
+                                                  </div>
+                                              </div>
+                                          </div>
+                                          <div style={{ display: 'flex', gap: '8px' }}>
+                                              <button onClick={() => handleRestorePayroll(snap)} style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '10px', padding: '8px 14px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>♻️ Khôi phục</button>
+                                              <button onClick={() => handleDeleteHistory(snap)} style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '10px', padding: '8px 10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem' }} title="Xóa khỏi lịch sử">🗑️</button>
+                                          </div>
+                                      </div>
+
+                                      {expandedHistoryId === snap.id && (
+                                          <div style={{ borderTop: '1px dashed #e2e8f0', background: '#f8fafc', padding: '12px 16px' }}>
+                                              {(snap.data && snap.data.length > 0) ? (
+                                                  <div className="table-responsive">
+                                                      <table style={styles.table} className="ops-table">
+                                                          <thead>
+                                                              <tr style={styles.tableHeadRow}>
+                                                                  <th style={{ ...styles.th, width: '50px', textAlign: 'center' }}>STT</th>
+                                                                  <th style={styles.th}>Nhân sự</th>
+                                                                  <th style={styles.th}>Thông tin thêm</th>
+                                                                  <th style={{ ...styles.th, textAlign: 'right' }}>Gộp</th>
+                                                                  <th style={{ ...styles.th, textAlign: 'right' }}>BHXH</th>
+                                                                  <th style={{ ...styles.th, textAlign: 'right' }}>Thuế</th>
+                                                                  <th style={{ ...styles.th, textAlign: 'right' }}>Thực nhận</th>
+                                                              </tr>
+                                                          </thead>
+                                                          <tbody>
+                                                              {snap.data.map((row, i) => (
+                                                                  <tr key={i} className="table-row">
+                                                                      <td data-label="STT" style={{ ...styles.td, textAlign: 'center', color: '#9ca3af', fontWeight: 'bold' }}>{i + 1}</td>
+                                                                      <td data-label="Nhân sự" style={{ ...styles.td, fontWeight: '700' }} className="text-wrap-name">{row.item}</td>
+                                                                      <td data-label="Thông tin thêm" style={{ ...styles.td, fontSize: '0.85rem', color: '#64748b' }}>{row.type}</td>
+                                                                      <td data-label="Gộp" style={{ ...styles.td, textAlign: 'right', fontWeight: '700' }}>{Math.round(row.gross || 0).toLocaleString()}</td>
+                                                                      <td data-label="BHXH" style={{ ...styles.td, textAlign: 'right', color: '#ef4444' }}>-{Math.round(row.bhxh || 0).toLocaleString()}</td>
+                                                                      <td data-label="Thuế" style={{ ...styles.td, textAlign: 'right', color: '#ef4444' }}>-{Math.round(row.tax || 0).toLocaleString()}</td>
+                                                                      <td data-label="Thực nhận" style={{ ...styles.td, textAlign: 'right', fontWeight: '800', color: '#059669' }}>{Math.round(row.net || row.amount || 0).toLocaleString()}</td>
+                                                                  </tr>
+                                                              ))}
+                                                          </tbody>
+                                                          <tfoot>
+                                                              <tr style={{ background: '#E8F4EC', borderTop: '2px solid #2B6830' }}>
+                                                                  <td colSpan="6" style={{ ...styles.td, textAlign: 'right', fontWeight: '800' }}>TỔNG THỰC NHẬN</td>
+                                                                  <td data-label="Tổng thực nhận" style={{ ...styles.td, textAlign: 'right', fontWeight: '900', color: '#2B6830' }}>{Math.round(snap.data.reduce((s, r) => s + (r.net || r.amount || 0), 0)).toLocaleString()}đ</td>
+                                                              </tr>
+                                                          </tfoot>
+                                                      </table>
+                                                  </div>
+                                              ) : (
+                                                  <div style={{ fontSize: '0.85rem', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '10px' }}>Bản chốt này không có dữ liệu nhân sự.</div>
+                                              )}
+                                          </div>
+                                      )}
+                                  </div>
+                              ))}
+                          </div>
+                      )}
                   </div>
                </div>
           </div>
@@ -1267,16 +1477,16 @@ const Reports = () => {
                     <thead>
                       <tr style={styles.tableHeadRow}>
                         <th style={{...styles.th, width: '50px', textAlign: 'center'}}>STT</th>
-                        <th style={styles.th}>Nhiệm vụ</th>
-                        <th style={styles.th}>Phụ trách</th>
-                        <th style={styles.th}>Hạn chót</th>
-                        <th style={styles.th}>Tiến độ</th>
-                        <th style={styles.th}>Trạng thái</th>
-                        <th style={{...styles.th, textAlign: 'center'}}>Đánh giá kết quả</th>
+                        <th onClick={() => toggleSort(taskSort, setTaskSort, 'title')} style={{...styles.th, cursor: 'pointer', userSelect: 'none'}}>Nhiệm vụ{sortArrow(taskSort, 'title')}</th>
+                        <th onClick={() => toggleSort(taskSort, setTaskSort, 'assigneeName')} style={{...styles.th, cursor: 'pointer', userSelect: 'none'}}>Phụ trách{sortArrow(taskSort, 'assigneeName')}</th>
+                        <th onClick={() => toggleSort(taskSort, setTaskSort, 'endTime')} style={{...styles.th, cursor: 'pointer', userSelect: 'none'}}>Hạn chót{sortArrow(taskSort, 'endTime')}</th>
+                        <th onClick={() => toggleSort(taskSort, setTaskSort, 'progress')} style={{...styles.th, cursor: 'pointer', userSelect: 'none'}}>Tiến độ{sortArrow(taskSort, 'progress')}</th>
+                        <th onClick={() => toggleSort(taskSort, setTaskSort, 'statusCol')} style={{...styles.th, cursor: 'pointer', userSelect: 'none'}}>Trạng thái{sortArrow(taskSort, 'statusCol')}</th>
+                        <th onClick={() => toggleSort(taskSort, setTaskSort, 'evalCol')} style={{...styles.th, textAlign: 'center', cursor: 'pointer', userSelect: 'none'}}>Đánh giá kết quả{sortArrow(taskSort, 'evalCol')}</th>
                       </tr>
                     </thead>
                     <tbody>
-                        {filteredOpTasks.map((task, index) => {
+                        {sortedOpTasks.map((task, index) => {
                           let statusElement;
                           const isOverdue = new Date() > new Date(task.endTime) && task.status !== 'completed';
 

@@ -1,9 +1,10 @@
-// Import các thư viện Firebase dành cho Service Worker
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
+/* Service Worker cho Firebase Cloud Messaging.
+   Cần thiết để: (1) app lấy được FCM token, (2) hiển thị thông báo khi app ở nền/đóng.
+   Đặt ở thư mục public/ để được phục vụ tại đường dẫn gốc /firebase-messaging-sw.js */
+importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 
-// Copy config từ dự án của bạn
-const firebaseConfig = {
+firebase.initializeApp({
   apiKey: "AIzaSyCcDf-QwrU2zkkQan49gSdq6AkjY5JI2rQ",
   authDomain: "beablevn-operation.firebaseapp.com",
   databaseURL: "https://beablevn-operation-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -11,20 +12,25 @@ const firebaseConfig = {
   storageBucket: "beablevn-operation.firebasestorage.app",
   messagingSenderId: "18301003388",
   appId: "1:18301003388:web:a32ceea5343c27a1134bf9",
-  measurementId: "G-L54LMGPTL4"
-};
+  measurementId: "G-L54LMGPTL4",
+});
 
-firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// Bắt thông báo khi app đang chạy ngầm
+// Hiển thị thông báo khi app KHÔNG mở (chạy nền).
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Nhận thông báo ngầm ', payload);
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/BA LOGO.png' // Icon sẽ hiển thị trên thông báo (đã có trong file public của bạn)
+  const title = (payload.notification && payload.notification.title) || "Be Able VN";
+  const options = {
+    body: (payload.notification && payload.notification.body) || "",
+    icon: "/BA LOGO.png",
+    badge: "/BA LOGO.png",
+    data: payload.data || {},
   };
+  self.registration.showNotification(title, options);
+});
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+// Bấm vào thông báo -> mở trang chấm công.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(clients.openWindow("/staff/attendance"));
 });

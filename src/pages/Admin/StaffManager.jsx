@@ -19,8 +19,17 @@ const Icons = {
 
 const safeNumber = (value) => {
     if (value === '' || value === null || value === undefined) return 0;
-    const num = Number(value);
+    // Bỏ dấu phẩy ngăn cách hàng nghìn (nếu có) trước khi chuyển về số.
+    const num = Number(String(value).replace(/,/g, ''));
     return isNaN(num) ? 0 : num;
+};
+
+// Hiển thị số tiền có dấu phẩy ngăn cách mỗi 3 chữ số (vd: 1,000,000) cho dễ đọc.
+// Trả về chuỗi rỗng khi chưa nhập gì. Chỉ giữ chữ số (tiền VNĐ không có phần thập phân).
+const formatMoney = (value) => {
+    if (value === '' || value === null || value === undefined) return '';
+    const digits = String(value).replace(/\D/g, '');
+    return digits === '' ? '' : Number(digits).toLocaleString('en-US');
 };
 
 const POSITIONS = [
@@ -483,12 +492,12 @@ const StaffManager = () => {
 
                   <div style={{...styles.financeRow, flexWrap: 'wrap'}}>
                       <span style={styles.financeLabel}>UBI cố định gốc (100%)</span>
-                      <input className="input-modern" type="number" placeholder="VNĐ" value={editForm.ubi1Base !== undefined ? editForm.ubi1Base : ''} onChange={e => setEditForm({...editForm, ubi1Base: e.target.value})} style={{flex: 1, marginTop: 0, fontWeight: '600'}} />
+                      <input className="input-modern" type="text" inputMode="numeric" placeholder="VNĐ" value={formatMoney(editForm.ubi1Base)} onChange={e => setEditForm({...editForm, ubi1Base: e.target.value.replace(/\D/g, '')})} style={{flex: 1, marginTop: 0, fontWeight: '600'}} />
                   </div>
                   
                   <div style={{...styles.financeRow, flexWrap: 'wrap'}}>
                       <span style={styles.financeLabel}>Phụ cấp đặc thù</span>
-                      <input className="input-modern" type="number" placeholder="VNĐ" value={editForm.specificAllowance} onChange={e => setEditForm({...editForm, specificAllowance: e.target.value})} style={{flex: 1, marginTop: 0, fontWeight: '600'}} />
+                      <input className="input-modern" type="text" inputMode="numeric" placeholder="VNĐ" value={formatMoney(editForm.specificAllowance)} onChange={e => setEditForm({...editForm, specificAllowance: e.target.value.replace(/\D/g, '')})} style={{flex: 1, marginTop: 0, fontWeight: '600'}} />
                   </div>
                   
                   <div style={{height: '1px', background: '#e2e8f0', margin: '20px 0'}}></div>
@@ -527,14 +536,14 @@ const StaffManager = () => {
                                       <>
                                           <div style={{flex: 1.5, minWidth: '140px'}}>
                                               <label style={styles.label}>Mức tiền (VNĐ)</label>
-                                              <input className="input-modern" type="number" placeholder="VNĐ" value={ubi.amount} onChange={(e) => handleSecUbiChange(idx, 'amount', e.target.value)} style={{fontWeight: '600'}} />
+                                              <input className="input-modern" type="text" inputMode="numeric" placeholder="VNĐ" value={formatMoney(ubi.amount)} onChange={(e) => handleSecUbiChange(idx, 'amount', e.target.value.replace(/\D/g, ''))} style={{fontWeight: '600'}} />
                                           </div>
                                           <div style={{flex: 1, minWidth: '120px'}}>
                                               <label style={styles.label}>Hệ số (Load)</label>
-                                              <select className="input-modern" value={ubi.loadFactor} onChange={(e) => handleSecUbiChange(idx, 'loadFactor', e.target.value)}>
+                                              <select className="input-modern" value={String(ubi.loadFactor)} onChange={(e) => handleSecUbiChange(idx, 'loadFactor', e.target.value)}>
                                                   <option value="0.75">0.75 (100%)</option>
-                                                  <option value="0.50">0.50 (75%)</option>
-                                                  <option value="0.30">0.30 (50%)</option>
+                                                  <option value="0.5">0.50 (75%)</option>
+                                                  <option value="0.3">0.30 (50%)</option>
                                                   <option value="0.15">0.15 (25%)</option>
                                               </select>
                                           </div>
@@ -579,7 +588,7 @@ const StaffManager = () => {
                               <span style={{fontSize: '0.9rem', color: '#64748b', fontWeight:'800', minWidth: '24px'}}>R{idx+1}</span>
                               
                               <div style={{display:'flex', gap:'10px', flex: '1 1 180px'}}>
-                                  <input className="input-modern" type="number" placeholder="VNĐ/Giờ" value={rem.amount} onChange={(e) => handleRemunerationChange(idx, 'amount', e.target.value)} style={{flex: 1.5, marginTop: 0, fontWeight: '600'}} />
+                                  <input className="input-modern" type="text" inputMode="numeric" placeholder="VNĐ/Giờ" value={formatMoney(rem.amount)} onChange={(e) => handleRemunerationChange(idx, 'amount', e.target.value.replace(/\D/g, ''))} style={{flex: 1.5, marginTop: 0, fontWeight: '600'}} />
                                   <select className="input-modern" value={rem.position} onChange={(e) => handleRemunerationChange(idx, 'position', e.target.value)} style={{flex: 1, marginTop: 0}}>
                                       <option value="">-- Chọn vị trí --</option>
                                       {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}

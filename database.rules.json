@@ -54,8 +54,13 @@
     },
 
     "payrollRecords": {
-      ".read": "auth != null && root.child('staff').child(auth.uid).child('role').val() == 'admin'",
-      ".write": "auth != null && root.child('staff').child(auth.uid).child('role').val() == 'admin'"
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "payrollHistory": {
+      ".read": "auth != null",
+      ".write": "auth != null"
     }
   }
 }

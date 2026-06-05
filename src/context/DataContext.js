@@ -17,7 +17,8 @@ export const DataProvider = ({ children }) => {
   const [disciplineRecords, setDisciplineRecords] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [payrollRecords, setPayrollRecords] = useState([]);
-  const [autoDisciplineRules, setAutoDisciplineRules] = useState([]); 
+  const [payrollHistory, setPayrollHistory] = useState([]); // Lịch sử các lần chốt sổ (snapshot)
+  const [autoDisciplineRules, setAutoDisciplineRules] = useState([]);
   const [areas, setAreas] = useState([]); // THÊM MỚI: State cho Cơ sở hạ tầng (Khu vực)
   
   // State theo dõi tiến trình tải dữ liệu ban đầu
@@ -31,7 +32,7 @@ export const DataProvider = ({ children }) => {
     const setupListeners = () => {
       // Bộ đếm kiểm tra việc nạp dữ liệu lần đầu từ 11 nhánh DatabaseListeners khác nhau
       let loadedCount = 0;
-      const totalListeners = 11; // Tăng lên 11 vì có thêm 'areas'
+      const totalListeners = 12; // +1 vì có thêm 'payrollHistory'
 
       const checkInitialLoad = () => {
         loadedCount++;
@@ -112,6 +113,14 @@ export const DataProvider = ({ children }) => {
         checkInitialLoad();
       }, (error) => { checkInitialLoad(); });
 
+      // 8b. PAYROLL HISTORY (Lịch sử chốt sổ — mỗi lần chốt là 1 snapshot)
+      const payrollHistoryRef = ref(db, 'payrollHistory');
+      const unsubPayrollHistory = onValue(payrollHistoryRef, (snapshot) => {
+        const data = snapshot.val();
+        setPayrollHistory(data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : []);
+        checkInitialLoad();
+      }, (error) => { checkInitialLoad(); });
+
       // 9. AUTO DISCIPLINE RULES
       const autoRulesRef = ref(db, 'autoDisciplineRules');
       const unsubAutoRules = onValue(autoRulesRef, (snapshot) => {
@@ -129,8 +138,8 @@ export const DataProvider = ({ children }) => {
       }, (error) => { checkInitialLoad(); });
 
       unsubs = [
-        unsubStaff, unsubTasks, unsubShifts, unsubAtt, unsubFacility, 
-        unsubDiscType, unsubDiscRec, unsubSchedules, unsubPayroll, unsubAutoRules, unsubAreas
+        unsubStaff, unsubTasks, unsubShifts, unsubAtt, unsubFacility,
+        unsubDiscType, unsubDiscRec, unsubSchedules, unsubPayroll, unsubPayrollHistory, unsubAutoRules, unsubAreas
       ];
     };
 
@@ -315,6 +324,16 @@ export const DataProvider = ({ children }) => {
     return set(ref(db, 'payrollRecords/' + recordData.month), { ...recordData, id: recordData.month });
   };
 
+  // Lịch sử chốt sổ: mỗi lần chốt lưu thêm 1 snapshot (không ghi đè bản cũ) để xem lại / khôi phục.
+  const addPayrollHistory = (snapshot) => {
+    const newRef = push(ref(db, 'payrollHistory'));
+    return set(newRef, { ...snapshot, id: newRef.key, savedAt: snapshot.savedAt || new Date().toISOString() });
+  };
+  const deletePayrollHistory = (id) => remove(ref(db, 'payrollHistory/' + id));
+
+  // Mở lại sổ (gỡ chốt) cho 1 tháng -> quay lại tính toán trực tiếp, cho phép chốt lại.
+  const deletePayrollRecord = (month) => remove(ref(db, 'payrollRecords/' + month));
+
   return (
     <DataContext.Provider value={{ 
       loading, 
@@ -327,7 +346,8 @@ export const DataProvider = ({ children }) => {
       disciplineRecords, addDisciplineRecord, updateDisciplineRecordStatus, deleteDisciplineRecord,
       autoDisciplineRules, addAutoRule, updateAutoRule, deleteAutoRule,
       schedules, addSchedule, updateSchedule, deleteSchedule,
-      payrollRecords, savePayrollRecord 
+      payrollRecords, savePayrollRecord,
+      payrollHistory, addPayrollHistory, deletePayrollHistory, deletePayrollRecord
     }}>
       {children}
     </DataContext.Provider>
